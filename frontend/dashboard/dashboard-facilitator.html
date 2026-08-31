@@ -6,16 +6,16 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facilitator Dashboard | QCMS Enterprise</title>
+    <title>Facilitator Dashboard | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
-    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -347,7 +347,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
     const facDash = {
         noteModal: null,
@@ -372,7 +372,7 @@
         },
 
         async init() {
-            QCMS.init();
+            OctaQube.init();
             this.noteModal = new bootstrap.Modal(document.getElementById('noteModal'));
             this.validateModal = new bootstrap.Modal(document.getElementById('validateRcaModal'));
             this.assistedDetailsModal = new bootstrap.Modal(document.getElementById('assistedDetailsModal'));
@@ -407,7 +407,7 @@
             });
 
             // Global search listener
-            window.addEventListener('qcms-global-search', (e) => {
+            window.addEventListener('octaqube-global-search', (e) => {
                 const sInp = document.getElementById('facSearchInput');
                 if (sInp) sInp.value = e.detail.query;
                 this.handleSearchInput(e.detail.query);
@@ -543,10 +543,10 @@
                 const kpiEl = document.getElementById('kpiGrid');
                 if (kpiEl) {
                     kpiEl.innerHTML =
-                        QCMS.kpiCard('Needs Guidance', s.pending_rca || s.pending_assistance || 0, 'help-circle', 'orange', null, "#assistance") +
-                        QCMS.kpiCard('Inactive Projects', s.stalled_projects || 0, 'alert-triangle', 'red') +
-                        QCMS.kpiCard('Total Active Projects', s.total_projects || 0, 'folder-open', 'blue', null, "#pipeline") +
-                        QCMS.kpiCard('Assisted Projects', s.assisted_count || 0, 'history', 'purple', null, "#assisted-history");
+                        OctaQube.kpiCard('Needs Guidance', s.pending_rca || s.pending_assistance || 0, 'help-circle', 'orange', null, "#assistance") +
+                        OctaQube.kpiCard('Inactive Projects', s.stalled_projects || 0, 'alert-triangle', 'red') +
+                        OctaQube.kpiCard('Total Active Projects', s.total_projects || 0, 'folder-open', 'blue', null, "#pipeline") +
+                        OctaQube.kpiCard('Assisted Projects', s.assisted_count || 0, 'history', 'purple', null, "#assisted-history");
                 }
                 if (window.lucide) lucide.createIcons();
             } catch (e) { console.error('Stats failed', e); }
@@ -575,7 +575,7 @@
                 const msg = (this.currentSearchQuery || document.getElementById('facPlantFilter')?.value || document.getElementById('facDeptFilter')?.value)
                     ? 'No assistance requests matching your selected plant, department, or search filters.'
                     : 'No assistance requests received yet.';
-                body.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-muted">${QCMS.emptyState('help-circle', 'No Requests Found', msg)}</td></tr>`;
+                body.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-muted">${OctaQube.emptyState('help-circle', 'No Requests Found', msg)}</td></tr>`;
                 if (window.lucide) lucide.createIcons();
                 return;
             }
@@ -604,7 +604,7 @@
                         <div class="text-sm" style="max-width:280px;white-space:pre-wrap;">${r.message}</div>
                         ${replySection}
                     </td>
-                    <td class="text-xs text-muted">${QCMS.formatDate(r.created_at)}</td>
+                    <td class="text-xs text-muted">${OctaQube.formatDate(r.created_at)}</td>
                     <td><span class="ds-badge ${statusBadge}">${r.status}</span></td>
                     <td class="text-end">
                         <button class="ds-btn ds-btn-sm ds-btn-primary" onclick="facDash.respondToRequest(${r.id})">
@@ -641,7 +641,7 @@
             const status = document.getElementById('replyStatus').value;
 
             if (!reply) {
-                QCMS.toast('Please provide a reply message or guidance.', 'warning');
+                OctaQube.toast('Please provide a reply message or guidance.', 'warning');
                 return;
             }
 
@@ -650,13 +650,13 @@
                     response: reply,
                     status: status
                 });
-                QCMS.toast('Reply sent successfully!', 'success');
+                OctaQube.toast('Reply sent successfully!', 'success');
                 if (this.replyModal) this.replyModal.hide();
                 this.loadAssistanceRequests();
                 this.loadAssistedHistory();
                 this.loadStats();
             } catch (err) {
-                QCMS.toast(err.message || 'Failed to send reply', 'error');
+                OctaQube.toast(err.message || 'Failed to send reply', 'error');
             }
         },
 
@@ -683,7 +683,7 @@
                 const msg = (this.currentSearchQuery || document.getElementById('facPlantFilter')?.value || document.getElementById('facDeptFilter')?.value)
                     ? 'No projects matching your selected plant, department, or search filters.'
                     : 'No projects currently assigned.';
-                body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">${QCMS.emptyState('folder-open', 'No Projects Found', msg)}</td></tr>`;
+                body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-muted">${OctaQube.emptyState('folder-open', 'No Projects Found', msg)}</td></tr>`;
                 if (window.lucide) lucide.createIcons();
                 return;
             }
@@ -698,7 +698,7 @@
                         <span class="text-xxs text-muted d-flex align-items-center gap-1 mt-0.5"><i data-lucide="map-pin" style="width:11px;height:11px;"></i> ${p.plant || 'Main Plant'}</span>
                     </td>
                     <td><span class="ds-badge blue">Stage ${p.stage || 1}</span></td>
-                    <td><span class="ds-badge ${QCMS.statusColor(p.status)}">${p.status}</span></td>
+                    <td><span class="ds-badge ${OctaQube.statusColor(p.status)}">${p.status}</span></td>
                     <td class="text-end">
                         <div class="d-flex justify-content-end gap-1">
                             <a href="/workflow/workspace.html?id=${p.id}" class="ds-btn ds-btn-sm ds-btn-primary">
@@ -737,7 +737,7 @@
                 const msg = (this.currentSearchQuery || document.getElementById('facPlantFilter')?.value || document.getElementById('facDeptFilter')?.value)
                     ? 'No assisted projects matching your selected plant, department, or search filters.'
                     : 'No assisted project records found yet.';
-                body.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-muted">${QCMS.emptyState('history', 'No Assisted History', msg)}</td></tr>`;
+                body.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-muted">${OctaQube.emptyState('history', 'No Assisted History', msg)}</td></tr>`;
                 if (window.lucide) lucide.createIcons();
                 return;
             }
@@ -765,7 +765,7 @@
                         <div class="text-sm fw-medium text-truncate" style="max-width:220px;color:var(--ds-success,#16a34a);" title="${(item.response || '').replace(/"/g, '&quot;')}">${item.response || '—'}</div>
                     </td>
                     <td><span class="ds-badge ${statusBadge}">${item.status}</span></td>
-                    <td class="text-xs text-muted">${QCMS.formatDate(item.responded_at || item.created_at)}</td>
+                    <td class="text-xs text-muted">${OctaQube.formatDate(item.responded_at || item.created_at)}</td>
                     <td class="text-end">
                         <button class="ds-btn ds-btn-sm ds-btn-ghost me-1" onclick="facDash.viewAssistedDetails(${item.id})">
                             <i data-lucide="eye" style="width:13px;height:13px;margin-right:4px;"></i> View
@@ -786,7 +786,7 @@
             document.getElementById('adProjectDept').textContent = `${item.dept || 'General'} (${item.plant || 'Main Plant'})`;
             document.getElementById('adProjectStage').textContent = `Stage ${item.stage_id || '—'}`;
             document.getElementById('adRequester').textContent = item.requested_by || 'Team Member';
-            document.getElementById('adAssistedDate').textContent = QCMS.formatDate(item.responded_at || item.created_at);
+            document.getElementById('adAssistedDate').textContent = OctaQube.formatDate(item.responded_at || item.created_at);
             
             const badgeEl = document.getElementById('adStatusBadge');
             if (badgeEl) {
@@ -825,8 +825,8 @@
             try {
                 await api.post('/facilitator/notes', { project_id: parseInt(projectId), stage_number: parseInt(stageNumber), note });
                 this.noteModal.hide();
-                QCMS.toast('Note added successfully', 'success');
-            } catch (e) { QCMS.toast(e.message || 'Failed to add note', 'error'); }
+                OctaQube.toast('Note added successfully', 'success');
+            } catch (e) { OctaQube.toast(e.message || 'Failed to add note', 'error'); }
         },
 
         async submitValidation() {
@@ -836,9 +836,9 @@
             try {
                 await api.post(`/facilitator/rca/${projectId}/validate`, { comments });
                 this.validateModal.hide();
-                QCMS.toast('RCA Validated! Stage 6 is now unlocked.', 'success');
+                OctaQube.toast('RCA Validated! Stage 6 is now unlocked.', 'success');
                 this.loadStats();
-            } catch (e) { QCMS.toast(e.message || 'Validation failed', 'error'); }
+            } catch (e) { OctaQube.toast(e.message || 'Validation failed', 'error'); }
         }
     };
 

@@ -367,7 +367,7 @@ if (typeof window !== 'undefined') {
     window.EnterpriseDataTable = EnterpriseDataTable;
 
     /**
-     * Universal QCMS Pagination Component
+     * Universal OctaQube Pagination Component
      */
     window.createStandardPagination = function({
         containerId,
@@ -390,7 +390,7 @@ if (typeof window !== 'undefined') {
 
         const elementId = (typeof containerId === 'string' && containerId)
             ? containerId
-            : (container.id || `qcms_pag_${Math.random().toString(36).slice(2, 9)}`);
+            : (container.id || `octaqube_pag_${Math.random().toString(36).slice(2, 9)}`);
 
         container.innerHTML = `
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-3 pb-2 px-3 border-top mt-2 w-100" style="font-size: 13px; color: var(--ds-text-secondary, #64748b); width: 100%;">

@@ -7,13 +7,13 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QCMS Enterprise</title>
+    <title>OctaQube Enterprise</title>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,7 +23,7 @@
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Design System & Glassmorphism -->
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -78,7 +78,7 @@
                     <i data-lucide="shield-check" style="width:20px; height:20px; color:#002347;"></i>
                 </div>
                 <span class="fw-extrabold fs-4 text-white tracking-tight"
-                    style="color:#FFFFFF !important;">QCMS <span
+                    style="color:#FFFFFF !important;">OctaQube <span
                         style="color:#C4A25A; font-weight:400;">Enterprise</span></span>
             </div>
             <div class="d-flex gap-3 align-items-center">
@@ -108,7 +108,7 @@
                             style="width:40px; height:40px; border-radius:10px; background:#C4A25A; color:#002347; display:flex; align-items:center; justify-content:center;">
                             <i data-lucide="shield-check" style="width:24px; height:24px;"></i>
                         </div>
-                        <span class="fw-extrabold fs-4 text-white">QCMS <span
+                        <span class="fw-extrabold fs-4 text-white">OctaQube <span
                                 style="color:#C4A25A; font-weight:400;">Enterprise</span></span>
                     </div>
                     <p class="mb-4" id="lp-footer-desc" style="max-width: 320px; color: #DAE0E7;">The world's most advanced quality management
@@ -165,7 +165,7 @@
             </div>
             <div
                 class="mt-5 pt-5 border-top d-flex flex-column flex-md-row justify-content-between align-items-center gap-4 small" style="border-color: rgba(255, 255, 255, 0.08) !important; color: #DAE0E7;">
-                <p class="mb-0" id="lp-footer-copy">&copy; 2026 QCMS Precision Core. Engineered for Excellence.</p>
+                <p class="mb-0" id="lp-footer-copy">&copy; 2026 OctaQube Precision Core. Engineered for Excellence.</p>
                 <div class="d-flex gap-4">
                     <a href="/page.html?slug=privacy-policy" class="text-decoration-none" style="color: #DAE0E7;">Privacy Policy</a>
                     <a href="/page.html?slug=terms-of-service" class="text-decoration-none" style="color: #DAE0E7;">Terms of Service</a>
@@ -176,7 +176,7 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -192,7 +192,7 @@
                 const res = await api.get('/admin/landing-cms');
                 if (res && res.custom_pages && res.custom_pages[slug]) {
                     const pageData = res.custom_pages[slug];
-                    document.title = `${pageData.title} | QCMS Enterprise`;
+                    document.title = `${pageData.title} | OctaQube Enterprise`;
                     document.getElementById('page-title').textContent = pageData.title;
                     document.getElementById('page-content').innerHTML = pageData.content;
                 } else {

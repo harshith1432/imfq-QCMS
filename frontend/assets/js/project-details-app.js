@@ -8,13 +8,13 @@ const ProjectApp = {
     myAssistanceRequests: [],  // Cache of this user's requests for this project
 
     async init() {
-        QCMS.init();
+        OctaQube.init();
         if (!this.projectId) {
             window.location.href = 'projects-repository.html';
             return;
         }
 
-        window.addEventListener('qcms-theme-change', (e) => {
+        window.addEventListener('octaqube-theme-change', (e) => {
             if (this.projectData) {
                 this.renderStepper(this.projectData);
             }
@@ -38,23 +38,23 @@ const ProjectApp = {
         if (idea) {
             body.innerHTML = `
                 <div class="row g-3 text-sm">
-                    <div class="col-md-6"><strong>Idea Code:</strong> <span class="font-monospace text-primary fw-bold">${QCMS.escapeHtml(idea.idea_code)}</span></div>
-                    <div class="col-md-6"><strong>Status:</strong> <span class="badge bg-success-subtle text-success border border-success-subtle">${QCMS.escapeHtml(idea.status || 'Approved')}</span></div>
-                    <div class="col-md-12"><strong>Title:</strong> ${QCMS.escapeHtml(idea.title)}</div>
-                    <div class="col-md-6"><strong>Department:</strong> ${QCMS.escapeHtml(idea.department || 'N/A')}</div>
-                    <div class="col-md-6"><strong>Category:</strong> ${QCMS.escapeHtml(idea.category || 'N/A')}</div>
-                    <div class="col-md-6"><strong>Submitted By:</strong> ${QCMS.escapeHtml(idea.submitted_by || 'N/A')}</div>
-                    <div class="col-md-6"><strong>Co-Suggesters:</strong> ${QCMS.escapeHtml((idea.co_suggesters || []).join(', ') || 'None')}</div>
-                    <div class="col-md-12 border-top pt-2 mt-2"><strong>Present Situation:</strong><br><span class="text-muted">${QCMS.escapeHtml(idea.present_situation || 'N/A')}</span></div>
-                    <div class="col-md-12"><strong>Proposed Solution:</strong><br><span class="text-muted">${QCMS.escapeHtml(idea.proposed_solution || 'N/A')}</span></div>
+                    <div class="col-md-6"><strong>Idea Code:</strong> <span class="font-monospace text-primary fw-bold">${OctaQube.escapeHtml(idea.idea_code)}</span></div>
+                    <div class="col-md-6"><strong>Status:</strong> <span class="badge bg-success-subtle text-success border border-success-subtle">${OctaQube.escapeHtml(idea.status || 'Approved')}</span></div>
+                    <div class="col-md-12"><strong>Title:</strong> ${OctaQube.escapeHtml(idea.title)}</div>
+                    <div class="col-md-6"><strong>Department:</strong> ${OctaQube.escapeHtml(idea.department || 'N/A')}</div>
+                    <div class="col-md-6"><strong>Category:</strong> ${OctaQube.escapeHtml(idea.category || 'N/A')}</div>
+                    <div class="col-md-6"><strong>Submitted By:</strong> ${OctaQube.escapeHtml(idea.submitted_by || 'N/A')}</div>
+                    <div class="col-md-6"><strong>Co-Suggesters:</strong> ${OctaQube.escapeHtml((idea.co_suggesters || []).join(', ') || 'None')}</div>
+                    <div class="col-md-12 border-top pt-2 mt-2"><strong>Present Situation:</strong><br><span class="text-muted">${OctaQube.escapeHtml(idea.present_situation || 'N/A')}</span></div>
+                    <div class="col-md-12"><strong>Proposed Solution:</strong><br><span class="text-muted">${OctaQube.escapeHtml(idea.proposed_solution || 'N/A')}</span></div>
                     <div class="col-md-6 border-top pt-2 mt-2"><strong>Tangible Benefit:</strong> $${(idea.tangible_benefit || 0).toLocaleString()}</div>
-                    <div class="col-md-6 border-top pt-2 mt-2"><strong>Intangible Benefit:</strong> ${QCMS.escapeHtml(idea.intangible_benefit || 'N/A')}</div>
+                    <div class="col-md-6 border-top pt-2 mt-2"><strong>Intangible Benefit:</strong> ${OctaQube.escapeHtml(idea.intangible_benefit || 'N/A')}</div>
                     <div class="col-md-6"><strong>Investment Required:</strong> $${(idea.investment_required || 0).toLocaleString()}</div>
-                    <div class="col-md-6"><strong>Implementation Time:</strong> ${QCMS.escapeHtml(idea.implementation_time || 'N/A')}</div>
+                    <div class="col-md-6"><strong>Implementation Time:</strong> ${OctaQube.escapeHtml(idea.implementation_time || 'N/A')}</div>
                 </div>
             `;
         } else {
-            body.innerHTML = `<p class="text-muted text-center py-4">No original idea payload cached. Reference Code: <strong>${QCMS.escapeHtml((this.projectData && this.projectData.reference_number) || 'N/A')}</strong></p>`;
+            body.innerHTML = `<p class="text-muted text-center py-4">No original idea payload cached. Reference Code: <strong>${OctaQube.escapeHtml((this.projectData && this.projectData.reference_number) || 'N/A')}</strong></p>`;
         }
 
         const modal = new bootstrap.Modal(document.getElementById('originalIdeaModal'));
@@ -85,7 +85,7 @@ const ProjectApp = {
             await this.loadMyAssistanceRequests();
 
         } catch (err) {
-            QCMS.toast('Failed to load project: ' + err.message, 'error');
+            OctaQube.toast('Failed to load project: ' + err.message, 'error');
         }
     },
 
@@ -182,7 +182,7 @@ const ProjectApp = {
                         <h6 class="alert-heading mb-1 fw-bold text-danger" style="font-size: 15px;">Project Permanently Rejected</h6>
                         <p class="mb-2 text-secondary text-xs">This project has been permanently rejected by the Reviewer. Editing and further stage progression are disabled.</p>
                         <div class="p-3 border rounded text-xs fw-semibold text-main" style="background: var(--ds-bg-card, #ffffff); border-color: rgba(239, 68, 68, 0.2) !important;">
-                            <strong>Rejection Reason:</strong> "${QCMS.escapeHtml(commentText)}"
+                            <strong>Rejection Reason:</strong> "${OctaQube.escapeHtml(commentText)}"
                         </div>
                     </div>
                 `;
@@ -198,7 +198,7 @@ const ProjectApp = {
                         <h6 class="alert-heading mb-1 fw-bold text-warning" style="font-size: 15px;">Revision Requested - Reset to Stage 1</h6>
                         <p class="mb-2 text-secondary text-xs">The Reviewer requested changes and returned this project to Stage 1. Please update the details and re-submit.</p>
                         <div class="p-3 border rounded text-xs fw-semibold text-main" style="background: var(--ds-bg-card, #ffffff); border-color: rgba(245, 158, 11, 0.2) !important;">
-                            <strong>Reviewer Comments:</strong> "${QCMS.escapeHtml(commentText)}"
+                            <strong>Reviewer Comments:</strong> "${OctaQube.escapeHtml(commentText)}"
                         </div>
                     </div>
                 `;
@@ -344,11 +344,11 @@ const ProjectApp = {
 
         container.innerHTML = `
         <style>
-            .qcms-stepper { display:flex; align-items:flex-start; overflow-x:auto; padding:16px 8px 8px; gap:0; scrollbar-width:none; }
-            .qcms-stepper::-webkit-scrollbar { display:none; }
-            .qcms-step { display:flex; flex-direction:column; align-items:center; min-width:100px; max-width:120px; position:relative; cursor:pointer; transition:opacity .2s; }
-            .qcms-step.locked { opacity:.42; cursor:default; }
-            .qcms-step:hover:not(.locked) .step-icon-wrap { transform:translateY(-3px); }
+            .octaqube-stepper { display:flex; align-items:flex-start; overflow-x:auto; padding:16px 8px 8px; gap:0; scrollbar-width:none; }
+            .octaqube-stepper::-webkit-scrollbar { display:none; }
+            .octaqube-step { display:flex; flex-direction:column; align-items:center; min-width:100px; max-width:120px; position:relative; cursor:pointer; transition:opacity .2s; }
+            .octaqube-step.locked { opacity:.42; cursor:default; }
+            .octaqube-step:hover:not(.locked) .step-icon-wrap { transform:translateY(-3px); }
             .step-icon-wrap { width:52px; height:52px; border-radius:16px; display:flex; align-items:center; justify-content:center; border:2px solid; transition:all .25s cubic-bezier(.4,0,.2,1); position:relative; }
             .step-icon-wrap.is-active { box-shadow:0 8px 20px -4px rgba(0,0,0,.18); transform:translateY(-2px); }
             .step-badge { position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%; background:white; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.15); }
@@ -356,7 +356,7 @@ const ProjectApp = {
             .step-status { font-size:.52rem; text-align:center; margin-top:2px; font-weight:600; letter-spacing:.03em; }
             .step-connector { flex:1; height:2px; min-width:12px; border-radius:1px; margin-bottom:36px; background:linear-gradient(90deg, var(--c-from), var(--c-to)); }
         </style>
-        <div class="qcms-stepper">
+        <div class="octaqube-stepper">
         ` + data.stages.map((s, i) => {
             const stg     = (stages && stages[i]) ? stages[i] : { name: `Stage ${i+1}`, icon: 'layers' };
             const st      = statusStyle[s.status] || statusStyle['Not Started'];
@@ -366,7 +366,7 @@ const ProjectApp = {
             const next    = i < data.stages.length - 1 ? (statusStyle[data.stages[i+1].status] || statusStyle['Not Started']) : null;
 
             return `
-            <div class="qcms-step ${isClickable ? '' : 'locked'}"
+            <div class="octaqube-step ${isClickable ? '' : 'locked'}"
                  onclick="ProjectApp.switchStage(${i+1}, ${isClickable})"
                  title="${(stg.name || '').replace(/\n/g,' ')}">
                 <div class="step-icon-wrap ${isActive ? 'is-active' : ''}"
@@ -450,7 +450,7 @@ const ProjectApp = {
             try {
                 DynamicRenderer.init(this.projectData, stageId);
             } catch (e) {
-                console.error("[QCMS] Error initializing DynamicRenderer for custom stage:", e);
+                console.error("[OctaQube] Error initializing DynamicRenderer for custom stage:", e);
             }
 
             document.getElementById('reviewPanel')?.classList.add('d-none');
@@ -530,7 +530,7 @@ const ProjectApp = {
                 });
             }
         } catch (e) {
-            console.error("[QCMS] Error applying predefined fields customization:", e);
+            console.error("[OctaQube] Error applying predefined fields customization:", e);
         }
 
         // Initialize logic
@@ -538,7 +538,7 @@ const ProjectApp = {
             try {
                 module.init(this.projectData);
             } catch (e) {
-                console.error("[QCMS] Error during module.init:", e);
+                console.error("[OctaQube] Error during module.init:", e);
             }
         }
 
@@ -593,7 +593,7 @@ const ProjectApp = {
                 });
             }
         } catch (e) {
-            console.error("[QCMS] Error tagging predefined cards:", e);
+            console.error("[OctaQube] Error tagging predefined cards:", e);
         }
 
         // 1. Inject custom top-level section cards
@@ -636,7 +636,7 @@ const ProjectApp = {
                 });
             }
         } catch (e) {
-            console.error("[QCMS] Error rendering custom cards:", e);
+            console.error("[OctaQube] Error rendering custom cards:", e);
         }
 
         // 2. Dynamically inject custom sub-fields defined on sections & register all custom elements
@@ -694,7 +694,7 @@ const ProjectApp = {
                 if (window.lucide) lucide.createIcons();
             }
         } catch (e) {
-            console.error("[QCMS] Error injecting custom subfields:", e);
+            console.error("[OctaQube] Error injecting custom subfields:", e);
         }
 
         // 3. Sort all cards in formEl according to stageCfg.sections order
@@ -754,7 +754,7 @@ const ProjectApp = {
                 });
             }
         } catch (e) {
-            console.error("[QCMS] Error sorting section cards:", e);
+            console.error("[OctaQube] Error sorting section cards:", e);
         }
 
         // Fallback pass: ensure circle numbers are stageId.secNum and hide duplicate inner section headings
@@ -794,14 +794,14 @@ const ProjectApp = {
                 });
             }
         } catch (e) {
-            console.error("[QCMS] Error applying stage section numbering:", e);
+            console.error("[OctaQube] Error applying stage section numbering:", e);
         }
 
         // 4. Setup Section N/A (Applicable / Not Applicable) Toggles
         try {
             this.setupSectionNAToggles(container, stageCfg);
         } catch (e) {
-            console.error("[QCMS] Error setting up section N/A toggles:", e);
+            console.error("[OctaQube] Error setting up section N/A toggles:", e);
         }
 
         this.applyPermissions(stageId);
@@ -1120,14 +1120,14 @@ const ProjectApp = {
     },
 
     highlightInvalidFields(invalidFields) {
-        console.log("[QCMS] highlightInvalidFields called with:", invalidFields);
+        console.log("[OctaQube] highlightInvalidFields called with:", invalidFields);
         this.clearValidationHighlights();
         let firstInvalidElement = null;
         invalidFields.forEach(fieldId => {
-            console.log("[QCMS] processing fieldId:", fieldId);
+            console.log("[OctaQube] processing fieldId:", fieldId);
             const el = document.getElementById(fieldId);
             if (el) {
-                console.log("[QCMS] adding is-invalid class to:", fieldId);
+                console.log("[OctaQube] adding is-invalid class to:", fieldId);
                 el.classList.add('is-invalid');
                 if (!firstInvalidElement) firstInvalidElement = el;
                 const parent = el.closest('.ds-field');
@@ -1142,7 +1142,7 @@ const ProjectApp = {
             } else {
                 const container = document.getElementById(fieldId);
                 if (container) {
-                    console.log("[QCMS] styling container as invalid:", fieldId);
+                    console.log("[OctaQube] styling container as invalid:", fieldId);
                     container.classList.add('is-invalid');
                     container.style.borderColor = 'rgb(var(--ds-red-rgb))';
                     container.style.borderWidth = '1px';
@@ -1162,12 +1162,12 @@ const ProjectApp = {
                     }
                     container.parentNode.appendChild(feedback);
                 } else {
-                    console.warn("[QCMS] element not found in DOM for highlighting:", fieldId);
+                    console.warn("[OctaQube] element not found in DOM for highlighting:", fieldId);
                 }
             }
         });
         if (firstInvalidElement) {
-            console.log("[QCMS] scrolling to element:", firstInvalidElement);
+            console.log("[OctaQube] scrolling to element:", firstInvalidElement);
             firstInvalidElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     },
@@ -1176,12 +1176,12 @@ const ProjectApp = {
         const sessionUser = JSON.parse(sessionStorage.getItem('user') || '{}');
         const role = ((sessionUser.role && sessionUser.role.name) ? sessionUser.role.name : (sessionUser.role || '')).toLowerCase().replace(/[^a-z0-9]/g, '');
         if (!['teamleader', 'teammember'].includes(role)) {
-            QCMS.toast('Access denied. Only assigned Team Leader and Team Members can edit project details.', 'warning');
+            OctaQube.toast('Access denied. Only assigned Team Leader and Team Members can edit project details.', 'warning');
             return;
         }
 
         if (this.projectData && (this.projectData.status === 'Rejected' || this.projectData.status === 'Stage 1 Rejected' || (this.projectData.status && this.projectData.status.includes('Rejected')))) {
-            QCMS.toast('This project has been permanently rejected and cannot be modified.', 'warning');
+            OctaQube.toast('This project has been permanently rejected and cannot be modified.', 'warning');
             return;
         }
 
@@ -1234,9 +1234,9 @@ const ProjectApp = {
             }
 
             window.hasUnsavedChanges = false;
-            QCMS.toast(`Stage ${this.activeStageId} draft saved successfully.`, 'success');
+            OctaQube.toast(`Stage ${this.activeStageId} draft saved successfully.`, 'success');
         } catch (e) {
-            QCMS.toast('Save failed: ' + e.message, 'error');
+            OctaQube.toast('Save failed: ' + e.message, 'error');
         }
     },
 
@@ -1427,7 +1427,7 @@ const ProjectApp = {
                     bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
                 }
             } catch (mErr) {
-                console.warn("[QCMS] bootstrap modal init warning:", mErr);
+                console.warn("[OctaQube] bootstrap modal init warning:", mErr);
             }
 
             let resolved = false;
@@ -1463,21 +1463,21 @@ const ProjectApp = {
         const sessionUser = JSON.parse(sessionStorage.getItem('user') || '{}');
         const role = ((sessionUser.role && sessionUser.role.name) ? sessionUser.role.name : (sessionUser.role || '')).toLowerCase().replace(/[^a-z0-9]/g, '');
         if (!['teamleader', 'teammember'].includes(role)) {
-            QCMS.toast('Access denied. Only assigned Team Leader and Team Members can submit project stages.', 'warning');
+            OctaQube.toast('Access denied. Only assigned Team Leader and Team Members can submit project stages.', 'warning');
             return;
         }
 
         if (this.projectData && (this.projectData.status === 'Rejected' || this.projectData.status === 'Stage 1 Rejected' || (this.projectData.status && this.projectData.status.includes('Rejected')))) {
-            QCMS.toast('This project has been permanently rejected and cannot be submitted for review.', 'warning');
+            OctaQube.toast('This project has been permanently rejected and cannot be submitted for review.', 'warning');
             return;
         }
 
-        console.log("[QCMS] submitForReview started for activeStageId:", this.activeStageId);
+        console.log("[OctaQube] submitForReview started for activeStageId:", this.activeStageId);
         const stageNum = this.activeStageId || 1;
         const module = StageModules[stageNum];
         if (!module) {
-            console.error("[QCMS] active stage module not found for stage:", stageNum);
-            QCMS.toast(`Cannot find Stage ${stageNum} module.`, 'error');
+            console.error("[OctaQube] active stage module not found for stage:", stageNum);
+            OctaQube.toast(`Cannot find Stage ${stageNum} module.`, 'error');
             return;
         }
 
@@ -1511,7 +1511,7 @@ const ProjectApp = {
                     secMsg = ` Mandatory section(s) incomplete: ${validation.missingSections.join(', ')}.`;
                 }
 
-                QCMS.toast(`Cannot submit Stage ${stageNum}:${secMsg}`, 'error');
+                OctaQube.toast(`Cannot submit Stage ${stageNum}:${secMsg}`, 'error');
 
                 const targetEl = validation.emptyFields[0];
                 if (targetEl) {
@@ -1575,7 +1575,7 @@ const ProjectApp = {
             await api.post(routeSave, data);
             const submitResult = await api.post(routeSubmit, {});
 
-            QCMS.toast(isReviewStage ? `Stage ${stageNum} submitted for review successfully!` : `Stage ${stageNum} submitted successfully!`, 'success');
+            OctaQube.toast(isReviewStage ? `Stage ${stageNum} submitted for review successfully!` : `Stage ${stageNum} submitted successfully!`, 'success');
             
             // Update UI badge and status immediately
             const badge = document.getElementById('stageStatusBadge');
@@ -1586,7 +1586,7 @@ const ProjectApp = {
             
             setTimeout(() => location.reload(), 800);
         } catch (e) {
-            console.error("[QCMS] submission caught exception:", e);
+            console.error("[OctaQube] submission caught exception:", e);
             
             if (submitBtnTop) {
                 submitBtnTop.disabled = false;
@@ -1635,7 +1635,7 @@ const ProjectApp = {
                 this.highlightInvalidFields(invalidFields);
             }
 
-            QCMS.toast(msg, 'error');
+            OctaQube.toast(msg, 'error');
         }
     },
 
@@ -1646,7 +1646,7 @@ const ProjectApp = {
 
         const projectTitle = this.projectData?.title || `Project #${this.projectId}`;
 
-        QCMS.showDecisionConfirmationDialog({
+        OctaQube.showDecisionConfirmationDialog({
             decision: normDecision,
             projectTitle,
             stageNumber: this.activeStageId,
@@ -1666,7 +1666,7 @@ const ProjectApp = {
                     const route = this.activeStageId === 1 ? `/projects/${this.projectId}/stage1/review` : `/projects/${this.projectId}/stage/${this.activeStageId}/review`;
                     await api.post(route, payload);
                     const actionLabel = normDecision === 'Approved' ? 'approved' : normDecision === 'Rejected' ? 'rejected' : 'sent back for revision';
-                    QCMS.toast(`Stage ${this.activeStageId} ${actionLabel} successfully.`, 'success');
+                    OctaQube.toast(`Stage ${this.activeStageId} ${actionLabel} successfully.`, 'success');
                     
                     if (this.activeStageId === this._stagesCfg.length && decision === 'approve') {
                         sessionStorage.setItem('auto_download_report_' + this.projectId, 'true');
@@ -1674,7 +1674,7 @@ const ProjectApp = {
                     
                     setTimeout(() => location.reload(), 1000);
                 } catch (e) {
-                    QCMS.toast(e.message, 'error');
+                    OctaQube.toast(e.message, 'error');
                 }
             }
         });
@@ -1704,12 +1704,12 @@ const ProjectApp = {
                 message,
                 stage_id: this.activeStageId || 1
             });
-            QCMS.toast('Assistance request sent to facilitator successfully.', 'success');
+            OctaQube.toast('Assistance request sent to facilitator successfully.', 'success');
             if (this.facRequestModal) {
                 this.facRequestModal.hide();
             }
         } catch (e) {
-            QCMS.toast('Failed to send request: ' + e.message, 'error');
+            OctaQube.toast('Failed to send request: ' + e.message, 'error');
         }
     },
 
@@ -1834,12 +1834,12 @@ const ProjectApp = {
         const url = document.getElementById('meetingUrl').value.trim();
         
         if (!title || !scheduled_at || !duration) {
-            QCMS.toast('Please fill all required fields.', 'error');
+            OctaQube.toast('Please fill all required fields.', 'error');
             return;
         }
         
         if (meeting_type === 'online' && !url) {
-            QCMS.toast('Meeting URL is required for online meetings.', 'error');
+            OctaQube.toast('Meeting URL is required for online meetings.', 'error');
             return;
         }
 
@@ -1851,11 +1851,11 @@ const ProjectApp = {
                 duration,
                 url
             });
-            QCMS.toast('Meeting scheduled successfully!', 'success');
+            OctaQube.toast('Meeting scheduled successfully!', 'success');
             if (this.meetingModal) this.meetingModal.hide();
             this.loadMeetings();
         } catch (e) {
-            QCMS.toast('Failed to schedule meeting: ' + e.message, 'error');
+            OctaQube.toast('Failed to schedule meeting: ' + e.message, 'error');
         }
     },
 
@@ -1865,7 +1865,7 @@ const ProjectApp = {
         
         try {
             const res = await api.post(`/admin/projects/${this.projectId}/close`);
-            QCMS.toast(res.message || 'Project approved & closed successfully!', 'success');
+            OctaQube.toast(res.message || 'Project approved & closed successfully!', 'success');
             
             sessionStorage.setItem('auto_download_report_' + this.projectId, 'true');
             
@@ -1873,14 +1873,14 @@ const ProjectApp = {
                 window.location.reload();
             }, 1000);
         } catch (e) {
-            QCMS.toast('Failed to close project: ' + e.message, 'error');
+            OctaQube.toast('Failed to close project: ' + e.message, 'error');
             if (btn) btn.disabled = false;
         }
     },
 
     async exportReport() {
         if (this.projectData.status !== 'Closed' && this.projectData.status !== 'Completed') {
-            QCMS.toast('Project report is only available after project completion and closure (Stage 8).', 'warning');
+            OctaQube.toast('Project report is only available after project completion and closure (Stage 8).', 'warning');
             return;
         }
         if (window.FeatureEngine) {
@@ -1890,7 +1890,7 @@ const ProjectApp = {
                 return;
             }
         }
-        QCMS.toast('Generating report...', 'info');
+        OctaQube.toast('Generating report...', 'info');
         const filename = `${this.projectData.project_uid || 'Project'}_8D_Report.pdf`;
         await api.downloadFile(`/reports/export/pdf/${this.projectId}`, filename);
     },
@@ -2394,7 +2394,7 @@ const ProjectApp = {
         if (!textEl) return;
         const text = textEl.value.trim();
         if (!text) {
-            QCMS.toast('Comment text cannot be empty.', 'warning');
+            OctaQube.toast('Comment text cannot be empty.', 'warning');
             return;
         }
         try {
@@ -2403,11 +2403,11 @@ const ProjectApp = {
                 stage_number: 8,
                 note_text: text
             });
-            QCMS.toast('Review comment saved successfully.', 'success');
+            OctaQube.toast('Review comment saved successfully.', 'success');
             textEl.value = '';
             await this.loadOversightNotes();
         } catch (e) {
-            QCMS.toast('Failed to save review comment: ' + e.message, 'error');
+            OctaQube.toast('Failed to save review comment: ' + e.message, 'error');
         }
     },
 

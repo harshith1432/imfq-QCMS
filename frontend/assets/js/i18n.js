@@ -1,5 +1,5 @@
 /**
- * QCMS Enterprise - i18n Language Manager v3.1
+ * OctaQube Enterprise - i18n Language Manager v3.1
  * Handles multi-language support across the entire platform.
  * Supports deep dynamic DOM walking, text node translation, attribute translation,
  * live DOM observation using MutationObservers, and client-side Google Translate API fallbacks.
@@ -50,7 +50,7 @@ class LanguageManager {
 
     /**
      * Determine the correct initial language for the current user.
-     * Priority: per-user stored preference > global qcms-language > user.language > 'en'
+     * Priority: per-user stored preference > global octaqube-language > user.language > 'en'
      */
     _resolveInitialLanguage() {
         try {
@@ -59,10 +59,10 @@ class LanguageManager {
                 const user = JSON.parse(userStr);
                 const userId = user.id || user.username;
                 // Per-user language key
-                const userLangKey = `qcms-language-${userId}`;
+                const userLangKey = `octaqube-language-${userId}`;
                 const userLang = localStorage.getItem(userLangKey);
                 if (userLang && this.supportedLanguages.includes(userLang)) {
-                    localStorage.setItem('qcms-language', userLang);
+                    localStorage.setItem('octaqube-language', userLang);
                     return userLang;
                 }
                 // Fallback to user.language from the stored user object (from backend)
@@ -71,7 +71,7 @@ class LanguageManager {
                 }
             }
         } catch (e) { /* ignore */ }
-        return localStorage.getItem('qcms-language') || 'en';
+        return localStorage.getItem('octaqube-language') || 'en';
     }
 
     /**
@@ -110,10 +110,10 @@ class LanguageManager {
         this._setupMutationObserver();
 
         // Re-translate whenever components dynamically inject new DOM elements via custom event
-        window.addEventListener('qcms-translate-request', () => this.translatePage());
+        window.addEventListener('octaqube-translate-request', () => this.translatePage());
 
         // Also re-translate after sidebar/navbar are rendered by components.js
-        window.addEventListener('qcms-language-change', () => {
+        window.addEventListener('octaqube-language-change', () => {
             setTimeout(() => this.translatePage(), 50);
         });
     }
@@ -134,7 +134,7 @@ class LanguageManager {
             if (!response.ok) throw new Error(`Could not load ${lang} translations (${url})`);
             this.translations = await response.json();
             this.currentLanguage = lang;
-            localStorage.setItem('qcms-language', lang);
+            localStorage.setItem('octaqube-language', lang);
             document.documentElement.setAttribute('lang', lang);
 
             // Compile the English -> Target language string map
@@ -377,7 +377,7 @@ class LanguageManager {
         const trimmed = text.trim();
         if (!trimmed || this._isPureNumberOrSymbol(trimmed)) return;
 
-        const cacheKey = `qcms-trans-cache-${targetLang}`;
+        const cacheKey = `octaqube-trans-cache-${targetLang}`;
         let cache = {};
         try {
             cache = JSON.parse(localStorage.getItem(cacheKey)) || {};
@@ -457,7 +457,7 @@ class LanguageManager {
         const trimmed = text.trim();
         if (!trimmed || this._isPureNumberOrSymbol(trimmed)) return;
 
-        const cacheKey = `qcms-trans-cache-${targetLang}`;
+        const cacheKey = `octaqube-trans-cache-${targetLang}`;
         let cache = {};
         try {
             cache = JSON.parse(localStorage.getItem(cacheKey)) || {};
@@ -587,7 +587,7 @@ class LanguageManager {
         await this.loadTranslations(lang);
 
         // Re-render dynamic components (sidebar/navbar) which contain data-i18n
-        window.dispatchEvent(new CustomEvent('qcms-language-change', { detail: { language: lang } }));
+        window.dispatchEvent(new CustomEvent('octaqube-language-change', { detail: { language: lang } }));
 
         // Translate all static elements after a short delay to allow component re-renders
         setTimeout(() => this.translatePage(), 100);
@@ -601,7 +601,7 @@ class LanguageManager {
 
                 // Save per-user language
                 if (userId) {
-                    localStorage.setItem(`qcms-language-${userId}`, lang);
+                    localStorage.setItem(`octaqube-language-${userId}`, lang);
                 }
 
                 // Update user object in localStorage

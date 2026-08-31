@@ -36,7 +36,7 @@ const reviewer = {
 
         // Wire logout button
         document.getElementById('logoutBtn')?.addEventListener('click', () => {
-            QCMS.logout();
+            OctaQube.logout();
         });
     },
 
@@ -98,7 +98,7 @@ const reviewer = {
                         <div class="p-3 mb-3 border rounded-3 bg-white d-flex justify-content-between align-items-center">
                             <div>
                                 <h6 class="mb-1">${p.title}</h6>
-                                <small class="text-muted">${p.department} | Submitted: ${QCMS.formatRelative(p.submitted_at)}</small>
+                                <small class="text-muted">${p.department} | Submitted: ${OctaQube.formatRelative(p.submitted_at)}</small>
                             </div>
                             <button class="btn btn-sm btn-primary" onclick="reviewer.openReview(${p.project_id})">Review</button>
                         </div>
@@ -120,7 +120,7 @@ const reviewer = {
         this.fetchAuditQueue();
 
         // Listen for global search
-        window.addEventListener('qcms-global-search', (e) => {
+        window.addEventListener('octaqube-global-search', (e) => {
             this.filterAuditQueue(e.detail.query);
         });
 
@@ -150,10 +150,10 @@ const reviewer = {
             const avgContainer = document.getElementById('kpi-avg-review');
 
             if (pendingContainer) {
-                pendingContainer.innerHTML = QCMS.kpiCard('Pending Audits', stats.pending_count || 0, 'clock', 'orange');
+                pendingContainer.innerHTML = OctaQube.kpiCard('Pending Audits', stats.pending_count || 0, 'clock', 'orange');
             }
             if (avgContainer) {
-                avgContainer.innerHTML = QCMS.kpiCard('Avg. Review Time', stats.avg_turnaround_time || '—', 'timer', 'blue');
+                avgContainer.innerHTML = OctaQube.kpiCard('Avg. Review Time', stats.avg_turnaround_time || '—', 'timer', 'blue');
             }
             if (window.lucide) lucide.createIcons();
         } catch (err) {
@@ -172,7 +172,7 @@ const reviewer = {
             this.renderAuditQueue(audits);
         } catch (err) {
             console.error("Failed to fetch audit queue", err);
-            container.innerHTML = QCMS.emptyState('Connection Error', 'Unable to reach the server. Please try again later.', 'wifi-off');
+            container.innerHTML = OctaQube.emptyState('Connection Error', 'Unable to reach the server. Please try again later.', 'wifi-off');
         }
     },
 
@@ -181,7 +181,7 @@ const reviewer = {
         if (!container) return;
 
         if (audits.length === 0) {
-            container.innerHTML = QCMS.emptyState('Queue is Empty', 'All projects have been reviewed and validated. Good job!', 'check-circle');
+            container.innerHTML = OctaQube.emptyState('Queue is Empty', 'All projects have been reviewed and validated. Good job!', 'check-circle');
             return;
         }
 
@@ -197,7 +197,7 @@ const reviewer = {
                             <div class="h-stack gap-2 flex-wrap">
                                 <span class="ds-badge gray text-xs">${audit.department}</span>
                                 <span class="text-xs text-muted opacity-50">•</span>
-                                <span class="ds-text-tertiary text-xs">Submitted ${QCMS.formatRelative(audit.submitted_at)}</span>
+                                <span class="ds-text-tertiary text-xs">Submitted ${OctaQube.formatRelative(audit.submitted_at)}</span>
                                 <span class="text-xs text-muted opacity-50">•</span>
                                 <span class="ds-text-secondary text-xs">Est. Cost: ₹${(audit.estimated_cost || 0).toLocaleString()}</span>
                             </div>
@@ -235,7 +235,7 @@ const reviewer = {
             if (!empty) {
                 const el = document.createElement('div');
                 el.id = 'searchEmptyState';
-                el.innerHTML = QCMS.emptyState('No results found', `No audits match "${q}"`, 'search-x');
+                el.innerHTML = OctaQube.emptyState('No results found', `No audits match "${q}"`, 'search-x');
                 document.getElementById('auditQueueList').appendChild(el);
             } else {
                 empty.style.display = 'block';
@@ -503,7 +503,7 @@ const reviewer = {
     async submitDecision(decision, providedComments = null) {
         const comments = providedComments || document.getElementById('reviewerComments')?.value || '';
         if (!comments && (decision === 'Rejected' || decision === 'Revision')) {
-            QCMS.toast("Please provide comments for rejection or revision.", "warning");
+            OctaQube.toast("Please provide comments for rejection or revision.", "warning");
             return;
         }
 
@@ -511,14 +511,14 @@ const reviewer = {
         const pendingStage = audit ? audit.pending_stage : 1;
         const projectTitle = audit ? (audit.title || `Project #${this.selectedProposalId}`) : `Project #${this.selectedProposalId}`;
 
-        QCMS.showDecisionConfirmationDialog({
+        OctaQube.showDecisionConfirmationDialog({
             decision,
             projectTitle,
             stageNumber: pendingStage,
             comments,
             onConfirm: async () => {
                 try {
-                    QCMS.setLoading('btn-approve', true);
+                    OctaQube.setLoading('btn-approve', true);
 
                     if (decision === 'SendToCEO') {
                         const res = await api.post(`/reviewer/closure/${this.selectedProposalId}/complete`, {
@@ -527,7 +527,7 @@ const reviewer = {
                             lessons_learned: comments || "Stage 8 lessons recorded.",
                             preventive_actions: "Stage 8 preventive actions recorded."
                         });
-                        QCMS.toast(res.msg || "Project forwarded to CEO for review successfully.", 'success');
+                        OctaQube.toast(res.msg || "Project forwarded to CEO for review successfully.", 'success');
                     } else {
                         const result = await api.post(`/reviewer/decision`, {
                             project_id: this.selectedProposalId,
@@ -535,7 +535,7 @@ const reviewer = {
                             comments: comments || "Approved",
                             pending_stage: pendingStage
                         });
-                        QCMS.toast(`Project ${decision} successfully.`, 'success');
+                        OctaQube.toast(`Project ${decision} successfully.`, 'success');
                     }
                     
                     // Close modal if open
@@ -554,9 +554,9 @@ const reviewer = {
                         Reviewer.loadInitialData();
                     }
                 } catch (err) {
-                    QCMS.toast(err.message || "Failed to submit decision", 'error');
+                    OctaQube.toast(err.message || "Failed to submit decision", 'error');
                 } finally {
-                    QCMS.setLoading('btn-approve', false);
+                    OctaQube.setLoading('btn-approve', false);
                 }
             }
         });

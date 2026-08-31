@@ -1,5 +1,5 @@
 /**
- * QCMS Enterprise OS — Integration Hub Module
+ * OctaQube Enterprise OS — Integration Hub Module
  * Author: UI/UX Architect & Senior Product Manager
  */
 
@@ -7,8 +7,8 @@
     // Custom date-time formatter helper
     function formatDateTime(dateStr) {
         if (!dateStr || dateStr === '—') return '—';
-        if (window.QCMS && typeof QCMS.formatDate === 'function' && typeof QCMS.formatTime === 'function') {
-            return QCMS.formatDate(dateStr) + ' ' + QCMS.formatTime(dateStr);
+        if (window.OctaQube && typeof OctaQube.formatDate === 'function' && typeof OctaQube.formatTime === 'function') {
+            return OctaQube.formatDate(dateStr) + ' ' + OctaQube.formatTime(dateStr);
         }
         const d = new Date(dateStr);
         if (isNaN(d.getTime())) return '—';
@@ -319,15 +319,15 @@
                     status: newStatus
                 });
                 
-                if (window.QCMS && typeof QCMS.toast === 'function') {
-                    QCMS.toast(`${providerName} status updated to ${newStatus}`, isConnected ? 'success' : 'info');
+                if (window.OctaQube && typeof OctaQube.toast === 'function') {
+                    OctaQube.toast(`${providerName} status updated to ${newStatus}`, isConnected ? 'success' : 'info');
                 }
                 await this.loadData();
                 this.render();
             } catch (e) {
                 console.error("Failed to toggle integration status:", e);
-                if (window.QCMS && typeof QCMS.toast === 'function') {
-                    QCMS.toast(`Failed to update ${providerName} status`, 'error');
+                if (window.OctaQube && typeof OctaQube.toast === 'function') {
+                    OctaQube.toast(`Failed to update ${providerName} status`, 'error');
                 }
                 await this.loadData();
                 this.render();
@@ -434,7 +434,7 @@
                         </div>
                         ${val ? `
                             <button class="btn btn-link btn-sm p-1 text-secondary hover-text-main transition" 
-                                    onclick="navigator.clipboard.writeText('${val}'); if(window.QCMS && typeof QCMS.toast === 'function') { QCMS.toast('Copied to clipboard', 'success'); } else { alert('Copied to clipboard'); }" 
+                                    onclick="navigator.clipboard.writeText('${val}'); if(window.OctaQube && typeof OctaQube.toast === 'function') { OctaQube.toast('Copied to clipboard', 'success'); } else { alert('Copied to clipboard'); }" 
                                     title="Copy Value" type="button">
                                 <i data-lucide="copy" style="width:13px; height:13px;"></i>
                             </button>
@@ -572,8 +572,8 @@
                 ];
             } else if (item.provider_id === 'dynamic_qr') {
                 schemaFields = [
-                    { key: 'upi_id', label: 'Organization UPI ID (VPA)', type: 'text', placeholder: 'e.g. qcms@upi' },
-                    { key: 'account_name', label: 'Beneficiary Account Name', type: 'text', placeholder: 'e.g. QCMS Enterprise Solutions Pvt Ltd' },
+                    { key: 'upi_id', label: 'Organization UPI ID (VPA)', type: 'text', placeholder: 'e.g. octaqube@upi' },
+                    { key: 'account_name', label: 'Beneficiary Account Name', type: 'text', placeholder: 'e.g. OctaQube Enterprise Solutions Pvt Ltd' },
                     { key: 'qr_code_url', label: 'QR Code Image URL', type: 'text', placeholder: 'https://api.qrserver.com/v1/create-qr-code/?data=...' },
                     { key: 'instructions', label: 'Payment Instructions', type: 'text', placeholder: 'Scan using GPay, PhonePe, Paytm...' }
                 ];
@@ -776,8 +776,8 @@
                     settings: settings
                 });
                 
-                if (window.QCMS && typeof QCMS.toast === 'function') {
-                    QCMS.toast(`Configuration saved for ${providerId}`, 'success');
+                if (window.OctaQube && typeof OctaQube.toast === 'function') {
+                    OctaQube.toast(`Configuration saved for ${providerId}`, 'success');
                 }
                 
                 // Hide modal and refresh data
@@ -792,8 +792,8 @@
                 await this.init();
             } catch (e) {
                 console.error("Save config failed", e);
-                if (window.QCMS && typeof QCMS.toast === 'function') {
-                    QCMS.toast('Failed to save configuration settings', 'error');
+                if (window.OctaQube && typeof OctaQube.toast === 'function') {
+                    OctaQube.toast('Failed to save configuration settings', 'error');
                 } else {
                     alert('Failed to save configuration settings');
                 }
@@ -801,13 +801,13 @@
         },
 
         async testIntegration(providerId) {
-            QCMS.toast(`Testing connection to ${providerId}...`, 'info');
+            OctaQube.toast(`Testing connection to ${providerId}...`, 'info');
             try {
                 const res = await api.post(`/super-admin/integrations/${providerId}/test`, {});
                 if (res.success) {
-                    QCMS.toast(`Connection OK! Latency: ${res.latency_ms}ms`, 'success');
+                    OctaQube.toast(`Connection OK! Latency: ${res.latency_ms}ms`, 'success');
                 } else {
-                    QCMS.toast(`Connection failed: ${res.message}`, 'error');
+                    OctaQube.toast(`Connection failed: ${res.message}`, 'error');
                 }
                 
                 // Refresh modal and view data
@@ -822,7 +822,7 @@
                 statusBadge.className = `ds-badge ${updatedItem.status === 'Connected' ? 'green' : 'red'}`;
             } catch (e) {
                 console.error("Test failed", e);
-                QCMS.toast('Error dispatching test connection request', 'error');
+                OctaQube.toast('Error dispatching test connection request', 'error');
             }
         },
 
@@ -830,7 +830,7 @@
             if (!confirm("Are you sure you want to rotate the webhook secret token?")) return;
             try {
                 const res = await api.post(`/super-admin/integrations/${providerId}/rotate`, {});
-                QCMS.toast("Webhook secret rotated successfully", "success");
+                OctaQube.toast("Webhook secret rotated successfully", "success");
                 
                 // Reload configuration tab
                 await this.loadData();
@@ -838,7 +838,7 @@
                 this.switchModalTab('Config');
             } catch (e) {
                 console.error("Rotate secret failed", e);
-                QCMS.toast('Failed to rotate webhook token secret', 'error');
+                OctaQube.toast('Failed to rotate webhook token secret', 'error');
             }
         },
 
@@ -986,10 +986,10 @@
                         <!-- Documentation reference cards -->
                         <div class="glass-card p-4">
                             <h6 class="fw-bold text-main mb-1">Developer Assets</h6>
-                            <p class="text-xxs text-secondary mb-3">Integrate QCMS platform capabilities into your client applications, build boards, and fetch telemetry logs.</p>
+                            <p class="text-xxs text-secondary mb-3">Integrate OctaQube platform capabilities into your client applications, build boards, and fetch telemetry logs.</p>
                             
                             <div class="d-flex flex-column gap-2.5">
-                                <a href="javascript:void(0)" class="border p-2.5 rounded-3 d-flex align-items-center justify-content-between text-decoration-none hover-bg" style="border-color:var(--ds-border-color); background:rgba(255,255,255,0.01);" onclick="QCMS.toast('Downloaded Swagger API Spec (JSON)','info')">
+                                <a href="javascript:void(0)" class="border p-2.5 rounded-3 d-flex align-items-center justify-content-between text-decoration-none hover-bg" style="border-color:var(--ds-border-color); background:rgba(255,255,255,0.01);" onclick="OctaQube.toast('Downloaded Swagger API Spec (JSON)','info')">
                                     <div class="d-flex align-items-center gap-2">
                                         <i data-lucide="file-json" class="text-primary" style="width:15px; height:15px;"></i>
                                         <div>
@@ -1000,7 +1000,7 @@
                                     <i data-lucide="download" class="text-muted" style="width:13px; height:13px;"></i>
                                 </a>
                                 
-                                <a href="javascript:void(0)" class="border p-2.5 rounded-3 d-flex align-items-center justify-content-between text-decoration-none hover-bg" style="border-color:var(--ds-border-color); background:rgba(255,255,255,0.01);" onclick="QCMS.toast('Downloaded Postman Collection','info')">
+                                <a href="javascript:void(0)" class="border p-2.5 rounded-3 d-flex align-items-center justify-content-between text-decoration-none hover-bg" style="border-color:var(--ds-border-color); background:rgba(255,255,255,0.01);" onclick="OctaQube.toast('Downloaded Postman Collection','info')">
                                     <div class="d-flex align-items-center gap-2">
                                         <i data-lucide="archive" class="text-warning" style="width:15px; height:15px;"></i>
                                         <div>
@@ -1028,7 +1028,7 @@
                     payload = JSON.parse(document.getElementById('play_payload').value);
                 }
             } catch (e) {
-                QCMS.toast('Invalid JSON format in payload body', 'error');
+                OctaQube.toast('Invalid JSON format in payload body', 'error');
                 return;
             }
 
@@ -1055,16 +1055,16 @@
             const name = prompt("Enter a description label for the new API Key:", "REST API integration");
             if (!name) return;
             
-            QCMS.toast("Generating live API token...", "info");
+            OctaQube.toast("Generating live API token...", "info");
             api.post('/super-admin/integrations/apikeys', { name: name })
                 .then(res => {
-                    QCMS.toast("API Key generated successfully!", "success");
+                    OctaQube.toast("API Key generated successfully!", "success");
                     alert(`IMPORTANT: Copy and save this API key securely. It will NOT be shown again:\n\n${res.api_key}`);
                     this.init();
                 })
                 .catch(e => {
                     console.error(e);
-                    QCMS.toast("Failed to generate API key", "error");
+                    OctaQube.toast("Failed to generate API key", "error");
                 });
         },
 
@@ -1072,12 +1072,12 @@
             if (!confirm("Are you sure you want to revoke this API Key? Clients using this token will lose access immediately.")) return;
             api.post(`/super-admin/integrations/apikeys/${keyId}/status`, { status: 'Revoked' })
                 .then(() => {
-                    QCMS.toast("API Key revoked", "success");
+                    OctaQube.toast("API Key revoked", "success");
                     this.init();
                 })
                 .catch(e => {
                     console.error(e);
-                    QCMS.toast("Failed to revoke API key", "error");
+                    OctaQube.toast("Failed to revoke API key", "error");
                 });
         },
 
@@ -1087,15 +1087,15 @@
             const url = prompt("Enter the recipient HTTP url endpoint:");
             if (!url) return;
 
-            QCMS.toast("Registering webhook listener...", "info");
+            OctaQube.toast("Registering webhook listener...", "info");
             api.post('/super-admin/integrations/webhooks', { name: name, url: url })
                 .then(res => {
-                    QCMS.toast("Webhook registered successfully!", "success");
+                    OctaQube.toast("Webhook registered successfully!", "success");
                     this.init();
                 })
                 .catch(e => {
                     console.error(e);
-                    QCMS.toast("Failed to register webhook", "error");
+                    OctaQube.toast("Failed to register webhook", "error");
                 });
         },
 
@@ -1103,12 +1103,12 @@
             if (!confirm("Are you sure you want to delete this Webhook endpoint?")) return;
             api.delete(`/super-admin/integrations/webhooks/${webhookId}`)
                 .then(() => {
-                    QCMS.toast("Webhook deleted successfully", "success");
+                    OctaQube.toast("Webhook deleted successfully", "success");
                     this.init();
                 })
                 .catch(e => {
                     console.error(e);
-                    QCMS.toast("Failed to delete webhook", "error");
+                    OctaQube.toast("Failed to delete webhook", "error");
                 });
         }
     };

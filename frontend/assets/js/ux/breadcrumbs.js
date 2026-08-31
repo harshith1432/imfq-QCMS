@@ -1,5 +1,5 @@
 /**
- * QCMS Breadcrumbs Utility
+ * OctaQube Breadcrumbs Utility
  * Dynamically generates breadcrumbs based on URL path and mapping.
  */
 const Breadcrumbs = {
@@ -48,25 +48,25 @@ const Breadcrumbs = {
                 const roleLower = String(role).toLowerCase();
                 const isSuper = roleLower.includes('super');
                 if (isSuper || window.location.pathname.includes('super-admin')) {
-                    return (u && u.platform_short_name) ? u.platform_short_name.trim() : 'QCMS';
+                    return (u && u.platform_short_name) ? u.platform_short_name.trim() : 'OctaQube';
                 }
-                if (u && u.org_name && u.org_name !== 'QCMS Admin Org' && u.org_name !== 'Platform Admin') {
+                if (u && u.org_name && u.org_name !== 'OctaQube Admin Org' && u.org_name !== 'Platform Admin') {
                     return u.org_name;
                 }
             }
         } catch(e) {}
-        if (window.QCMS && window.QCMS.user) {
-            const u = window.QCMS.user;
+        if (window.OctaQube && window.OctaQube.user) {
+            const u = window.OctaQube.user;
             const role = (u && (u.role || u.role_name)) || '';
             const roleLower = String(role).toLowerCase();
             if (roleLower.includes('super') || window.location.pathname.includes('super-admin')) {
-                return (u.platform_short_name) ? u.platform_short_name.trim() : 'QCMS';
+                return (u.platform_short_name) ? u.platform_short_name.trim() : 'OctaQube';
             }
-            if (u.org_name && u.org_name !== 'QCMS Admin Org' && u.org_name !== 'Platform Admin') {
+            if (u.org_name && u.org_name !== 'OctaQube Admin Org' && u.org_name !== 'Platform Admin') {
                 return u.org_name;
             }
         }
-        return 'QCMS';
+        return 'OctaQube';
     },
 
     getHomeUrl() {
@@ -84,8 +84,8 @@ const Breadcrumbs = {
                 if (roleLower.includes('member')) return '/dashboard/dashboard-team-member.html';
             }
         } catch(e) {}
-        if (window.QCMS && window.QCMS.user) {
-            const u = window.QCMS.user;
+        if (window.OctaQube && window.OctaQube.user) {
+            const u = window.OctaQube.user;
             const role = (u && (u.role || u.role_name)) || '';
             const roleLower = String(role).toLowerCase();
             if (roleLower.includes('super')) return '/admin/super-admin.html';

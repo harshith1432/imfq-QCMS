@@ -134,11 +134,11 @@ def get_stats():
         impact_query = impact_query.filter(~Project.id.in_(approved_impact_ids))
 
     if not is_admin:
+        from sqlalchemy import or_
         if user_dept_id:
-            from sqlalchemy import or_
             impact_query = impact_query.filter(or_(Project.department_id == user_dept_id, Project.reviewer_id == user.id, Project.department_id.is_(None)))
         else:
-            impact_query = impact_query.filter(Project.reviewer_id == user.id)
+            impact_query = impact_query.filter(or_(Project.reviewer_id == user.id, Project.department_id.is_(None)))
     pending_impact = impact_query.count()
 
     # Stage 8 closure projects (SOP created, ready for closure)
@@ -149,10 +149,11 @@ def get_stats():
         Project.status.in_(['Impact Approved', 'SOP Created', 'Pending Closure'])
     )
     if not is_admin:
+        from sqlalchemy import or_
         if user_dept_id:
-            closure_query = closure_query.filter(Project.department_id == user_dept_id)
+            closure_query = closure_query.filter(or_(Project.department_id == user_dept_id, Project.reviewer_id == user.id, Project.department_id.is_(None)))
         else:
-            closure_query = closure_query.filter(Project.reviewer_id == user.id)
+            closure_query = closure_query.filter(or_(Project.reviewer_id == user.id, Project.department_id.is_(None)))
     pending_closure = closure_query.count()
 
     # Average improvement
@@ -163,10 +164,11 @@ def get_stats():
             Stage8Standardization.kpi_improvement_pct > 0
         )
         if not is_admin:
+            from sqlalchemy import or_
             if user_dept_id:
-                impacts_query = impacts_query.filter(Project.department_id == user_dept_id)
+                impacts_query = impacts_query.filter(or_(Project.department_id == user_dept_id, Project.reviewer_id == user.id, Project.department_id.is_(None)))
             else:
-                impacts_query = impacts_query.filter(Project.reviewer_id == user.id)
+                impacts_query = impacts_query.filter(or_(Project.reviewer_id == user.id, Project.department_id.is_(None)))
         impacts = impacts_query.all()
         avg_improvement = 0
         if impacts:
@@ -741,9 +743,6 @@ def get_history():
     
     # Only show review history for THIS reviewer's decisions
     query = ProjectReview.query.filter_by(org_id=user.org_id, reviewer_id=user.id)
-    if user.dept and user.dept.name not in ['All', 'N/A']:
-        query = query.join(Project, ProjectReview.project_id == Project.id).filter(Project.department_id == user.department_id)
-        
     history = query.order_by(ProjectReview.decided_at.desc()).limit(10).all()
     
     result = []
@@ -808,10 +807,11 @@ def get_impact_review():
         user_dept_id = user.department_id
 
     if not is_admin:
+        from sqlalchemy import or_
         if user_dept_id:
-            query = query.filter(Project.department_id == user_dept_id)
+            query = query.filter(or_(Project.department_id == user_dept_id, Project.reviewer_id == user.id, Project.department_id.is_(None)))
         else:
-            query = query.filter(Project.reviewer_id == user.id)
+            query = query.filter(or_(Project.reviewer_id == user.id, Project.department_id.is_(None)))
         
     projects = query.all()
     result = []
@@ -865,18 +865,19 @@ def approve_stage8_submission(project_id):
     user = db.session.get(User, get_jwt_identity())
     project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
 
-    # Enforce department restriction for Reviewer
+    # Enforce department restriction for Reviewer (unless explicitly assigned as reviewer or global department)
     if user.role.name != 'Admin' and user.dept and user.dept.name not in ['All', 'N/A']:
-        if project.department_id != user.department_id:
+        if project.reviewer_id != user.id and project.department_id and project.department_id != user.department_id:
             return jsonify({"msg": "Unauthorized: This project does not belong to your department."}), 403
 
     if project.current_stage != 8:
         return jsonify({"msg": f"Project is not in Stage 8."}), 400
 
-    if project.status != 'Stage 8 Submitted':
-        return jsonify({"msg": f"Project submission not pending approval (current status: '{project.status}')."}), 400
+    if project.status in ('Closed', 'Rejected', 'Stage 1 Rejected'):
+        return jsonify({"msg": f"Project is already {project.status.lower()} and cannot be approved."}), 400
 
-    project.status = 'Stage 8 Approved'
+    if project.status != 'Impact Approved':
+        project.status = 'Stage 8 Approved'
     tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=8).first()
     if tracker:
         tracker.status = 'Approved'
@@ -908,9 +909,9 @@ def add_post_data(project_id):
 
     project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
 
-    # Enforce department restriction for Reviewer
+    # Enforce department restriction for Reviewer (unless explicitly assigned as reviewer or global department)
     if user.role.name != 'Admin' and user.dept and user.dept.name not in ['All', 'N/A']:
-        if project.department_id != user.department_id:
+        if project.reviewer_id != user.id and project.department_id and project.department_id != user.department_id:
             return jsonify({"msg": "Unauthorized: This project does not belong to your department."}), 403
     if project.current_stage != 8:
         return jsonify({"msg": "Project is not in Stage 8"}), 400
@@ -995,10 +996,11 @@ def get_closure_projects():
         user_dept_id = user.department_id
 
     if not is_admin:
+        from sqlalchemy import or_
         if user_dept_id:
-            query = query.filter(Project.department_id == user_dept_id)
+            query = query.filter(or_(Project.department_id == user_dept_id, Project.reviewer_id == user.id, Project.department_id.is_(None)))
         else:
-            query = query.filter(Project.reviewer_id == user.id)
+            query = query.filter(or_(Project.reviewer_id == user.id, Project.department_id.is_(None)))
         
     projects = query.all()
     result = []
@@ -1048,9 +1050,9 @@ def complete_closure(project_id):
 
     project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
 
-    # Enforce department restriction for Reviewer
+    # Enforce department restriction for Reviewer (unless explicitly assigned as reviewer or global department)
     if user.role.name != 'Admin' and user.dept and user.dept.name not in ['All', 'N/A']:
-        if project.department_id != user.department_id:
+        if project.reviewer_id != user.id and project.department_id and project.department_id != user.department_id:
             return jsonify({"msg": "Unauthorized: This project does not belong to your department."}), 403
     if project.current_stage != 8:
         return jsonify({"msg": "Project is not in Stage 8"}), 400

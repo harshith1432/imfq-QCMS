@@ -660,7 +660,7 @@ const Stage8 = {
         if (window.lucide) lucide.createIcons();
 
         // Restrict Section 5 (Benefits Summary / Impact Review) to Facilitator & Admin only
-        const user = QCMS.user || JSON.parse(sessionStorage.getItem('user') || '{}');
+        const user = OctaQube.user || JSON.parse(sessionStorage.getItem('user') || '{}');
         const role = user.role ? (user.role.name || user.role) : 'Team Member';
         const roleNormalized = role.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
         if (roleNormalized !== 'teammember') {
@@ -679,12 +679,12 @@ const Stage8 = {
             const types = res.types || [];
 
             if (selCat && categories.length) {
-                selCat.innerHTML = categories.map(c => `<option value="${QCMS.escapeHtml(c.name)}">${QCMS.escapeHtml(c.name)}</option>`).join('');
+                selCat.innerHTML = categories.map(c => `<option value="${OctaQube.escapeHtml(c.name)}">${OctaQube.escapeHtml(c.name)}</option>`).join('');
                 if (savedCategory) selCat.value = savedCategory;
             }
 
             if (selType && types.length) {
-                selType.innerHTML = types.map(t => `<option value="${QCMS.escapeHtml(t.name)}">${QCMS.escapeHtml(t.name)}</option>`).join('');
+                selType.innerHTML = types.map(t => `<option value="${OctaQube.escapeHtml(t.name)}">${OctaQube.escapeHtml(t.name)}</option>`).join('');
                 if (savedType) selType.value = savedType;
             }
         } catch (e) {
@@ -790,7 +790,7 @@ const Stage8 = {
             stepsContainer.innerHTML = '';
             this.addSopStepRow();
         }
-        const user = QCMS.user || JSON.parse(sessionStorage.getItem('user') || '{}');
+        const user = OctaQube.user || JSON.parse(sessionStorage.getItem('user') || '{}');
         const role = user.role ? (user.role.name || user.role) : 'Team Member';
         const roleNormalized = role.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
         if (roleNormalized !== 'teammember') {
@@ -812,7 +812,7 @@ const Stage8 = {
         const instructions = cleanVal(d.instructions || d.instruction || d.desc || d.description);
         const safetyNotes = cleanVal(d.safety_notes || d.safety);
         const qualityCheckpoints = cleanVal(d.quality_checkpoints || d.quality);
-        const esc = (s) => (window.QCMS && QCMS.escapeHtml) ? QCMS.escapeHtml(String(s)) : String(s).replace(/"/g, '&quot;');
+        const esc = (s) => (window.OctaQube && OctaQube.escapeHtml) ? OctaQube.escapeHtml(String(s)) : String(s).replace(/"/g, '&quot;');
 
         r.innerHTML = `
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -1037,8 +1037,8 @@ const Stage8 = {
 
             if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
                 console.error("Bootstrap Modal library not loaded");
-                if (window.QCMS && QCMS.toast) {
-                    QCMS.toast("Bootstrap modal library is not loaded.", "error");
+                if (window.OctaQube && OctaQube.toast) {
+                    OctaQube.toast("Bootstrap modal library is not loaded.", "error");
                 } else {
                     alert("Bootstrap modal library is not loaded.");
                 }
@@ -1053,8 +1053,8 @@ const Stage8 = {
             if (window.lucide) lucide.createIcons();
         } catch (err) {
             console.error('Error in previewSop:', err);
-            if (window.QCMS && QCMS.toast) {
-                QCMS.toast("Error opening SOP preview: " + err.message, "error");
+            if (window.OctaQube && OctaQube.toast) {
+                OctaQube.toast("Error opening SOP preview: " + err.message, "error");
             } else {
                 alert("Error opening SOP preview: " + err.message);
             }
@@ -1325,7 +1325,7 @@ const Stage8 = {
         if (file.size > MAX_SIZE_BYTES) {
             const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
             const msg = `File size exceeds 2MB limit (Selected: ${sizeMB} MB). Please upload a document up to 2MB.`;
-            if (window.QCMS && QCMS.toast) QCMS.toast(msg, "warning");
+            if (window.OctaQube && OctaQube.toast) OctaQube.toast(msg, "warning");
             else alert(msg);
             inputEl.value = '';
             return;
@@ -1348,8 +1348,8 @@ const Stage8 = {
                     viewLink.href = fullUrl;
                     viewLink.classList.remove('d-none');
                 }
-                if (window.QCMS && QCMS.toast) {
-                    QCMS.toast("Annexure / SOP uploaded successfully (Under 2MB limit)", "success");
+                if (window.OctaQube && OctaQube.toast) {
+                    OctaQube.toast("Annexure / SOP uploaded successfully (Under 2MB limit)", "success");
                 }
             } else {
                 throw new Error("Invalid response from server");
@@ -1357,8 +1357,8 @@ const Stage8 = {
         } catch (err) {
             console.error("Upload error:", err);
             attachInput.value = originalVal;
-            if (window.QCMS && QCMS.toast) {
-                QCMS.toast("Upload failed: " + (err.message || 'File upload error'), "error");
+            if (window.OctaQube && OctaQube.toast) {
+                OctaQube.toast("Upload failed: " + (err.message || 'File upload error'), "error");
             } else {
                 alert("Upload failed: " + (err.message || 'File upload error'));
             }
@@ -1377,8 +1377,8 @@ const Stage8 = {
         if (file.size > MAX_SIZE_BYTES) {
             const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
             const msg = `File size exceeds 2MB limit (Selected: ${sizeMB} MB). Please upload a document up to 2MB.`;
-            if (window.QCMS && QCMS.toast) {
-                QCMS.toast(msg, "warning");
+            if (window.OctaQube && OctaQube.toast) {
+                OctaQube.toast(msg, "warning");
             } else {
                 alert(msg);
             }
@@ -1400,8 +1400,8 @@ const Stage8 = {
             const res = await api.uploadFile('/sop/upload', file);
             if (res && res.url) {
                 docInput.value = window.location.origin + res.url;
-                if (window.QCMS && QCMS.toast) {
-                    QCMS.toast("File uploaded successfully (Under 2MB limit)", "success");
+                if (window.OctaQube && OctaQube.toast) {
+                    OctaQube.toast("File uploaded successfully (Under 2MB limit)", "success");
                 }
             } else {
                 throw new Error("Invalid response from server");
@@ -1409,8 +1409,8 @@ const Stage8 = {
         } catch (err) {
             console.error("Upload error:", err);
             docInput.value = originalVal;
-            if (window.QCMS && QCMS.toast) {
-                QCMS.toast("Upload failed: " + (err.message || 'File upload error'), "error");
+            if (window.OctaQube && OctaQube.toast) {
+                OctaQube.toast("Upload failed: " + (err.message || 'File upload error'), "error");
             } else {
                 alert("Upload failed: " + (err.message || 'File upload error'));
             }
@@ -1572,17 +1572,17 @@ const Stage8 = {
         teamList.forEach(item => {
             const isSelected = (savedMember === item.name || savedMember === item.label) ? 'selected' : '';
             if (isSelected) foundSaved = true;
-            optionsHtml += `<option value="${QCMS.escapeHtml(item.name)}" ${isSelected}>${QCMS.escapeHtml(item.label)}</option>`;
+            optionsHtml += `<option value="${OctaQube.escapeHtml(item.name)}" ${isSelected}>${OctaQube.escapeHtml(item.label)}</option>`;
         });
 
         if (savedMember && !foundSaved) {
-            optionsHtml += `<option value="${QCMS.escapeHtml(savedMember)}" selected>${QCMS.escapeHtml(savedMember)}</option>`;
+            optionsHtml += `<option value="${OctaQube.escapeHtml(savedMember)}" selected>${OctaQube.escapeHtml(savedMember)}</option>`;
         }
 
         const awardBadge = d.award ? `
             <div class="mt-1 d-flex align-items-center gap-1">
                 <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem; padding: 2px 6px;">
-                    <i data-lucide="award" style="width:11px;height:11px;vertical-align:text-bottom;"></i> Award Granted by Reviewer: <strong>${QCMS.escapeHtml(d.award)}</strong>
+                    <i data-lucide="award" style="width:11px;height:11px;vertical-align:text-bottom;"></i> Award Granted by Reviewer: <strong>${OctaQube.escapeHtml(d.award)}</strong>
                 </span>
             </div>` : '';
 

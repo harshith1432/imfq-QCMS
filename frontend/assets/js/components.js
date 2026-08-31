@@ -1,11 +1,11 @@
 /**
- * QCMS Enterprise - Shared UI Components
+ * OctaQube Enterprise - Shared UI Components
  * v1.0 - Handle sidebars, navbars, and role-based UI logic.
  */
 
 // Auto-load FeatureEngine client and module map if not already present
 (function loadFeatureEngine() {
-    if (!window.QCMS_MODULE_MAP) {
+    if (!window.OctaQube_MODULE_MAP && !window.QCMS_MODULE_MAP) {
         const s1 = document.createElement('script');
         s1.src = '/assets/js/module-map.js';
         document.head.appendChild(s1);
@@ -77,14 +77,14 @@ window.ensureTableDataLabels = function(targetContainer) {
 document.addEventListener('DOMContentLoaded', () => {
     window.ensureRedAsterisksOnLabels();
     window.ensureTableDataLabels();
-    if (window.QCMS && typeof window.QCMS.setActiveLink === 'function') {
-        window.QCMS.setActiveLink();
+    if (window.OctaQube && typeof window.OctaQube.setActiveLink === 'function') {
+        window.OctaQube.setActiveLink();
     }
     setInterval(() => {
         window.ensureRedAsterisksOnLabels();
         window.ensureTableDataLabels();
-        if (window.QCMS && typeof window.QCMS.setActiveLink === 'function') {
-            window.QCMS.setActiveLink();
+        if (window.OctaQube && typeof window.OctaQube.setActiveLink === 'function') {
+            window.OctaQube.setActiveLink();
         }
     }, 1500);
 });
@@ -127,19 +127,19 @@ class ThemeManager {
             if (userStr) {
                 const u = JSON.parse(userStr);
                 const uid = u.id || u.user_id;
-                if (uid) return `qcms-theme-user-${uid}`;
+                if (uid) return `octaqube-theme-user-${uid}`;
                 const role = (u.role && typeof u.role === 'object') ? u.role.name : u.role;
-                if (role) return `qcms-theme-role-${String(role).toLowerCase().replace(/\s+/g, '_')}`;
+                if (role) return `octaqube-theme-role-${String(role).toLowerCase().replace(/\s+/g, '_')}`;
             }
         } catch(e) {}
-        return 'qcms-theme';
+        return 'octaqube-theme';
     }
 
     getSavedTheme() {
         const userKey = this.getStorageKey();
-        const userSaved = localStorage.getItem(userKey);
+        const userSaved = localStorage.getItem(userKey) || localStorage.getItem(userKey.replace('octaqube-', 'qcms-'));
         if (userSaved) return userSaved;
-        return 'light';
+        return localStorage.getItem('octaqube-theme') || localStorage.getItem('qcms-theme') || 'light';
     }
 
     init() {
@@ -191,6 +191,7 @@ class ThemeManager {
         });
 
         // Dispatch event
+        window.dispatchEvent(new CustomEvent('octaqube-theme-change', { detail: { theme } }));
         window.dispatchEvent(new CustomEvent('qcms-theme-change', { detail: { theme } }));
 
         // Dynamic favicon or meta updates could go here
@@ -211,7 +212,7 @@ class ThemeManager {
 
         let brandConfig = {};
         try {
-            brandConfig = JSON.parse(localStorage.getItem('qcms_branding_config') || '{}');
+            brandConfig = JSON.parse(localStorage.getItem('octaqube_branding_config') || '{}');
         } catch (e) {}
 
         const activeMode = theme || this.theme || 'light';
@@ -293,7 +294,7 @@ window.themeManager = new ThemeManager();
 /**
  * UI Utilities & Core Logic
  */
-const QCMS = {
+const OctaQube = {
     user: null,
     perms: {
         'SuperAdmin': { canCreate: true, canValidate: true, canApprove: true, isAdmin: true, isSuperAdmin: true },
@@ -453,7 +454,7 @@ const QCMS = {
 
         // If this is a public landing or auth page, never render authenticated shell elements
         if (this.isPublicOrAuthPage()) {
-            const nav = document.getElementById('qcms-mobile-bottom-nav');
+            const nav = document.getElementById('octaqube-mobile-bottom-nav');
             if (nav) nav.remove();
             const sidebar = document.getElementById('app-sidebar');
             if (sidebar) sidebar.remove();
@@ -497,8 +498,8 @@ const QCMS = {
                 id: 'active_session',
                 full_name: 'Enterprise User',
                 role: fallbackRole,
-                org_name: 'QCMS Enterprise',
-                email: 'user@qcms.io'
+                org_name: 'OctaQube Enterprise',
+                email: 'user@octaqube.io'
             };
         }
 
@@ -592,7 +593,7 @@ const QCMS = {
         }
 
         // Listen for theme changes to re-render
-        window.addEventListener('qcms-theme-change', () => {
+        window.addEventListener('octaqube-theme-change', () => {
             if (this.user) {
                 this.renderNavbar();
                 this.renderMobileBottomNav();
@@ -600,7 +601,7 @@ const QCMS = {
         });
 
         // Listen for language changes to re-render
-        window.addEventListener('qcms-language-change', () => {
+        window.addEventListener('octaqube-language-change', () => {
             if (this.user) {
                 this.renderSidebar();
                 this.renderNavbar();
@@ -634,7 +635,7 @@ const QCMS = {
         banner.innerHTML = `
             <div class="d-flex align-items-center gap-2">
                 <span>⚠️ Impersonating Administrator Context (${this.user ? this.user.org_name : 'Tenant'})</span>
-                <button onclick="QCMS.exitImpersonation()" class="btn btn-sm btn-light py-0 px-2 fw-bold text-xs" style="color:rgb(var(--ds-orange-rgb)); border-radius: 4px; border:none; height:24px; line-height:1;">
+                <button onclick="OctaQube.exitImpersonation()" class="btn btn-sm btn-light py-0 px-2 fw-bold text-xs" style="color:rgb(var(--ds-orange-rgb)); border-radius: 4px; border:none; height:24px; line-height:1;">
                     Return to Super Admin
                 </button>
             </div>
@@ -652,12 +653,21 @@ const QCMS = {
     async checkProfileCompletion() {
         try {
             if (!this.user) return;
-            const roleName = (this.user.role && this.user.role.name) ? this.user.role.name : (this.user.role || '');
-            const isOrgAdmin = ['Admin', 'CEO', 'SuperAdmin', 'Owner', 'Organization Admin'].includes(roleName) || this.user.is_super_admin;
-            if (!isOrgAdmin) return;
+            const roleName = this.normalizeRole(this.user.role?.name || this.user.role || this.user.role_name);
+            // Strictly only Organization Administrators should see and act on organization profile completion
+            const isOrgAdmin = (roleName === 'Admin') && !this.user.is_super_admin;
+            if (!isOrgAdmin) {
+                const existing = document.getElementById('org-profile-completion-banner');
+                if (existing) existing.remove();
+                return;
+            }
 
             // Skip on login page or super-admin portal
-            if (window.location.pathname.includes('login.html') || window.location.pathname.includes('super-admin.html')) return;
+            if (window.location.pathname.includes('login.html') || window.location.pathname.includes('super-admin.html')) {
+                const existing = document.getElementById('org-profile-completion-banner');
+                if (existing) existing.remove();
+                return;
+            }
 
             const res = await api.get('/admin/org-settings');
             if (!res) return;
@@ -716,6 +726,15 @@ const QCMS = {
     },
 
     renderProfileCompletionBanner(comp) {
+        if (!this.user) return;
+        const roleName = this.normalizeRole(this.user.role?.name || this.user.role || this.user.role_name);
+        const isOrgAdmin = (roleName === 'Admin') && !this.user.is_super_admin;
+        if (!isOrgAdmin) {
+            const existing = document.getElementById('org-profile-completion-banner');
+            if (existing) existing.remove();
+            return;
+        }
+
         if (document.getElementById('org-profile-completion-banner')) {
             const pctEl = document.getElementById('opc-completed-pct');
             if (pctEl) pctEl.innerText = `${comp.completed_pct}%`;
@@ -821,7 +840,7 @@ const QCMS = {
             }
         } catch (e) {
             // Silently fail — branding sync is best-effort
-            console.debug('[QCMS] Branding sync skipped:', e.message);
+            console.debug('[OctaQube] Branding sync skipped:', e.message);
         }
     },
 
@@ -876,29 +895,29 @@ const QCMS = {
         if (faviconUrl) {
             link.href = faviconUrl;
         } else {
-            // Default QCMS Shield Favicon
+            // Default OctaQube Shield Favicon
             link.href = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%230f172a" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>';
         }
 
         // Update sidebar logo if it's already rendered
         const sidebarBrand = document.querySelector('.sidebar-brand');
-        const orgName = (this.user && this.user.org_name) ? this.user.org_name : 'QCMS';
+        const orgName = (this.user && this.user.org_name) ? this.user.org_name : 'OctaQube';
         if (sidebarBrand) {
             if (logoUrl && logoUrl !== 'null' && logoUrl !== 'None') {
                 let img = sidebarBrand.querySelector('img');
                 if (!img) {
                     sidebarBrand.innerHTML = `<img src="${logoUrl}" alt="Logo" style="width: 32px; height: 32px; object-fit: contain; border-radius: 8px;">
-                                              <div class="brand-text">${QCMS.escapeHtml(orgName)} <small style="color:var(--ds-accent); opacity:1;">Workspace</small></div>`;
+                                              <div class="brand-text">${OctaQube.escapeHtml(orgName)} <small style="color:var(--ds-accent); opacity:1;">Workspace</small></div>`;
                 } else {
                     img.src = logoUrl;
                     const bt = sidebarBrand.querySelector('.brand-text');
-                    if (bt) bt.innerHTML = `${QCMS.escapeHtml(orgName)} <small style="color:var(--ds-accent); opacity:1;">Workspace</small>`;
+                    if (bt) bt.innerHTML = `${OctaQube.escapeHtml(orgName)} <small style="color:var(--ds-accent); opacity:1;">Workspace</small>`;
                 }
             } else {
                 sidebarBrand.innerHTML = `<div class="brand-icon" style="background: var(--ds-accent);">
                                             <i data-lucide="shield-check" style="color:white;"></i>
                                           </div>
-                                          <div class="brand-text">${QCMS.escapeHtml(orgName)} <small style="color:var(--ds-accent); opacity:1;">Enterprise OS</small></div>`;
+                                          <div class="brand-text">${OctaQube.escapeHtml(orgName)} <small style="color:var(--ds-accent); opacity:1;">Enterprise OS</small></div>`;
                 if (window.lucide) lucide.createIcons();
             }
         }
@@ -934,7 +953,7 @@ const QCMS = {
         if (this.user && !this.isPublicOrAuthPage()) {
             this.renderMobileBottomNav();
         } else {
-            const nav = document.getElementById('qcms-mobile-bottom-nav');
+            const nav = document.getElementById('octaqube-mobile-bottom-nav');
             if (nav) nav.remove();
         }
         if (window.ensureTableDataLabels) {
@@ -944,12 +963,12 @@ const QCMS = {
 
     renderMobileBottomNav() {
         if (!this.user || this.isPublicOrAuthPage()) {
-            const existingNav = document.getElementById('qcms-mobile-bottom-nav');
+            const existingNav = document.getElementById('octaqube-mobile-bottom-nav');
             if (existingNav) existingNav.remove();
             return;
         }
 
-        let nav = document.getElementById('qcms-mobile-bottom-nav');
+        let nav = document.getElementById('octaqube-mobile-bottom-nav');
         if (window.innerWidth > 768) {
             if (nav) nav.remove();
             return;
@@ -1285,7 +1304,7 @@ const QCMS = {
 
         if (!nav) {
             nav = document.createElement('nav');
-            nav.id = 'qcms-mobile-bottom-nav';
+            nav.id = 'octaqube-mobile-bottom-nav';
             nav.className = 'app-bottom-nav';
             document.body.appendChild(nav);
         }
@@ -1303,7 +1322,7 @@ const QCMS = {
         }
 
         // Check saved desktop state
-        if (localStorage.getItem('qcms-sidebar-collapsed') === 'true') {
+        if (localStorage.getItem('octaqube-sidebar-collapsed') === 'true') {
             document.body.classList.add('sidebar-collapsed');
         }
 
@@ -1404,7 +1423,7 @@ const QCMS = {
             document.body.classList.toggle('sidebar-mobile-open', willOpen);
         } else {
             document.body.classList.toggle('sidebar-collapsed');
-            localStorage.setItem('qcms-sidebar-collapsed', document.body.classList.contains('sidebar-collapsed'));
+            localStorage.setItem('octaqube-sidebar-collapsed', document.body.classList.contains('sidebar-collapsed'));
             setTimeout(() => window.dispatchEvent(new Event('resize')), 350);
         }
     },
@@ -1533,7 +1552,7 @@ const QCMS = {
                 src = src.startsWith('/') ? src : '/' + src;
             }
             return `<div class="avatar-container" style="width:${size}px; height:${size}px; min-width:${size}px; min-height:${size}px; max-width:${size}px; max-height:${size}px; border-radius:50%; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; background:${bgColor}; flex-shrink:0; position:relative;">
-                <img src="${src}" alt="${QCMS.escapeHtml(name)}" style="width:100%; height:100%; object-fit:cover; display:block; border-radius:50%;" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                <img src="${src}" alt="${OctaQube.escapeHtml(name)}" style="width:100%; height:100%; object-fit:cover; display:block; border-radius:50%;" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
                 <div class="avatar-initials" style="width:100%; height:100%; display:none; align-items:center; justify-content:center; background:${bgColor}; color:#ffffff; font-weight:700; font-size:${Math.round(size/2.4)}px; border-radius:50%;">
                     ${initials}
                 </div>
@@ -1658,7 +1677,7 @@ const QCMS = {
             <div class="container-fluid d-flex align-items-center justify-content-between h-100 px-2 px-md-4">
                 <div class="d-flex align-items-center">
                     <!-- Sidebar Toggle -->
-                    <button class="ds-btn ds-btn-ghost p-1 me-2" id="sidebar-toggle-btn" onclick="QCMS.toggleSidebar(event)" style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: #FFFFFF !important;" title="Toggle Navigation Sidebar">
+                    <button class="ds-btn ds-btn-ghost p-1 me-2" id="sidebar-toggle-btn" onclick="OctaQube.toggleSidebar(event)" style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: #FFFFFF !important;" title="Toggle Navigation Sidebar">
                         <i data-lucide="menu" style="width: 22px; height: 22px; color: #FFFFFF !important;"></i>
                     </button>
 
@@ -1737,7 +1756,7 @@ const QCMS = {
                 searchInput.value = ''; // Force clear browser autofill
                 setTimeout(() => { searchInput.value = ''; }, 500); // Clear again for slower autofills
                 searchInput.addEventListener('input', (e) => {
-                    window.dispatchEvent(new CustomEvent('qcms-global-search', { detail: { query: e.target.value } }));
+                    window.dispatchEvent(new CustomEvent('octaqube-global-search', { detail: { query: e.target.value } }));
                 });
                 document.addEventListener('keydown', (e) => {
                     if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
@@ -1748,7 +1767,7 @@ const QCMS = {
             }
         }, 100);
 
-        QCMS.refreshIcons();
+        OctaQube.refreshIcons();
         if (window.Breadcrumbs) {
             window.Breadcrumbs.init('nav-breadcrumb-container');
         } else {
@@ -1783,8 +1802,8 @@ const QCMS = {
         const isSuperAdmin = (user.role === 'SuperAdmin' || user.role === 'Super Admin');
 
         const shortName = isSuperAdmin
-            ? (user.platform_short_name || user.software_name || user.software_display_name || 'QCMS')
-            : (user.org_name || user.platform_short_name || 'QCMS');
+            ? (user.platform_short_name || user.software_name || user.software_display_name || 'OctaQube')
+            : (user.org_name || user.platform_short_name || 'OctaQube');
 
         const displaySub = isSuperAdmin
             ? (user.platform_subtitle || 'ENTERPRISE OS')
@@ -1800,7 +1819,7 @@ const QCMS = {
                 <i data-lucide="${isSuperAdmin ? 'shield-check' : 'building-2'}" style="color:white;"></i>
             </div>
         `;
-        let brandNameHtml = `${QCMS.escapeHtml(shortName)} <small style="color:var(--ds-accent); opacity:1;">${QCMS.escapeHtml(displaySub)}</small>`;
+        let brandNameHtml = `${OctaQube.escapeHtml(shortName)} <small style="color:var(--ds-accent); opacity:1;">${OctaQube.escapeHtml(displaySub)}</small>`;
 
         if (logoUrl && logoUrl !== 'null' && logoUrl !== 'None' && !logoUrl.includes('/assets/img/logo.png')) {
             logoIconHtml = `<img src="${logoUrl}" alt="Logo" style="width: 32px; height: 32px; object-fit: contain; border-radius: 8px;">`;
@@ -1893,7 +1912,7 @@ const QCMS = {
             footerHtml = `
                 <div class="sidebar-footer">
                     <nav class="sidebar-nav">
-                        <a href="#" class="sidebar-link sa-compact-link text-danger" onclick="QCMS.logout()">
+                        <a href="#" class="sidebar-link sa-compact-link text-danger" onclick="OctaQube.logout()">
                             <i class="link-icon" data-lucide="log-out"></i>
                             <span data-i18n="sidebar.links.logout">Logout</span>
                         </a>
@@ -2002,7 +2021,7 @@ const QCMS = {
                 <div class="sidebar-footer">
                     <nav class="sidebar-nav">
                         ${canSettings ? `<a href="/admin/settings.html" class="sidebar-link"><i class="link-icon" data-lucide="settings"></i><span data-i18n="sidebar.links.settings">Settings</span></a>` : ''}
-                        <a href="#" class="sidebar-link text-danger" onclick="QCMS.logout()">
+                        <a href="#" class="sidebar-link text-danger" onclick="OctaQube.logout()">
                             <i class="link-icon" data-lucide="log-out"></i>
                             <span data-i18n="sidebar.links.logout">Logout</span>
                         </a>
@@ -2012,7 +2031,7 @@ const QCMS = {
         }
 
         sidebar.innerHTML = `${brandHtml}<div class="sidebar-body">${sectionsHtml}</div>${footerHtml}`;
-        QCMS.refreshIcons();
+        OctaQube.refreshIcons();
         this.setActiveLink();
         if (window.i18n) window.i18n.translatePage();
         if (window.FeatureEngine) {
@@ -2082,7 +2101,7 @@ const QCMS = {
         } catch (_) {}
         try {
             sessionStorage.clear();
-            localStorage.removeItem('qcms_authenticated');
+            localStorage.removeItem('octaqube_authenticated');
             localStorage.removeItem('token');
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
@@ -2174,7 +2193,7 @@ const QCMS = {
             color = 'gray';
         }
 
-        const safeText = QCMS.escapeHtml ? QCMS.escapeHtml(r) : r;
+        const safeText = OctaQube.escapeHtml ? OctaQube.escapeHtml(r) : r;
         return `<span class="ds-badge ${color}">${safeText}</span>`;
     },
 
@@ -2404,8 +2423,8 @@ const QCMS = {
                             <button type="button" class="quick-question-btn p-2 rounded-2" data-prompt="What is the overall progress and completion status of our quality projects?">
                                 📊 Overall project status &amp; completion progress
                             </button>
-                            <button type="button" class="quick-question-btn p-2 rounded-2" data-prompt="How do I start and execute an 8-Stage QCMS project?">
-                                🛠️ How to start an 8-Stage QCMS project
+                            <button type="button" class="quick-question-btn p-2 rounded-2" data-prompt="How do I start and execute an 8-Stage OctaQube project?">
+                                🛠️ How to start an 8-Stage OctaQube project
                             </button>
                             <button type="button" class="quick-question-btn p-2 rounded-2" data-prompt="Which plant location has the highest quality performance and savings?">
                                 🏭 Plant quality performance &amp; top savings
@@ -2816,7 +2835,7 @@ const QCMS = {
                                                             ${c.attachments.map(a => `
                                                                 <a href="${a.file_path}" target="_blank" download class="badge text-decoration-none d-inline-flex align-items-center gap-1" style="background: rgba(255,255,255,0.08); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.15); padding: 3px 6px; font-size: 10px;">
                                                                     <i data-lucide="paperclip" style="width:10px;height:10px;"></i>
-                                                                    <span class="text-truncate" style="max-width: 130px;">${QCMS.escapeHtml(a.file_name)}</span>
+                                                                    <span class="text-truncate" style="max-width: 130px;">${OctaQube.escapeHtml(a.file_name)}</span>
                                                                 </a>
                                                             `).join('')}
                                                         </div>
@@ -2826,12 +2845,12 @@ const QCMS = {
                                                         <div class="p-2 rounded" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); border-left: 3px solid ${isSupport ? '#4f8ef7' : '#94a3b8'};">
                                                             <div class="d-flex justify-content-between align-items-center mb-1">
                                                                 <div class="d-flex align-items-center gap-1">
-                                                                    <span class="text-xs fw-bold text-white">${QCMS.escapeHtml(c.user)}</span>
+                                                                    <span class="text-xs fw-bold text-white">${OctaQube.escapeHtml(c.user)}</span>
                                                                     <span class="badge py-0 px-1 text-xxs" style="${badgeBg}">${isSupport ? 'Support' : 'You'}</span>
                                                                 </div>
                                                                 <span class="text-xxs text-secondary">${c.created_at ? new Date(c.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : ''}</span>
                                                             </div>
-                                                            <div class="text-xs" style="white-space: pre-wrap; word-break: break-word; color: #cbd5e1!important;">${QCMS.escapeHtml(c.content)}</div>
+                                                            <div class="text-xs" style="white-space: pre-wrap; word-break: break-word; color: #cbd5e1!important;">${OctaQube.escapeHtml(c.content)}</div>
                                                             ${attHtml}
                                                         </div>
                                                     `;
@@ -2851,7 +2870,7 @@ const QCMS = {
                                                 <i data-lucide="${t.status.toLowerCase() === 'rejected' ? 'x-circle' : 'check-circle'}" style="width:13px;height:13px;"></i>
                                                 <span>Resolution Summary:</span>
                                             </div>
-                                            <div class="text-xs" style="white-space: pre-wrap; word-break: break-word;">${QCMS.escapeHtml(t.resolution)}</div>
+                                            <div class="text-xs" style="white-space: pre-wrap; word-break: break-word;">${OctaQube.escapeHtml(t.resolution)}</div>
                                         </div>
                                     `;
                                 } else if (isClosedOrResolved && !hasComments) {
@@ -2872,11 +2891,11 @@ const QCMS = {
                                             <span class="text-xs font-monospace text-secondary">#TKT-${t.id}</span>
                                             ${badgeHtml}
                                         </div>
-                                        <div class="fw-bold text-white text-sm mb-1">${QCMS.escapeHtml(t.subject)}</div>
-                                        <div class="text-xs text-secondary mb-2">${createdDate} &bull; ${QCMS.escapeHtml(t.category)} &bull; ${QCMS.escapeHtml(t.priority)} Priority</div>
+                                        <div class="fw-bold text-white text-sm mb-1">${OctaQube.escapeHtml(t.subject)}</div>
+                                        <div class="text-xs text-secondary mb-2">${createdDate} &bull; ${OctaQube.escapeHtml(t.category)} &bull; ${OctaQube.escapeHtml(t.priority)} Priority</div>
                                         <div class="p-2 rounded mb-2" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
                                             <div class="text-xxs text-secondary mb-1 text-uppercase fw-bold" style="letter-spacing:.04em;">Your Message:</div>
-                                            <div class="text-xs text-muted" style="white-space: pre-wrap; word-break: break-word;">${QCMS.escapeHtml(t.message)}</div>
+                                            <div class="text-xs text-muted" style="white-space: pre-wrap; word-break: break-word;">${OctaQube.escapeHtml(t.message)}</div>
                                         </div>
                                         ${repliesHtml}
                                         ${resolutionHtml}
@@ -3039,7 +3058,7 @@ const QCMS = {
         modalEl.className = 'modal fade show';
         modalEl.style.cssText = 'display:block; background:rgba(0,0,0,0.55); z-index:20500; backdrop-filter:blur(4px);';
 
-        const createdDateStr = notif.created_at ? `${new Date(notif.created_at).toLocaleString()} (${QCMS.formatRelative(notif.created_at)})` : 'Just now';
+        const createdDateStr = notif.created_at ? `${new Date(notif.created_at).toLocaleString()} (${OctaQube.formatRelative(notif.created_at)})` : 'Just now';
 
         const titleLower = (notif.title || '').toLowerCase();
         const msgLower = (notif.message || '').toLowerCase();
@@ -3057,7 +3076,7 @@ const QCMS = {
             actionButtonHtml = `
                 <div class="p-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-3 mb-3">
                     <div class="text-xs text-secondary mb-2 fw-bold"><i data-lucide="receipt" class="me-1"></i> Outstanding Pay-As-You-Go Bill Action</div>
-                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm w-100 py-2 fw-bold text-white shadow-sm" onclick="QCMS.handlePaygBillNotifClick()">
+                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm w-100 py-2 fw-bold text-white shadow-sm" onclick="OctaQube.handlePaygBillNotifClick()">
                         <i data-lucide="credit-card" class="me-1.5"></i> Pay Invoice Now & View Usage Breakdown
                     </button>
                 </div>
@@ -3067,7 +3086,7 @@ const QCMS = {
                 actionButtonHtml = `
                     <div class="p-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-3 mb-3">
                         <div class="text-xs text-secondary mb-2 fw-bold">Offline Payment Review Action</div>
-                        <button type="button" class="ds-btn ds-btn-primary ds-btn-sm w-100 py-2" onclick="QCMS.handleOfflinePaymentNotifClick('${utrMatch || ''}')">
+                        <button type="button" class="ds-btn ds-btn-primary ds-btn-sm w-100 py-2" onclick="OctaQube.handleOfflinePaymentNotifClick('${utrMatch || ''}')">
                             <i data-lucide="shield-check" class="me-1"></i> View Receipt Image, UTR & Activate Plan
                         </button>
                     </div>
@@ -3093,7 +3112,7 @@ const QCMS = {
                                 <i data-lucide="${notif.is_announcement ? 'megaphone' : 'bell'}" style="width:20px;height:20px;"></i>
                             </div>
                             <div>
-                                <h6 class="modal-title fw-bold mb-0" style="color:var(--ds-text-main); font-size:16px;">${QCMS.escapeHtml(notif.title || (notif.is_announcement ? 'Announcement' : 'Notification Details'))}</h6>
+                                <h6 class="modal-title fw-bold mb-0" style="color:var(--ds-text-main); font-size:16px;">${OctaQube.escapeHtml(notif.title || (notif.is_announcement ? 'Announcement' : 'Notification Details'))}</h6>
                                 <span class="text-xxs text-secondary">${createdDateStr}</span>
                             </div>
                         </div>
@@ -3116,7 +3135,7 @@ const QCMS = {
                             ${notif.is_starred ? `<span class="badge bg-warning bg-opacity-15 text-warning border border-warning border-opacity-25" style="font-size:11px;">★ Saved</span>` : ''}
                         </div>
                         <div class="p-3 rounded-3 mb-3" style="background:rgba(255,255,255,0.03); border:1px solid var(--ds-border-color); font-size:14px; line-height:1.6; color:var(--ds-text-main); white-space:pre-wrap; word-break:break-word;">
-${QCMS.escapeHtml(notif.message || 'No detailed description available.')}
+${OctaQube.escapeHtml(notif.message || 'No detailed description available.')}
                         </div>
                         ${actionButtonHtml}
                     </div>
@@ -3133,11 +3152,11 @@ ${QCMS.escapeHtml(notif.message || 'No detailed description available.')}
         `;
 
         document.body.appendChild(modalEl);
-        if (QCMS.refreshIcons) QCMS.refreshIcons();
+        if (OctaQube.refreshIcons) OctaQube.refreshIcons();
     },
 
     handleNotifClick(index) {
-        const notifs = window.QCMS.notifications || this.notifications || [];
+        const notifs = window.OctaQube.notifications || this.notifications || [];
         const notif = notifs[index];
         if (!notif) return;
 
@@ -3185,9 +3204,9 @@ let currentNotifFilterTab = 'all';
 let currentNotifPage = 1;
 const NOTIFS_PER_PAGE = 10;
 
-QCMS.toggleStarNotification = async function(notifId, e) {
+OctaQube.toggleStarNotification = async function(notifId, e) {
     if (e) e.stopPropagation();
-    const notifs = window.QCMS.notifications || [];
+    const notifs = window.OctaQube.notifications || [];
     const notif = notifs.find(n => n.id == notifId);
     if (!notif) return;
 
@@ -3201,7 +3220,7 @@ QCMS.toggleStarNotification = async function(notifId, e) {
     }
 };
 
-QCMS.changeNotifPage = function(delta) {
+OctaQube.changeNotifPage = function(delta) {
     currentNotifPage += delta;
     if (currentNotifPage < 1) currentNotifPage = 1;
     switchNotifTab(currentNotifFilterTab || 'all', currentNotifPage);
@@ -3223,7 +3242,7 @@ function switchNotifTab(tab, page) {
         btn.style.fontWeight = isActive ? '700' : '500';
     });
 
-    const notifs = window.QCMS.notifications || [];
+    const notifs = window.OctaQube.notifications || [];
     
     // Active notifications: Only show items that are UNREAD or STARRED!
     // Unstarred seen/read notifications automatically disappear!
@@ -3268,25 +3287,25 @@ function switchNotifTab(tab, page) {
             return `
                 <div class="notif-item p-3 mb-2 rounded-2 clickable hover-bg" 
                      style="background:${isStarred ? 'rgba(234, 179, 8, 0.06)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${isStarred ? 'rgba(234, 179, 8, 0.35)' : 'var(--ds-border-color)'}; cursor:pointer; transition:all 0.15s ease;"
-                     onclick="QCMS.handleNotifClick(${originalIdx})">
+                     onclick="OctaQube.handleNotifClick(${originalIdx})">
                     <div class="d-flex align-items-center justify-content-between mb-1">
                         <div class="d-flex align-items-center gap-1.5 overflow-hidden">
                             ${isAnn ? '<span class="badge bg-primary bg-opacity-15 text-primary text-xxs font-monospace px-1.5 py-0.5">📢 Announcement</span>' : ''}
-                            <div class="fw-bold text-sm text-truncate" style="color: var(--ds-text-main);">${QCMS.escapeHtml(n.title || (isAnn ? 'Announcement' : 'Notification'))}</div>
+                            <div class="fw-bold text-sm text-truncate" style="color: var(--ds-text-main);">${OctaQube.escapeHtml(n.title || (isAnn ? 'Announcement' : 'Notification'))}</div>
                         </div>
                         <div class="d-flex align-items-center gap-1.5 flex-shrink-0">
                             <button type="button" class="btn btn-sm p-0 border-0 ${isStarred ? 'text-warning' : 'text-secondary opacity-60'}" 
                                     title="${isStarred ? 'Unstar notification' : 'Star & Save notification'}"
-                                    onclick="QCMS.toggleStarNotification(${n.id}, event)" 
+                                    onclick="OctaQube.toggleStarNotification(${n.id}, event)" 
                                     style="font-size:16px; line-height:1; background:transparent; cursor:pointer;">
                                 ${isStarred ? '★' : '☆'}
                             </button>
                             ${!n.is_read ? '<span class="badge bg-primary" style="font-size:9px; padding:2px 5px; flex-shrink:0;">New</span>' : ''}
                         </div>
                     </div>
-                    <div class="text-xs text-secondary text-truncate">${QCMS.escapeHtml(n.message || '')}</div>
+                    <div class="text-xs text-secondary text-truncate">${OctaQube.escapeHtml(n.message || '')}</div>
                     <div class="text-xxs text-muted mt-1.5 d-flex align-items-center justify-content-between">
-                        <span>${QCMS.formatRelative(n.created_at)}</span>
+                        <span>${OctaQube.formatRelative(n.created_at)}</span>
                         ${isStarred ? '<span class="text-warning fw-semibold text-xxs">★ Saved</span>' : (isAnn ? '<span class="text-primary fw-semibold">Read Details &rarr;</span>' : '')}
                     </div>
                 </div>
@@ -3300,9 +3319,9 @@ function switchNotifTab(tab, page) {
             footerPaginationEl.innerHTML = `
                 <span class="text-xxs text-muted">Showing ${startItem}–${endItem} of ${totalFiltered}</span>
                 <div class="d-flex align-items-center gap-1">
-                    <button class="btn btn-xs ds-btn-ghost px-2 py-0.5 text-xxs" ${currentNotifPage <= 1 ? 'disabled' : ''} onclick="QCMS.changeNotifPage(-1)">&larr; Prev</button>
+                    <button class="btn btn-xs ds-btn-ghost px-2 py-0.5 text-xxs" ${currentNotifPage <= 1 ? 'disabled' : ''} onclick="OctaQube.changeNotifPage(-1)">&larr; Prev</button>
                     <span class="text-xxs fw-bold px-1" style="color:var(--ds-text-main);">Page ${currentNotifPage}/${totalPages}</span>
-                    <button class="btn btn-xs ds-btn-ghost px-2 py-0.5 text-xxs" ${currentNotifPage >= totalPages ? 'disabled' : ''} onclick="QCMS.changeNotifPage(1)">Next &rarr;</button>
+                    <button class="btn btn-xs ds-btn-ghost px-2 py-0.5 text-xxs" ${currentNotifPage >= totalPages ? 'disabled' : ''} onclick="OctaQube.changeNotifPage(1)">Next &rarr;</button>
                 </div>
             `;
         }
@@ -3316,7 +3335,7 @@ function showNotificationsPanel() {
     if (existing) { existing.remove(); return; }
 
     currentNotifPage = 1;
-    const notifs = window.QCMS.notifications || [];
+    const notifs = window.OctaQube.notifications || [];
     const activeNotifs = notifs.filter(n => !n.is_read || n.is_starred);
 
     const annCount = activeNotifs.filter(n => n.is_announcement || (n.title && n.title.startsWith('📢'))).length;
@@ -3334,9 +3353,9 @@ function showNotificationsPanel() {
                     <span class="badge rounded-pill bg-primary bg-opacity-15 text-primary text-xxs font-monospace">${activeNotifs.length}</span>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-sm btn-link text-decoration-none text-xs p-0 text-muted" onclick="QCMS.markNotificationsAsRead()">Mark Read</button>
+                    <button class="btn btn-sm btn-link text-decoration-none text-xs p-0 text-muted" onclick="OctaQube.markNotificationsAsRead()">Mark Read</button>
                     <span class="text-muted opacity-50">&bull;</span>
-                    <button class="btn btn-sm btn-link text-decoration-none text-xs p-0 text-danger" onclick="QCMS.clearNotifications(); switchNotifTab(currentNotifFilterTab, 1);">Clear All</button>
+                    <button class="btn btn-sm btn-link text-decoration-none text-xs p-0 text-danger" onclick="OctaQube.clearNotifications(); switchNotifTab(currentNotifFilterTab, 1);">Clear All</button>
                 </div>
             </div>
 
@@ -3372,10 +3391,12 @@ function showNotificationsPanel() {
     switchNotifTab(currentNotifFilterTab || 'all', 1);
 }
 
-// Expose QCMS globally
-window.QCMS = QCMS;
+// Expose OctaQube globally (with backwards compatibility alias)
+window.OctaQube = OctaQube;
+window.QCMS = OctaQube;
+var QCMS = OctaQube;
 
-QCMS.escapeHtml = function(str) {
+OctaQube.escapeHtml = function(str) {
     if (str === null || str === undefined) return '';
     return String(str)
         .replace(/&/g, '&amp;')
@@ -3386,27 +3407,27 @@ QCMS.escapeHtml = function(str) {
 };
 
 // Dynamic Organization Category Manager
-QCMS._cachedCategories = null;
-QCMS._categoryFetchPromise = null;
+OctaQube._cachedCategories = null;
+OctaQube._categoryFetchPromise = null;
 
-QCMS.loadCategories = async function(forceRefresh = false) {
-    if (QCMS._cachedCategories && !forceRefresh) {
-        return QCMS._cachedCategories;
+OctaQube.loadCategories = async function(forceRefresh = false) {
+    if (OctaQube._cachedCategories && !forceRefresh) {
+        return OctaQube._cachedCategories;
     }
-    if (QCMS._categoryFetchPromise && !forceRefresh) {
-        return QCMS._categoryFetchPromise;
+    if (OctaQube._categoryFetchPromise && !forceRefresh) {
+        return OctaQube._categoryFetchPromise;
     }
 
     const defaultCategories = ['Quality', 'Cost', 'Delivery', 'Safety', 'Morale', 'Environment', 'Productivity'];
 
-    QCMS._categoryFetchPromise = (async () => {
+    OctaQube._categoryFetchPromise = (async () => {
         try {
             if (typeof api !== 'undefined' && typeof api.get === 'function') {
                 const res = await api.get('/sop/masters');
                 if (res && Array.isArray(res.categories) && res.categories.length > 0) {
                     const loaded = res.categories.map(c => typeof c === 'string' ? c : (c.name || '')).filter(Boolean);
                     if (loaded.length > 0) {
-                        QCMS._cachedCategories = loaded;
+                        OctaQube._cachedCategories = loaded;
                         return loaded;
                     }
                 }
@@ -3414,16 +3435,16 @@ QCMS.loadCategories = async function(forceRefresh = false) {
         } catch (e) {
             console.warn('Could not fetch categories from server, using defaults:', e);
         }
-        QCMS._cachedCategories = defaultCategories;
+        OctaQube._cachedCategories = defaultCategories;
         return defaultCategories;
     })();
 
-    return QCMS._categoryFetchPromise;
+    return OctaQube._categoryFetchPromise;
 };
 
-QCMS.populateCategorySelects = async function(targetContainer) {
+OctaQube.populateCategorySelects = async function(targetContainer) {
     try {
-        const categories = await QCMS.loadCategories();
+        const categories = await OctaQube.loadCategories();
         const root = targetContainer || document;
         
         const selects = root.querySelectorAll(`
@@ -3448,7 +3469,7 @@ QCMS.populateCategorySelects = async function(targetContainer) {
             let optionsHtml = `<option value="">${placeholderText}</option>`;
             categories.forEach(cat => {
                 const isSelected = (currentVal === cat) ? ' selected' : '';
-                optionsHtml += `<option value="${QCMS.escapeHtml(cat)}"${isSelected}>${QCMS.escapeHtml(cat)}</option>`;
+                optionsHtml += `<option value="${OctaQube.escapeHtml(cat)}"${isSelected}>${OctaQube.escapeHtml(cat)}</option>`;
             });
 
             select.innerHTML = optionsHtml;
@@ -3462,7 +3483,7 @@ QCMS.populateCategorySelects = async function(targetContainer) {
 };
 
 // Standardized Icon Refresh
-QCMS.refreshIcons = function() {
+OctaQube.refreshIcons = function() {
     if (window.lucide) {
         window.lucide.createIcons({
             attrs: {
@@ -3475,10 +3496,10 @@ QCMS.refreshIcons = function() {
 
 // Auto-populate Category dropdowns on page load and modal open
 document.addEventListener('DOMContentLoaded', () => {
-    QCMS.populateCategorySelects();
+    OctaQube.populateCategorySelects();
 });
 
-QCMS.showDecisionConfirmationDialog = function({
+OctaQube.showDecisionConfirmationDialog = function({
     decision,
     projectTitle = '',
     stageNumber = null,
@@ -3486,7 +3507,7 @@ QCMS.showDecisionConfirmationDialog = function({
     onConfirm = () => {},
     onCancel = () => {}
 }) {
-    const existing = document.getElementById('qcms-decision-confirm-modal');
+    const existing = document.getElementById('octaqube-decision-confirm-modal');
     if (existing) existing.remove();
 
     const normalized = (decision === 'SendToCEO' || decision === 'send_to_ceo' || decision === 'Send to CEO') ? 'SendToCEO' :
@@ -3564,7 +3585,7 @@ QCMS.showDecisionConfirmationDialog = function({
     const cfg = configs[normalized] || configs['Revision'];
 
     const modalHtml = `
-        <div class="modal fade" id="qcms-decision-confirm-modal" tabindex="-1" style="z-index: 10050;">
+        <div class="modal fade" id="octaqube-decision-confirm-modal" tabindex="-1" style="z-index: 10050;">
             <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
                 <div class="modal-content" style="border-radius: 16px; border: 1px solid ${cfg.borderColor}40; box-shadow: 0 25px 60px rgba(0,0,0,0.3); background: var(--ds-bg-card, #ffffff); overflow: hidden;">
                     
@@ -3579,7 +3600,7 @@ QCMS.showDecisionConfirmationDialog = function({
                                 ${stageNumber ? `<span class="text-xs text-muted fw-bold">Stage ${stageNumber}</span>` : ''}
                             </div>
                             <h5 class="modal-title fw-bold text-dark mb-0" style="font-size: 1.1rem;">${cfg.title}</h5>
-                            ${projectTitle ? `<div class="text-xs text-secondary text-truncate mt-1" style="max-width: 380px;">Project: <strong>${QCMS.escapeHtml(projectTitle)}</strong></div>` : ''}
+                            ${projectTitle ? `<div class="text-xs text-secondary text-truncate mt-1" style="max-width: 380px;">Project: <strong>${OctaQube.escapeHtml(projectTitle)}</strong></div>` : ''}
                         </div>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
@@ -3602,17 +3623,17 @@ QCMS.showDecisionConfirmationDialog = function({
                         ${comments ? `
                             <div class="p-2 px-3 rounded-2 text-xs border" style="background: rgba(0,0,0,0.02);">
                                 <span class="text-muted fw-bold">Reviewer Feedback:</span>
-                                <div class="text-secondary italic text-truncate" style="max-height: 40px; overflow-y: auto;">"${QCMS.escapeHtml(comments)}"</div>
+                                <div class="text-secondary italic text-truncate" style="max-height: 40px; overflow-y: auto;">"${OctaQube.escapeHtml(comments)}"</div>
                             </div>
                         ` : ''}
                     </div>
 
                     <!-- Footer Buttons -->
                     <div class="p-3 px-4 border-top d-flex justify-content-end gap-2" style="background: var(--ds-bg-elevated, #f8fafc);">
-                        <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal" id="qcms-btn-cancel-decision">
+                        <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal" id="octaqube-btn-cancel-decision">
                             Cancel
                         </button>
-                        <button type="button" class="${cfg.btnClass} ds-btn-sm fw-bold" style="${cfg.btnStyle}" id="qcms-btn-confirm-decision">
+                        <button type="button" class="${cfg.btnClass} ds-btn-sm fw-bold" style="${cfg.btnStyle}" id="octaqube-btn-confirm-decision">
                             ${cfg.confirmText}
                         </button>
                     </div>
@@ -3623,12 +3644,12 @@ QCMS.showDecisionConfirmationDialog = function({
     `;
 
     document.body.insertAdjacentHTML('beforeend', modalHtml);
-    const modalEl = document.getElementById('qcms-decision-confirm-modal');
+    const modalEl = document.getElementById('octaqube-decision-confirm-modal');
     const bsModal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
 
     if (window.lucide) lucide.createIcons({ root: modalEl });
 
-    document.getElementById('qcms-btn-confirm-decision').onclick = () => {
+    document.getElementById('octaqube-btn-confirm-decision').onclick = () => {
         bsModal.hide();
         setTimeout(() => {
             modalEl.remove();
@@ -3636,7 +3657,7 @@ QCMS.showDecisionConfirmationDialog = function({
         }, 200);
     };
 
-    document.getElementById('qcms-btn-cancel-decision').onclick = () => {
+    document.getElementById('octaqube-btn-cancel-decision').onclick = () => {
         onCancel();
     };
 
@@ -3661,7 +3682,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-QCMS.init();
+OctaQube.init();
 
 function updateChartTheme(theme) {
     if (typeof Chart === 'undefined') return;
@@ -3739,31 +3760,31 @@ function updateChartTheme(theme) {
     }
 }
 
-window.addEventListener('qcms-theme-change', e => {
+window.addEventListener('octaqube-theme-change', e => {
     updateChartTheme(e.detail.theme);
 });
 
 window.addEventListener('load', () => {
-    const theme = localStorage.getItem('qcms-theme') || 'light';
+    const theme = localStorage.getItem('octaqube-theme') || 'light';
     updateChartTheme(theme);
 });
 
 // Global JS Error Boundary for Production Hardening
 window.addEventListener('error', function(event) {
-    console.error('[QCMS Error Boundary]', event.error || event.message);
+    console.error('[OctaQube Error Boundary]', event.error || event.message);
     // Only log — individual components handle their own errors via try/catch
 });
 
 window.addEventListener('unhandledrejection', function(event) {
     const reason = event.reason;
-    console.error('[QCMS Unhandled Rejection]', reason);
+    console.error('[OctaQube Unhandled Rejection]', reason);
     
     // Only show toast for actual network/fetch failures, not JS TypeErrors
     const isNetworkError = reason instanceof TypeError && 
         (String(reason.message).includes('fetch') || String(reason.message).includes('network') || String(reason.message).includes('Failed to fetch'));
     
-    if (isNetworkError && typeof QCMS !== 'undefined' && typeof QCMS.toast === 'function') {
-        QCMS.toast('Network connection error. Please check your connection.', 'error');
+    if (isNetworkError && typeof OctaQube !== 'undefined' && typeof OctaQube.toast === 'function') {
+        OctaQube.toast('Network connection error. Please check your connection.', 'error');
     }
     
     // Prevent browser from logging the unhandled rejection in console (we already logged it)
@@ -3784,10 +3805,10 @@ const GlobalAnnouncementBanner = {
 
         await this.fetchActiveAnnouncements();
 
-        window.addEventListener('qcms:announcement-published', () => {
+        window.addEventListener('octaqube:announcement-published', () => {
             this.fetchActiveAnnouncements();
-            if (window.QCMS && typeof QCMS.loadNotifications === 'function') {
-                QCMS.loadNotifications();
+            if (window.OctaQube && typeof OctaQube.loadNotifications === 'function') {
+                OctaQube.loadNotifications();
             }
         });
     },
@@ -3797,8 +3818,8 @@ const GlobalAnnouncementBanner = {
             const res = await api.get('/announcements/user-active');
             if (res && res.status === 'success' && Array.isArray(res.data)) {
                 this.activeAnnouncements = res.data.filter(a => !a.is_dismissed);
-                if (window.QCMS && typeof QCMS.loadNotifications === 'function') {
-                    QCMS.loadNotifications();
+                if (window.OctaQube && typeof OctaQube.loadNotifications === 'function') {
+                    OctaQube.loadNotifications();
                 }
             }
         } catch (e) {
@@ -3833,15 +3854,15 @@ const GlobalAnnouncementBanner = {
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 text-xs">${ann.category}</span>
                             <span class="badge ${ann.priority === 'Critical' ? 'bg-danger' : ann.priority === 'High' ? 'bg-warning text-dark' : 'bg-info'} text-xs">${ann.priority}</span>
-                            <h6 class="modal-title fw-bold mb-0 text-main ms-2">${QCMS.escapeHtml(ann.title)}</h6>
+                            <h6 class="modal-title fw-bold mb-0 text-main ms-2">${OctaQube.escapeHtml(ann.title)}</h6>
                         </div>
                         <button type="button" class="btn-close" style="filter:var(--ds-icon-filter, none);" onclick="document.getElementById('user-ann-reader-modal').remove()"></button>
                     </div>
                     <div class="modal-body p-4" style="max-height:65vh; overflow-y:auto;">
                         <div class="text-xxs text-secondary mb-3">
-                            Published by <strong>${QCMS.escapeHtml(ann.created_by)}</strong> on ${ann.published_at ? new Date(ann.published_at).toLocaleString() : 'Recently'}
+                            Published by <strong>${OctaQube.escapeHtml(ann.created_by)}</strong> on ${ann.published_at ? new Date(ann.published_at).toLocaleString() : 'Recently'}
                         </div>
-                        ${ann.summary ? `<div class="p-3 bg-body-tertiary rounded-3 mb-3 text-xs text-secondary border" style="border-color:var(--ds-border-color)!important;"><strong>Summary:</strong> ${QCMS.escapeHtml(ann.summary)}</div>` : ''}
+                        ${ann.summary ? `<div class="p-3 bg-body-tertiary rounded-3 mb-3 text-xs text-secondary border" style="border-color:var(--ds-border-color)!important;"><strong>Summary:</strong> ${OctaQube.escapeHtml(ann.summary)}</div>` : ''}
                         <div class="text-sm text-main leading-relaxed" style="white-space:pre-wrap;">
                             ${ann.body || 'No detailed message provided.'}
                         </div>
@@ -3971,14 +3992,14 @@ const UserAnnouncementsModal = {
                                 else if (pUpper.includes('MEDIUM')) priorityStyle = 'background:#2563eb; color:#ffffff;';
                                 else if (pUpper.includes('LOW')) priorityStyle = 'background:#64748b; color:#ffffff;';
 
-                                const catLabel = QCMS.escapeHtml(a.category || 'General');
+                                const catLabel = OctaQube.escapeHtml(a.category || 'General');
                                 const isUnread = !a.is_read;
 
                                 return `
                                     <tr class="border-bottom hover-bg" style="transition:background 0.15s ease;">
                                         <td style="padding:12px 14px;">
                                             <span class="badge rounded-pill px-2.5 py-1 text-xxs font-monospace fw-bold" style="${priorityStyle} display:inline-block; letter-spacing:0.5px; box-shadow:0 1px 2px rgba(0,0,0,0.1);">
-                                                ${QCMS.escapeHtml(a.priority || 'Medium')}
+                                                ${OctaQube.escapeHtml(a.priority || 'Medium')}
                                             </span>
                                         </td>
                                         <td style="padding:12px 14px;">
@@ -3987,11 +4008,11 @@ const UserAnnouncementsModal = {
                                             </span>
                                         </td>
                                         <td style="padding:12px 14px; max-width:340px;">
-                                            <div class="fw-bold text-sm text-main mb-1" style="color:var(--ds-text-main); font-size:13.5px;">${QCMS.escapeHtml(a.title)}</div>
-                                            <div class="text-xs text-secondary text-truncate-2" style="line-height:1.45; color:var(--ds-text-muted, #64748b); font-size:12px;">${QCMS.escapeHtml(a.summary || a.body || '')}</div>
+                                            <div class="fw-bold text-sm text-main mb-1" style="color:var(--ds-text-main); font-size:13.5px;">${OctaQube.escapeHtml(a.title)}</div>
+                                            <div class="text-xs text-secondary text-truncate-2" style="line-height:1.45; color:var(--ds-text-muted, #64748b); font-size:12px;">${OctaQube.escapeHtml(a.summary || a.body || '')}</div>
                                         </td>
                                         <td style="padding:12px 14px;">
-                                            <div class="text-xs fw-semibold text-main" style="color:var(--ds-text-main);">${QCMS.escapeHtml(a.created_by || 'System Admin')}</div>
+                                            <div class="text-xs fw-semibold text-main" style="color:var(--ds-text-main);">${OctaQube.escapeHtml(a.created_by || 'System Admin')}</div>
                                             <div class="text-xxs text-muted mt-0.5" style="font-size:11px;">${a.published_at ? new Date(a.published_at).toLocaleDateString() : 'Recently'}</div>
                                         </td>
                                         <td style="padding:12px 14px;" class="text-end">

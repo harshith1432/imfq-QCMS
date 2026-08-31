@@ -31,8 +31,8 @@ const EnterpriseAnalytics = {
     },
 
     _toast(msg, type = 'info') {
-        if (window.QCMS && typeof QCMS.toast === 'function') {
-            QCMS.toast(msg, type);
+        if (window.OctaQube && typeof OctaQube.toast === 'function') {
+            OctaQube.toast(msg, type);
         } else if (window.api && typeof api.showNotification === 'function') {
             api.showNotification(msg, type);
         } else {
@@ -63,10 +63,10 @@ const EnterpriseAnalytics = {
     initFinancialSyncListener() {
         if (window.BroadcastChannel && !this._financialSyncListenerInitialized) {
             try {
-                this._financialSyncChannel = new BroadcastChannel('qcms_financial_sync');
+                this._financialSyncChannel = new BroadcastChannel('octaqube_financial_sync');
                 this._financialSyncChannel.onmessage = (msg) => {
                     if (msg && msg.data && msg.data.event === 'FINANCIAL_UPDATE') {
-                        console.log('[QCMS Analytics Sync] Received financial update event.');
+                        console.log('[OctaQube Analytics Sync] Received financial update event.');
                         this.refreshDashboard();
                     }
                 };
@@ -1045,7 +1045,7 @@ const EnterpriseAnalytics = {
             let ext = fmt.toLowerCase();
             if (ext === 'excel') ext = 'xlsx';
 
-            let filename = `QCMS_${reportType}_Report_${new Date().toISOString().slice(0, 10)}.${ext}`;
+            let filename = `OctaQube_${reportType}_Report_${new Date().toISOString().slice(0, 10)}.${ext}`;
             const disposition = fileRes.headers.get('Content-Disposition') || '';
             const fnMatch = disposition.match(/filename[^;=\n]*=([^;\n]*)/);
             if (fnMatch) {

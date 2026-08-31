@@ -141,7 +141,7 @@
     },
     "compliance": {
       "title": "Regulatory Compliance",
-      "desc": "Select the standards that govern your organization. QCMS will adjust reporting templates accordingly.",
+      "desc": "Select the standards that govern your organization. OctaQube will adjust reporting templates accordingly.",
       "iso9001": "Quality Management System",
       "iso14001": "Environmental Management",
       "as9100": "Aerospace Quality",
@@ -213,7 +213,7 @@
       "active_initiatives_sub": "{total} कुल परियोजनाओं में से",
       "insight_velocity": "औसत परियोजना चरण पूरा होने का समय {days} दिन है।",
       "insight_success": "परियोजना की सफलता दर {total} पहलों में {rate}% है।",
-      "insight_participation": "{active} विभाग ({rate}%) सक्रिय रूप से QCMS प्लेटफॉर्म का उपयोग कर रहे हैं।",
+      "insight_participation": "{active} विभाग ({rate}%) सक्रिय रूप से OctaQube प्लेटफॉर्म का उपयोग कर रहे हैं।",
       "insight_recommendation": "सिफारिश: कम प्रदर्शन करने वाली इकाइयों में सुविधा प्रदाता की भागीदारी बढ़ाएं।",
       "executive_access": "कार्यकारी पहुंच",
       "project_initiative": "परियोजना पहल",

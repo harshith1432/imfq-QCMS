@@ -1,5 +1,5 @@
 /**
- * QCMS Feature Engine Client Library
+ * OctaQube Feature Engine Client Library
  * ===================================
  * Centralized feature flag evaluation and DOM control for the frontend application.
  * Features:
@@ -63,8 +63,8 @@ class FeatureEngineClient {
             }
         }
 
-        if (window.QCMS_MODULE_MAP && window.QCMS_MODULE_MAP.findByName) {
-            const resolvedCode = window.QCMS_MODULE_MAP.findByName(moduleCode);
+        if (window.OctaQube_MODULE_MAP && window.OctaQube_MODULE_MAP.findByName) {
+            const resolvedCode = window.OctaQube_MODULE_MAP.findByName(moduleCode);
             if (resolvedCode && this.moduleDetails[resolvedCode]) {
                 return this.moduleDetails[resolvedCode];
             }
@@ -92,8 +92,8 @@ class FeatureEngineClient {
             }
         }
 
-        if (window.QCMS_MODULE_MAP && window.QCMS_MODULE_MAP.findByName) {
-            const resolvedCode = window.QCMS_MODULE_MAP.findByName(moduleCode);
+        if (window.OctaQube_MODULE_MAP && window.OctaQube_MODULE_MAP.findByName) {
+            const resolvedCode = window.OctaQube_MODULE_MAP.findByName(moduleCode);
             if (resolvedCode && this.flags[resolvedCode] !== undefined) {
                 return this.flags[resolvedCode] !== false;
             }
@@ -132,15 +132,15 @@ class FeatureEngineClient {
             }
         });
 
-        // 2. Sidebar Navigation Links mapped via QCMS_MODULE_MAP or href
+        // 2. Sidebar Navigation Links mapped via OctaQube_MODULE_MAP or href
         const sidebarLinks = document.querySelectorAll('.sidebar-link');
         sidebarLinks.forEach(link => {
             const href = link.getAttribute('href');
             if (!href || href === '#' || href.includes('logout')) return;
 
             let moduleCode = link.getAttribute('data-feature');
-            if (!moduleCode && window.QCMS_MODULE_MAP) {
-                moduleCode = window.QCMS_MODULE_MAP.findByRoute(href);
+            if (!moduleCode && window.OctaQube_MODULE_MAP) {
+                moduleCode = window.OctaQube_MODULE_MAP.findByRoute(href);
             }
 
             if (moduleCode && this.flags[moduleCode] === false) {
@@ -164,11 +164,11 @@ class FeatureEngineClient {
             }
         });
 
-        // 3. Elements mapped via QCMS_MODULE_MAP
-        if (window.QCMS_MODULE_MAP && this.flags) {
+        // 3. Elements mapped via OctaQube_MODULE_MAP
+        if (window.OctaQube_MODULE_MAP && this.flags) {
             Object.keys(this.flags).forEach(code => {
                 if (this.flags[code] === false) {
-                    const mod = window.QCMS_MODULE_MAP[code];
+                    const mod = window.OctaQube_MODULE_MAP[code];
                     if (mod && mod.selectors) {
                         mod.selectors.forEach(sel => {
                             try {
@@ -220,17 +220,17 @@ class FeatureEngineClient {
      */
     showDisabledModuleNotice(moduleCode) {
         const details = this.getModuleDetails(moduleCode);
-        const modName = details.name || ((window.QCMS_MODULE_MAP && window.QCMS_MODULE_MAP[moduleCode]) 
-            ? window.QCMS_MODULE_MAP[moduleCode].name 
+        const modName = details.name || ((window.OctaQube_MODULE_MAP && window.OctaQube_MODULE_MAP[moduleCode]) 
+            ? window.OctaQube_MODULE_MAP[moduleCode].name 
             : (moduleCode || 'This module'));
         const reason = details.reason || 'disabled';
         const requiredPlan = details.required_plan || 'Professional';
         const isUpgrade = reason === 'upgrade_required';
 
-        let modal = document.getElementById('qcmsDisabledModuleModal');
+        let modal = document.getElementById('octaqubeDisabledModuleModal');
         if (!modal) {
             modal = document.createElement('div');
-            modal.id = 'qcmsDisabledModuleModal';
+            modal.id = 'octaqubeDisabledModuleModal';
             modal.className = 'modal fade';
             modal.tabIndex = -1;
             modal.setAttribute('aria-hidden', 'true');
@@ -293,9 +293,9 @@ class FeatureEngineClient {
         if (window.location.pathname.includes('/admin/super-admin.html')) return;
 
         const path = window.location.pathname;
-        if (!window.QCMS_MODULE_MAP) return;
+        if (!window.OctaQube_MODULE_MAP) return;
 
-        const moduleCode = window.QCMS_MODULE_MAP.findByRoute(path);
+        const moduleCode = window.OctaQube_MODULE_MAP.findByRoute(path);
         if (moduleCode && this.isEnabled(moduleCode) === false) {
             this.renderPageDisabledOverlay(moduleCode);
         }
@@ -306,17 +306,17 @@ class FeatureEngineClient {
      */
     renderPageDisabledOverlay(moduleCode) {
         const details = this.getModuleDetails(moduleCode);
-        const modName = details.name || ((window.QCMS_MODULE_MAP && window.QCMS_MODULE_MAP[moduleCode])
-            ? window.QCMS_MODULE_MAP[moduleCode].name
+        const modName = details.name || ((window.OctaQube_MODULE_MAP && window.OctaQube_MODULE_MAP[moduleCode])
+            ? window.OctaQube_MODULE_MAP[moduleCode].name
             : 'This module');
         const reason = details.reason || 'disabled';
         const requiredPlan = details.required_plan || 'Professional';
         const isUpgrade = reason === 'upgrade_required';
 
-        let overlay = document.getElementById('qcmsPageDisabledOverlay');
+        let overlay = document.getElementById('octaqubePageDisabledOverlay');
         if (!overlay) {
             overlay = document.createElement('div');
-            overlay.id = 'qcmsPageDisabledOverlay';
+            overlay.id = 'octaqubePageDisabledOverlay';
             overlay.style.cssText = 'position: fixed; inset: 0; background: var(--ds-surface, #ffffff); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 2rem;';
 
             const title = isUpgrade ? `Upgrade Plan Required for ${modName}` : `${modName} Temporarily Disabled`;

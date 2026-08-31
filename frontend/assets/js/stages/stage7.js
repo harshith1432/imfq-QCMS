@@ -912,7 +912,7 @@ const Stage7 = {
         const testType = cleanVal(d.test_type || d.test || d.type);
         const pVal = cleanVal(d.p_value || d.pval || d.p_val);
         const conc = cleanVal(d.conclusion || d.result);
-        const esc = (s) => (window.QCMS && QCMS.escapeHtml) ? QCMS.escapeHtml(String(s)) : String(s).replace(/"/g, '&quot;');
+        const esc = (s) => (window.OctaQube && OctaQube.escapeHtml) ? OctaQube.escapeHtml(String(s)) : String(s).replace(/"/g, '&quot;');
 
         this.addRowTemplate('s7_statContainer', d, `
             <div class="col-4"><input type="text" class="ds-input r-tst" placeholder="e.g. Two-Sample Proportion Test" value="${esc(testType)}" required></div>
@@ -985,7 +985,7 @@ const Stage7 = {
                 const rows = this.parseCSV(text);
                 
                 if (rows.length <= 1) {
-                    QCMS.toast("Uploaded CSV is empty or invalid.", "error");
+                    OctaQube.toast("Uploaded CSV is empty or invalid.", "error");
                     return;
                 }
 
@@ -1045,13 +1045,13 @@ const Stage7 = {
                 }
 
                 if (msgParts.length > 0) {
-                    QCMS.toast(`Successfully imported: ${msgParts.join(' & ')}`, "success");
+                    OctaQube.toast(`Successfully imported: ${msgParts.join(' & ')}`, "success");
                 } else {
-                    QCMS.toast("No valid numerical data found in uploaded file.", "error");
+                    OctaQube.toast("No valid numerical data found in uploaded file.", "error");
                 }
             } catch (err) {
-                console.error("[QCMS] CSV Parse Error:", err);
-                QCMS.toast("Failed to parse file. Please ensure it matches the template.", "error");
+                console.error("[OctaQube] CSV Parse Error:", err);
+                OctaQube.toast("Failed to parse file. Please ensure it matches the template.", "error");
             }
             
             // Reset input so file can be uploaded again

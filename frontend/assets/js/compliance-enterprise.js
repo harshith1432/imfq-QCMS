@@ -1,5 +1,5 @@
 /* ==========================================================================
-   QCMS ENTERPRISE COMPLIANCE STANDARDS — REAL DATA ENGINE  v2.0
+   OctaQube ENTERPRISE COMPLIANCE STANDARDS — REAL DATA ENGINE  v2.0
    All certificate data is now fetched from /api/admin/compliance/standards
    and stored back via PUT /api/admin/compliance/standards/<code>.
    No hardcoded certificate values exist in this file.
@@ -22,7 +22,7 @@
      * Initialise — called by settings tab switch & DOMContentLoaded
      * -------------------------------------------------------------------- */
     init: async function () {
-      console.log('[QCMS Compliance] Initialising real-data engine v2.0…');
+      console.log('[OctaQube Compliance] Initialising real-data engine v2.0…');
       await this.loadRealData();
       setTimeout(() => {
         this.initCharts();
@@ -42,7 +42,7 @@
         const data = await res.json();
         this.standards = data.standards || [];
       } catch (err) {
-        console.warn('[QCMS Compliance] API fetch failed, showing empty state:', err);
+        console.warn('[OctaQube Compliance] API fetch failed, showing empty state:', err);
         this.standards = [];
       }
 
@@ -282,7 +282,7 @@
         this._toast('Compliance settings saved successfully', 'success');
         return true;
       } catch (err) {
-        console.error('[QCMS Compliance] Save failed:', err);
+        console.error('[OctaQube Compliance] Save failed:', err);
         this._toast('Failed to save compliance changes', 'danger');
         return false;
       }
@@ -353,7 +353,7 @@
         this.updateKPIs();
         this._toast('Certificate data saved successfully', 'success');
       } catch (err) {
-        console.error('[QCMS Compliance] Save failed:', err);
+        console.error('[OctaQube Compliance] Save failed:', err);
         this._toast('Save failed — please retry', 'danger');
       }
     },
@@ -436,7 +436,7 @@
      * -------------------------------------------------------------------- */
     safeOpenModal: function (modalId) {
       const el = document.getElementById(modalId);
-      if (!el) { console.warn(`[QCMS Compliance] Modal #${modalId} not found`); return; }
+      if (!el) { console.warn(`[OctaQube Compliance] Modal #${modalId} not found`); return; }
       if (window.bootstrap?.Modal) {
         try { window.bootstrap.Modal.getOrCreateInstance(el).show(); return; } catch (_) {}
       }
@@ -469,13 +469,13 @@
     openAddStandardModal:  function () { this._toast('Custom standard support coming soon', 'info'); },
 
     downloadDocument: function (docName, filename) {
-      const name = docName || 'QCMS Official Compliance Document';
+      const name = docName || 'OctaQube Official Compliance Document';
       let fname = filename || `${name.replace(/[^a-z0-9_\-\.]/gi, '_')}`;
       if (!fname.endsWith('.pdf')) fname += '.pdf';
 
       // Read current preview / standard state
       const stdName = document.getElementById('ce-preview-name')?.textContent || 'ISO 9001:2015';
-      const certNo  = document.getElementById('ce-preview-cert-no')?.textContent || 'QCMS-2026-0001';
+      const certNo  = document.getElementById('ce-preview-cert-no')?.textContent || 'OctaQube-2026-0001';
       const issue   = document.getElementById('ce-preview-issue')?.textContent || new Date().toLocaleDateString();
       const expiry  = document.getElementById('ce-preview-expiry')?.textContent || 'N/A';
       const owner   = document.getElementById('ce-preview-owner')?.textContent || 'Quality Operations Team';
@@ -492,7 +492,7 @@
       const streamContent = `BT
 /F1 20 Tf
 50 730 Td
-(QCMS ENTERPRISE COMPLIANCE CERTIFICATE) Tj
+(OctaQube ENTERPRISE COMPLIANCE CERTIFICATE) Tj
 /F2 14 Tf
 0 -35 Td
 (${sName}) Tj
@@ -512,7 +512,7 @@
 0 -40 Td
 (This official document verifies that the organization maintains compliance with) Tj
 0 -15 Td
-(all specified quality and audit framework standards under QCMS Enterprise OS.) Tj
+(all specified quality and audit framework standards under OctaQube Enterprise OS.) Tj
 0 -40 Td
 (Generated on: ${today}) Tj
 ET`;
@@ -560,7 +560,7 @@ ET`;
     triggerAction: function (name) {
       const nameLower = name.toLowerCase();
       if (nameLower.includes('download') || nameLower.includes('export') || nameLower.includes('certificate') || nameLower.includes('report') || nameLower.includes('pdf')) {
-        let filename = 'QCMS_Compliance_Document.pdf';
+        let filename = 'OctaQube_Compliance_Document.pdf';
         if (nameLower.includes('certificate')) filename = 'ISO_9001_Official_Certificate.pdf';
         if (nameLower.includes('report')) filename = '2026_Q2_External_Audit_Report.pdf';
         if (nameLower.includes('pdf')) filename = 'ISO_9001_Compliance_Certificate.pdf';
@@ -697,8 +697,8 @@ ET`;
     },
 
     _toast: function (msg, type = 'info') {
-      if (window.QCMS?.toast) { window.QCMS.toast(msg, type); return; }
-      console.log(`[QCMS Compliance] ${type.toUpperCase()}: ${msg}`);
+      if (window.OctaQube?.toast) { window.OctaQube.toast(msg, type); return; }
+      console.log(`[OctaQube Compliance] ${type.toUpperCase()}: ${msg}`);
     }
   };
 

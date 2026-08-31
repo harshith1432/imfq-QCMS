@@ -1,5 +1,5 @@
 /**
- * QCMS Action Locking & Single-Execution Engine
+ * OctaQube Action Locking & Single-Execution Engine
  * ============================================
  * Prevents double-clicks, rapid clicks, keyboard spam, touch spam, and duplicate API requests.
  */

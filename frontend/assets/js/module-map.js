@@ -1,5 +1,5 @@
 /**
- * QCMS Feature Engine — Module Mapping Dictionary
+ * OctaQube Feature Engine — Module Mapping Dictionary
  * ===============================================
  * Links all 144 Feature Modules to their corresponding:
  *   - Page routes
@@ -8,7 +8,7 @@
  *   - Backend API endpoints
  */
 
-window.QCMS_MODULE_MAP = {
+window.OctaQube_MODULE_MAP = {
     // ── IAM & USER MANAGEMENT ───────────────────────────────────────────────
     "users.view": {
         category: "IAM",
@@ -250,8 +250,8 @@ window.QCMS_MODULE_MAP = {
 /**
  * Helper to get module code by route or selector.
  */
-window.QCMS_MODULE_MAP.findByRoute = function (pathname) {
-    for (const [code, item] of Object.entries(window.QCMS_MODULE_MAP)) {
+window.OctaQube_MODULE_MAP.findByRoute = function (pathname) {
+    for (const [code, item] of Object.entries(window.OctaQube_MODULE_MAP)) {
         if (item.route && pathname.startsWith(item.route)) return code;
     }
     return null;
@@ -260,11 +260,15 @@ window.QCMS_MODULE_MAP.findByRoute = function (pathname) {
 /**
  * Helper to get module code by human readable module name.
  */
-window.QCMS_MODULE_MAP.findByName = function (name) {
+window.OctaQube_MODULE_MAP.findByName = function (name) {
     if (!name) return null;
     const lower = name.trim().toLowerCase();
-    for (const [code, item] of Object.entries(window.QCMS_MODULE_MAP)) {
+    for (const [code, item] of Object.entries(window.OctaQube_MODULE_MAP)) {
         if (item.name && item.name.toLowerCase() === lower) return code;
     }
     return null;
 };
+
+// Backwards compatibility alias
+window.QCMS_MODULE_MAP = window.OctaQube_MODULE_MAP;
+

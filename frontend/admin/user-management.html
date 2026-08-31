@@ -6,16 +6,16 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Management | QCMS Enterprise</title>
+    <title>User Management | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
-    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -110,14 +110,14 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
         const userMgmt = {
             roles: [],
             departments: [],
             
             async init() {
-                QCMS.init();
+                OctaQube.init();
                 
                 // Global Search Integration
                 const globalSearch = document.getElementById('globalSearchInput');
@@ -146,7 +146,7 @@
                     document.getElementById('roleSelect').innerHTML = roles.map(r => `<option value="${r}">${r}</option>`).join('');
                     document.getElementById('deptSelect').innerHTML = '<option value="">None</option>' + depts.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
                 } catch (e) {
-                    QCMS.toast('Failed to load roles/departments', 'error');
+                    OctaQube.toast('Failed to load roles/departments', 'error');
                 }
             },
 
@@ -156,7 +156,7 @@
                     this.allUsers = users;
                     this.renderUsers(users);
                 } catch (e) {
-                    QCMS.toast('Failed to load users', 'error');
+                    OctaQube.toast('Failed to load users', 'error');
                 }
             },
 
@@ -177,13 +177,13 @@
                                     </div>
                                 </div>
                             </td>
-                            <td>${QCMS.roleBadge(u.role)}</td>
+                            <td>${OctaQube.roleBadge(u.role)}</td>
                             <td>${u.department || '<span class="text-muted">N/A</span>'}</td>
                             <td>
                                 <span class="ds-badge-dot ${u.is_active ? 'green' : 'gray'}"></span>
                                 ${u.is_active ? 'Active' : 'Inactive'}
                             </td>
-                            <td><span class="text-sm">${u.last_login ? QCMS.formatRelative(u.last_login) : 'Never'}</span></td>
+                            <td><span class="text-sm">${u.last_login ? OctaQube.formatRelative(u.last_login) : 'Never'}</span></td>
                             <td style="text-align:right;">
                                 <div class="dropdown">
                                     <button class="ds-btn ds-btn-sm ds-btn-ghost p-1" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}'>
@@ -226,7 +226,7 @@
                 const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$";
                 let pass = "";
                 for(let i=0; i<8; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
-                document.getElementById('password').value = "QCMS@" + pass;
+                document.getElementById('password').value = "OctaQube@" + pass;
             },
 
             openEditModal(u) {
@@ -254,10 +254,10 @@
                 try {
                     if (id) {
                         await api.put(`/admin/users/${id}`, payload);
-                        QCMS.toast('User updated successfully', 'success');
+                        OctaQube.toast('User updated successfully', 'success');
                     } else {
                         await api.post('/admin/users', payload);
-                        QCMS.toast('User created successfully', 'success');
+                        OctaQube.toast('User created successfully', 'success');
                     }
                     bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
                     this.loadUsers();
@@ -269,10 +269,10 @@
             async toggleStatus(id, current) {
                 try {
                     await api.put(`/admin/users/${id}`, { is_active: !current });
-                    QCMS.toast(`User ${current ? 'deactivated' : 'activated'}`, 'success');
+                    OctaQube.toast(`User ${current ? 'deactivated' : 'activated'}`, 'success');
                     this.loadUsers();
                 } catch (e) {
-                    QCMS.toast('Failed to update user status', 'error');
+                    OctaQube.toast('Failed to update user status', 'error');
                 }
             }
         };

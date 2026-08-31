@@ -7,16 +7,16 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | QCMS Enterprise</title>
+    <title>Dashboard | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
-    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* Custom Floating Tooltip for Ref Number */
@@ -751,7 +751,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
         const tmDash = {
             projects: [], // Personal workstation projects
@@ -781,7 +781,7 @@
             defaultDepartments: [],
 
             async init() {
-                if (typeof QCMS !== 'undefined' && QCMS.init) QCMS.init();
+                if (typeof OctaQube !== 'undefined' && OctaQube.init) OctaQube.init();
 
                 const getM = id => {
                     const el = document.getElementById(id);
@@ -793,7 +793,7 @@
                 this.workloadModal = getM('workloadModal');
 
                 // Global search listener
-                window.addEventListener('qcms-global-search', (e) => {
+                window.addEventListener('octaqube-global-search', (e) => {
                     this.handleGlobalSearch(e.detail.query);
                 });
 
@@ -843,7 +843,7 @@
                     console.error('Workstation load failed', e);
                     const list = document.getElementById('projectsList');
                     if (list) {
-                        list.innerHTML = `<div class="p-4">${QCMS.emptyState('alert-circle', 'Error', 'Could not load your projects.')}</div>`;
+                        list.innerHTML = `<div class="p-4">${OctaQube.emptyState('alert-circle', 'Error', 'Could not load your projects.')}</div>`;
                     }
                 }
             },
@@ -881,11 +881,11 @@
                 const grid = document.getElementById('workstationKpiGrid');
                 if (grid) {
                     grid.innerHTML =
-                        QCMS.kpiCard('Total Projects Assigned Till Now', total, 'folder', 'blue') +
-                        QCMS.kpiCard('Active Projects', active, 'activity', 'green') +
-                        QCMS.kpiCard('Total Completed Projects Till Now', completed, 'award', 'cyan') +
-                        QCMS.kpiCard('Inactive Projects', inactive, 'clock', 'orange') +
-                        QCMS.kpiCard('Total Projects Stopped', rejected, 'x-circle', 'red', null, "javascript:tmDash.openRejectedProjectsModal()");
+                        OctaQube.kpiCard('Total Projects Assigned Till Now', total, 'folder', 'blue') +
+                        OctaQube.kpiCard('Active Projects', active, 'activity', 'green') +
+                        OctaQube.kpiCard('Total Completed Projects Till Now', completed, 'award', 'cyan') +
+                        OctaQube.kpiCard('Inactive Projects', inactive, 'clock', 'orange') +
+                        OctaQube.kpiCard('Total Projects Stopped', rejected, 'x-circle', 'red', null, "javascript:tmDash.openRejectedProjectsModal()");
 
                     const cards = grid.querySelectorAll('& > div, & > a');
                     if (cards[4]) {
@@ -908,12 +908,12 @@
                         body.innerHTML = rejectedProjs.map(p => `
                             <tr>
                                 <td class="py-3">
-                                    <div class="fw-bold text-danger">${QCMS.escapeHtml(p.title)}</div>
-                                    <div class="text-xxs text-muted font-mono">${QCMS.escapeHtml(p.project_uid || ('PRJ-' + p.id))}</div>
+                                    <div class="fw-bold text-danger">${OctaQube.escapeHtml(p.title)}</div>
+                                    <div class="text-xxs text-muted font-mono">${OctaQube.escapeHtml(p.project_uid || ('PRJ-' + p.id))}</div>
                                 </td>
                                 <td>
-                                    <div class="fw-semibold text-main">${QCMS.escapeHtml(p.department || p.dept || 'N/A')}</div>
-                                    <div class="text-xxs text-muted">Plant: ${QCMS.escapeHtml(p.plant || 'General')}</div>
+                                    <div class="fw-semibold text-main">${OctaQube.escapeHtml(p.department || p.dept || 'N/A')}</div>
+                                    <div class="text-xxs text-muted">Plant: ${OctaQube.escapeHtml(p.plant || 'General')}</div>
                                 </td>
                                 <td>
                                     <span class="ds-badge red">Stage ${p.current_stage || p.stage || 1}</span>
@@ -921,7 +921,7 @@
                                 <td>
                                     <div class="d-inline-flex align-items-center px-2 py-1 rounded bg-danger-subtle text-danger border border-danger-subtle text-xs" style="white-space:pre-wrap; max-width:100%;">
                                         <i data-lucide="info" style="width:12px;height:12px;margin-right:4px;flex-shrink:0;"></i>
-                                        <span>${QCMS.escapeHtml(p.rejection_reason || p.comments || 'No reason specified')}</span>
+                                        <span>${OctaQube.escapeHtml(p.rejection_reason || p.comments || 'No reason specified')}</span>
                                     </div>
                                 </td>
                                 <td class="text-end">
@@ -950,7 +950,7 @@
                 document.getElementById('projectCount').textContent = `${activeProjects.length} Active`;
 
                 if (!activeProjects.length) {
-                    list.innerHTML = `<div class="p-4">${QCMS.emptyState('inbox', 'No Assignments', 'You are not assigned to any active projects.')}</div>`;
+                    list.innerHTML = `<div class="p-4">${OctaQube.emptyState('inbox', 'No Assignments', 'You are not assigned to any active projects.')}</div>`;
                     return;
                 }
 
@@ -958,10 +958,10 @@
                     <div class="project-item fade-in ${idx === 0 ? 'active' : ''}" onclick="tmDash.selectProject(${p.id}, this)">
                         <div class="project-item-info">
                             <div class="project-name">${p.title}</div>
-                            <div class="project-uid">${p.project_uid || 'UID-PENDING'} · ${QCMS.categoryBadge(p.category)}</div>
+                            <div class="project-uid">${p.project_uid || 'UID-PENDING'} · ${OctaQube.categoryBadge(p.category)}</div>
                         </div>
                         <div class="project-item-meta">
-                            ${QCMS.projectProgress(p.current_stage || p.stage || 1)}
+                            ${OctaQube.projectProgress(p.current_stage || p.stage || 1)}
                         </div>
                         <i data-lucide="chevron-right" class="project-item-arrow"></i>
                     </div>
@@ -995,11 +995,11 @@
                                 <h4 class="mb-1">${p.title}</h4>
                                 <div class="text-sm text-primary fw-semibold">${stageNames[stage]}</div>
                             </div>
-                            ${QCMS.statusBadge(p.status || 'Active')}
+                            ${OctaQube.statusBadge(p.status || 'Active')}
                         </div>
                         
                         <div class="mb-5">
-                            ${QCMS.stageStepper(stage)}
+                            ${OctaQube.stageStepper(stage)}
                         </div>
 
                         <div class="workstation-details ds-card bg-light border-0">
@@ -1114,11 +1114,11 @@
                 try {
                     const stats = await api.get('/team-leader/dashboard');
                     document.getElementById('teamKpiGrid').innerHTML =
-                        QCMS.kpiCard('Total Projects Assigned Till Now', stats.total_projects || 0, 'folder-kanban', 'blue', null, "javascript:tmDash.filterBy('all')") +
-                        QCMS.kpiCard('Active Projects', stats.active_projects || 0, 'activity', 'green', null, "javascript:tmDash.filterBy('progress')") +
-                        QCMS.kpiCard('Total Completed Projects Till Now', stats.completed_projects || 0, 'award', 'cyan', null, "javascript:tmDash.filterBy('completed')") +
-                        QCMS.kpiCard('Inactive Projects', stats.stalled_projects || stats.inactive_projects || 0, 'clock', 'orange', null, "javascript:tmDash.filterBy('inactive')") +
-                        QCMS.kpiCard('Total Projects Stopped', stats.rejected_projects || 0, 'x-circle', 'red', null, "javascript:tmDash.openRejectedProjectsModal()");
+                        OctaQube.kpiCard('Total Projects Assigned Till Now', stats.total_projects || 0, 'folder-kanban', 'blue', null, "javascript:tmDash.filterBy('all')") +
+                        OctaQube.kpiCard('Active Projects', stats.active_projects || 0, 'activity', 'green', null, "javascript:tmDash.filterBy('progress')") +
+                        OctaQube.kpiCard('Total Completed Projects Till Now', stats.completed_projects || 0, 'award', 'cyan', null, "javascript:tmDash.filterBy('completed')") +
+                        OctaQube.kpiCard('Inactive Projects', stats.stalled_projects || stats.inactive_projects || 0, 'clock', 'orange', null, "javascript:tmDash.filterBy('inactive')") +
+                        OctaQube.kpiCard('Total Projects Stopped', stats.rejected_projects || 0, 'x-circle', 'red', null, "javascript:tmDash.openRejectedProjectsModal()");
                     if (window.lucide) lucide.createIcons();
                 } catch (e) {
                     console.error('Stats load failed', e);
@@ -1146,7 +1146,7 @@
                     this.renderPipeline();
                 } catch (e) {
                     console.error('loadTeamProjects failed:', e);
-                    document.getElementById('pipelineContainer').innerHTML = QCMS.emptyState('inbox', 'No Projects Linked', 'Start a new project to lead your team.');
+                    document.getElementById('pipelineContainer').innerHTML = OctaQube.emptyState('inbox', 'No Projects Linked', 'Start a new project to lead your team.');
                 }
             },
 
@@ -1162,7 +1162,7 @@
                 const container = document.getElementById('pipelineContainer');
                 if (this.currentPipelineView === 'kanban') {
                     if (!this.filteredTeamProjects || !this.filteredTeamProjects.length) {
-                        container.innerHTML = QCMS.emptyState('folder-kanban', 'No Projects Matched', 'Try searching for something else.');
+                        container.innerHTML = OctaQube.emptyState('folder-kanban', 'No Projects Matched', 'Try searching for something else.');
                         return;
                     }
 
@@ -1191,7 +1191,7 @@
                                     <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="tmDash.loadTeamProjects(${page - 1})">
                                         <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
                                     </button>
-                                    ${QCMS.renderPagination(page, totalPages, 'tmDash.loadTeamProjects')}
+                                    ${OctaQube.renderPagination(page, totalPages, 'tmDash.loadTeamProjects')}
                                     <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === totalPages ? 'disabled' : ''} onclick="tmDash.loadTeamProjects(${page + 1})">
                                         <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
                                     </button>
@@ -1216,7 +1216,7 @@
                                                     <div class="kanban-task-card fade-in" onclick="window.location.href='/projects/project-details.html?id=${p.id}'">
                                                         <div class="kanban-task-header">
                                                             <span class="kanban-task-id">${p.project_uid || 'PRJ-XXXX'}</span>
-                                                            ${QCMS.categoryBadge(p.category)}
+                                                            ${OctaQube.categoryBadge(p.category)}
                                                         </div>
                                                         <div class="kanban-task-title">${p.title}</div>
                                                         <div class="kanban-task-footer">
@@ -1242,7 +1242,7 @@
                 } else {
                     const projects = this.tableProjects || [];
                     if (!projects.length) {
-                        container.innerHTML = QCMS.emptyState('folder-kanban', 'No Projects Found', 'There are currently no projects in your pipeline.');
+                        container.innerHTML = OctaQube.emptyState('folder-kanban', 'No Projects Found', 'There are currently no projects in your pipeline.');
                         return;
                     }
 
@@ -1264,7 +1264,7 @@
                                     <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === 1 ? 'disabled' : ''} onclick="tmDash.setPage(${page - 1})">
                                         <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
                                     </button>
-                                    ${QCMS.renderPagination(page, totalPages, 'tmDash.setPage')}
+                                    ${OctaQube.renderPagination(page, totalPages, 'tmDash.setPage')}
                                     <button class="ds-btn ds-btn-icon ds-btn-ghost ds-btn-sm" ${page === totalPages ? 'disabled' : ''} onclick="tmDash.setPage(${page + 1})">
                                         <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
                                     </button>
@@ -1283,9 +1283,9 @@
                                             <div class="fw-semibold text-primary">${p.title}</div>
                                             <div class="text-xs text-muted">${p.project_uid || 'UID-PENDING'}</div>
                                         </td>
-                                        <td>${QCMS.categoryBadge(p.category)}</td>
-                                        <td>${QCMS.badge('Stage ' + (p.current_stage || 1), 'blue')}</td>
-                                        <td>${QCMS.statusBadge(p.status || 'Active')}</td>
+                                        <td>${OctaQube.categoryBadge(p.category)}</td>
+                                        <td>${OctaQube.badge('Stage ' + (p.current_stage || 1), 'blue')}</td>
+                                        <td>${OctaQube.statusBadge(p.status || 'Active')}</td>
                                         <td class="text-end">
                                             <div class="d-flex justify-content-end gap-2">
                                                 <a href="/projects/project-details.html?id=${p.id}" class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-icon" title="Workspace">
@@ -1341,7 +1341,7 @@
                     this.totalMemberPages = totalPages;
 
                     if (!membersList.length) {
-                        tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted">${QCMS.emptyState('users', 'No Team Members', 'You haven\'t added any stakeholders to your team yet.')}</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted">${OctaQube.emptyState('users', 'No Team Members', 'You haven\'t added any stakeholders to your team yet.')}</td></tr>`;
                         document.getElementById('membersPagination').style.display = 'none';
                         return;
                     }
@@ -1355,7 +1355,7 @@
                                     </div>
                                     <div class="v-stack">
                                         <div class="text-sm fw-bold" style="color: var(--ds-text-main);">${m.username}</div>
-                                        <div class="text-xxs text-muted">${m.email || 'team-member@qcms.com'}</div>
+                                        <div class="text-xxs text-muted">${m.email || 'team-member@octaqube.com'}</div>
                                     </div>
                                 </div>
                             </td>
@@ -1838,7 +1838,7 @@
                 if (type === 'Other') {
                     type = (document.getElementById('projTypeCustom')?.value || '').trim();
                     if (!type) {
-                        return QCMS.toast('Please enter custom Project Type.', 'warning');
+                        return OctaQube.toast('Please enter custom Project Type.', 'warning');
                     }
                 }
                 const workArea = document.getElementById('projWorkArea').value.trim();
@@ -1848,7 +1848,7 @@
                 if (source === 'Other') {
                     source = (document.getElementById('projSourceCustom')?.value || '').trim();
                     if (!source) {
-                        return QCMS.toast('Please enter custom Project Source.', 'warning');
+                        return OctaQube.toast('Please enter custom Project Source.', 'warning');
                     }
                 }
                 const facilitatorId = document.getElementById('projFacilitator').value;
@@ -1860,7 +1860,7 @@
                 const endDate = document.getElementById('projEndDate').value;
 
                 if (!title || !type || !workArea || !deptId || !plant || !source || !facilitatorId || !teamLeaderId || !reviewerId || !startDate || !endDate) {
-                    return QCMS.toast('Please fill all required (*) fields.', 'warning');
+                    return OctaQube.toast('Please fill all required (*) fields.', 'warning');
                 }
 
                 const payload = {
@@ -1877,13 +1877,13 @@
 
                 try {
                     const res = await api.post('/projects', payload);
-                    QCMS.toast('Project created successfully!', 'success');
+                    OctaQube.toast('Project created successfully!', 'success');
                     this.initModal.hide();
                     setTimeout(() => {
                         window.location.href = `/projects/project-details.html?id=${res.id}`;
                     }, 800);
                 } catch (e) {
-                    QCMS.toast(e.message || 'Failed to create project', 'error');
+                    OctaQube.toast(e.message || 'Failed to create project', 'error');
                 }
             },
 
@@ -1914,15 +1914,15 @@
                 const cbs = document.querySelectorAll('.edit-member-cb:checked');
                 const member_ids = Array.from(cbs).map(cb => parseInt(cb.value));
 
-                if (!title) return QCMS.toast('Title is required', 'warning');
+                if (!title) return OctaQube.toast('Title is required', 'warning');
 
                 try {
                     await api.put(`/projects/${id}`, { title, category, description, deadline, member_ids });
-                    QCMS.toast('Project details updated successfully!', 'success');
+                    OctaQube.toast('Project details updated successfully!', 'success');
                     this.editModal.hide();
                     this.loadTeamPerformanceData();
                 } catch (e) {
-                    QCMS.toast(e.message || 'Update failed', 'error');
+                    OctaQube.toast(e.message || 'Update failed', 'error');
                 }
             },
 
@@ -1935,11 +1935,11 @@
                 if (!this.activeDeleteProjectId) return;
                 try {
                     await api.delete(`/projects/${this.activeDeleteProjectId}`);
-                    QCMS.toast('Project deleted successfully.', 'success');
+                    OctaQube.toast('Project deleted successfully.', 'success');
                     this.deleteModal.hide();
                     this.loadTeamPerformanceData();
                 } catch (e) {
-                    QCMS.toast(e.message || 'Deletion failed', 'error');
+                    OctaQube.toast(e.message || 'Deletion failed', 'error');
                 }
             },
 
@@ -1979,7 +1979,7 @@
                     }
                 } catch (e) {
                     console.error('Failed to load workload', e);
-                    QCMS.toast('Error loading workload statistics', 'danger');
+                    OctaQube.toast('Error loading workload statistics', 'danger');
                 }
             },
 
@@ -2120,7 +2120,7 @@
                                     </div>
                                     <div class="v-stack">
                                         <div class="text-sm fw-bold" style="color: var(--ds-text-main);">${m.username}</div>
-                                        <div class="text-xxs text-muted">${m.email || 'team-member@qcms.com'}</div>
+                                        <div class="text-xxs text-muted">${m.email || 'team-member@octaqube.com'}</div>
                                     </div>
                                 </div>
                             </td>
@@ -2203,10 +2203,10 @@
                             <div class="project-item fade-in" onclick="tmDash.selectProject(${p.id}, this)">
                                 <div class="project-item-info">
                                     <div class="project-name">${p.title}</div>
-                                    <div class="project-uid">${p.project_uid || 'UID-PENDING'} · ${QCMS.categoryBadge(p.category)}</div>
+                                    <div class="project-uid">${p.project_uid || 'UID-PENDING'} · ${OctaQube.categoryBadge(p.category)}</div>
                                 </div>
                                 <div class="project-item-meta">
-                                    ${QCMS.projectProgress(p.current_stage || p.stage || 1)}
+                                    ${OctaQube.projectProgress(p.current_stage || p.stage || 1)}
                                 </div>
                                 <i data-lucide="chevron-right" class="project-item-arrow"></i>
                             </div>

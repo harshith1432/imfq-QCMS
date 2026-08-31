@@ -141,7 +141,7 @@
     },
     "compliance": {
       "title": "Regulatory Compliance",
-      "desc": "Select the standards that govern your organization. QCMS will adjust reporting templates accordingly.",
+      "desc": "Select the standards that govern your organization. OctaQube will adjust reporting templates accordingly.",
       "iso9001": "Quality Management System",
       "iso14001": "Environmental Management",
       "as9100": "Aerospace Quality",
@@ -212,7 +212,7 @@
       "org_health_sub": "Composite efficiency index",
       "insight_velocity": "Average project stage completion time is {days} days.",
       "insight_success": "Project success rate stands at {rate}% across {total} initiatives.",
-      "insight_participation": "{active} departments ({rate}%) are actively utilizing the QCMS platform.",
+      "insight_participation": "{active} departments ({rate}%) are actively utilizing the OctaQube platform.",
       "insight_recommendation": "Recommendation: Increase facilitator engagement in underperforming units.",
       "active_initiatives_sub": "of {total} total projects",
       "executive_access": "Executive Access",

@@ -6,11 +6,11 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QCMS Developer Portal & API Documentation</title>
+    <title>OctaQube Developer Portal & API Documentation</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,7 +23,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- App JS Utilities -->
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <style>
         :root {
             --docs-bg: #f8fafc;
@@ -466,12 +466,12 @@
                     <i data-lucide="code-2" style="width:20px;height:20px;"></i>
                 </div>
                 <div>
-                    <span class="fw-bold fs-6 text-dark text-decoration-none">QCMS</span>
+                    <span class="fw-bold fs-6 text-dark text-decoration-none">OctaQube</span>
                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">Developer Portal</span>
                 </div>
             </a>
             <span class="text-muted fs-6">|</span>
-            <span class="text-xs text-muted font-monospace">Base URL: <code>https://api.qcms.com/v1/</code></span>
+            <span class="text-xs text-muted font-monospace">Base URL: <code>https://api.octaqube.com/v1/</code></span>
         </div>
 
         <!-- Center Search Trigger -->
@@ -484,7 +484,7 @@
             <a href="/api/v1/integrations/docs/openapi.json" target="_blank" class="btn btn-sm btn-outline-secondary">
                 <i data-lucide="file-json" style="width:14px;height:14px;" class="me-1"></i> OpenAPI 3.1
             </a>
-            <a href="/api/v1/integrations/docs/postman_collection.json" download="QCMS_Postman_Collection.json" class="btn btn-sm btn-outline-primary">
+            <a href="/api/v1/integrations/docs/postman_collection.json" download="OctaQube_Postman_Collection.json" class="btn btn-sm btn-outline-primary">
                 <i data-lucide="download" style="width:14px;height:14px;" class="me-1"></i> Postman
             </a>
             <button class="btn btn-sm btn-light border" onclick="toggleTheme()">
@@ -550,10 +550,10 @@
             <!-- SECTION 1: OVERVIEW -->
             <section id="overview" class="mb-5">
                 <div class="d-flex align-items-center gap-2 mb-2">
-                    <h2 class="fw-bold mb-0">QCMS Developer API Overview</h2>
+                    <h2 class="fw-bold mb-0">OctaQube Developer API Overview</h2>
                     <span class="badge bg-success-subtle text-success border border-success-subtle">v1.0 Stable</span>
                 </div>
-                <p class="text-muted">Welcome to the QCMS (Quality & Continuous Improvement Management System) Integration API. Our API allows external applications (such as Ideation Tools, ERP systems, CRMs, and custom workplace software) to securely sync continuous improvement ideas, Kaizen projects, and quality records into QCMS.</p>
+                <p class="text-muted">Welcome to the OctaQube (Quality & Continuous Improvement Management System) Integration API. Our API allows external applications (such as Ideation Tools, ERP systems, CRMs, and custom workplace software) to securely sync continuous improvement ideas, Kaizen projects, and quality records into OctaQube.</p>
                 
                 <div class="row g-3 mt-3">
                     <div class="col-md-4">
@@ -580,14 +580,14 @@
             <!-- SECTION 2: AUTHENTICATION -->
             <section id="authentication" class="mb-5">
                 <h3 class="fw-bold mb-3">2. Authentication</h3>
-                <p>All requests to the QCMS Integration API must include a valid Organization API key passed as a Bearer token in the <code>Authorization</code> HTTP request header.</p>
+                <p>All requests to the OctaQube Integration API must include a valid Organization API key passed as a Bearer token in the <code>Authorization</code> HTTP request header.</p>
 
                 <div class="code-block-container">
                     <div class="code-block-header">
                         <span class="text-xs text-muted">HTTP Header Format</span>
                         <button class="btn btn-xs btn-outline-light" onclick="copyCode(this)">Copy</button>
                     </div>
-                    <pre class="code-block-body">Authorization: Bearer qcms_live_83hd92jd93jd83jd93jd93jd</pre>
+                    <pre class="code-block-body">Authorization: Bearer octaqube_live_83hd92jd93jd83jd93jd93jd</pre>
                 </div>
 
                 <div class="alert alert-warning border-0 bg-warning-subtle text-warning-emphasis p-3">
@@ -604,7 +604,7 @@
             <!-- SECTION 3: BASE URL -->
             <section id="base-url" class="mb-5">
                 <h3 class="fw-bold mb-3">3. Base URL</h3>
-                <p>The QCMS Integration API is served over HTTPS. Use the following base URLs depending on your environment:</p>
+                <p>The OctaQube Integration API is served over HTTPS. Use the following base URLs depending on your environment:</p>
                 <div class="table-responsive">
                     <table class="table border text-sm">
                         <thead>
@@ -621,9 +621,9 @@
             <!-- SECTION 4: API KEYS -->
             <section id="api-keys" class="mb-5">
                 <h3 class="fw-bold mb-3">4. API Key Lifecycle Management</h3>
-                <p>Organization Administrators can manage API keys in QCMS via <strong>Settings → Integrations</strong>:</p>
+                <p>Organization Administrators can manage API keys in OctaQube via <strong>Settings → Integrations</strong>:</p>
                 <ul>
-                    <li><strong>Generate API Key:</strong> Creates a new live secret key (format <code>qcms_live_...</code>).</li>
+                    <li><strong>Generate API Key:</strong> Creates a new live secret key (format <code>octaqube_live_...</code>).</li>
                     <li><strong>Regenerate Key:</strong> Invalidates the current key and issues a new key immediately.</li>
                     <li><strong>Enable/Disable Key:</strong> Temporarily pause API traffic without deleting credentials.</li>
                     <li><strong>Delete Key:</strong> Permanently revokes access.</li>
@@ -636,11 +636,11 @@
                 <div class="d-flex flex-column gap-3">
                     <div class="p-3 border rounded-3 bg-body-tertiary d-flex align-items-center gap-3">
                         <div class="badge bg-primary rounded-circle p-2 fs-6" style="width:36px;height:36px;">1</div>
-                        <div><strong>Generate API Key</strong> in QCMS Platform (Settings → Integrations).</div>
+                        <div><strong>Generate API Key</strong> in OctaQube Platform (Settings → Integrations).</div>
                     </div>
                     <div class="p-3 border rounded-3 bg-body-tertiary d-flex align-items-center gap-3">
                         <div class="badge bg-primary rounded-circle p-2 fs-6" style="width:36px;height:36px;">2</div>
-                        <div><strong>Copy Secret Token</strong> (e.g. <code>qcms_live_TvvFkQ6zRRI6YIAUAA4CL...</code>).</div>
+                        <div><strong>Copy Secret Token</strong> (e.g. <code>octaqube_live_TvvFkQ6zRRI6YIAUAA4CL...</code>).</div>
                     </div>
                     <div class="p-3 border rounded-3 bg-body-tertiary d-flex align-items-center gap-3">
                         <div class="badge bg-primary rounded-circle p-2 fs-6" style="width:36px;height:36px;">3</div>
@@ -659,7 +659,7 @@
                     <h3 class="fw-bold mb-0">6. Endpoint: Import Approved Idea</h3>
                     <span class="method-badge method-post fs-6">POST /api/v1/integrations/ideas</span>
                 </div>
-                <p>Pushes an approved continuous improvement idea from external tools (Ideation Tool, ERP) into the QCMS database.</p>
+                <p>Pushes an approved continuous improvement idea from external tools (Ideation Tool, ERP) into the OctaQube database.</p>
 
                 <h5 class="fw-bold mt-4 mb-2">Request Body Fields</h5>
                 <table class="param-table">
@@ -781,7 +781,7 @@
                     <h3 class="fw-bold mb-0">Endpoint: List Imported Ideas</h3>
                     <span class="method-badge method-get fs-6">GET /api/v1/integrations/imported-ideas</span>
                 </div>
-                <p>Retrieves a list of continuous improvement ideas previously synced into QCMS for the authenticated organization.</p>
+                <p>Retrieves a list of continuous improvement ideas previously synced into OctaQube for the authenticated organization.</p>
                 <div class="code-block-container mt-3">
                     <div class="code-block-header">
                         <span class="text-xs text-muted">Response 200 OK</span>
@@ -880,7 +880,7 @@
                     <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-3">
                         <div>
                             <h4 class="fw-bold mb-0 text-primary"><i data-lucide="play" class="me-1"></i> Interactive API Playground</h4>
-                            <p class="text-xs text-muted mb-0">Test QCMS API requests live in your browser</p>
+                            <p class="text-xs text-muted mb-0">Test OctaQube API requests live in your browser</p>
                         </div>
                         <button class="btn btn-sm btn-primary" onclick="sendPlaygroundRequest()">
                             <i data-lucide="send" style="width:14px;height:14px;" class="me-1"></i> Send Request
@@ -890,7 +890,7 @@
                     <div class="row g-3">
                         <div class="col-md-8">
                             <label class="form-label text-xs fw-bold text-muted">ORGANIZATION API KEY</label>
-                            <input type="text" id="playgroundApiKey" class="form-control form-control-sm font-monospace" placeholder="Paste Bearer Key e.g. qcms_live_..." value="qcms_live_demo">
+                            <input type="text" id="playgroundApiKey" class="form-control form-control-sm font-monospace" placeholder="Paste Bearer Key e.g. octaqube_live_..." value="octaqube_live_demo">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label text-xs fw-bold text-muted">ENDPOINT</label>
@@ -1078,7 +1078,7 @@ const payload = JSON.stringify({
 });
 
 const options = {
-  hostname: 'your-qcms-server.com',
+  hostname: 'your-octaqube-server.com',
   path: '/api/v1/integrations/ideas',
   method: 'POST',
   headers: {
@@ -1242,7 +1242,7 @@ echo $response->getBody();
 import java.net.URI;
 import java.net.http.*;
 
-public class QCMSIntegration {
+public class OctaQubeIntegration {
     public static void main(String[] args) throws Exception {
         String json = """
             {
@@ -1410,19 +1410,19 @@ puts "Body:   #{res.body}"
 # {"success":true,"message":"Idea imported successfully.","ideaCode":"IDA-2026-006"}`,
 
             react:
-`// React — custom hook for QCMS idea import
+`// React — custom hook for OctaQube idea import
 import { useState } from 'react';
 
-const QCMS_API = 'http://localhost:5000/api/v1/integrations/ideas';
+const OctaQube_API = 'http://localhost:5000/api/v1/integrations/ideas';
 
-function useQCMSImport(apiKey) {
+function useOctaQubeImport(apiKey) {
   const [loading, setLoading] = useState(false);
   const [result,  setResult]  = useState(null);
 
   const importIdea = async (idea) => {
     setLoading(true);
     try {
-      const res  = await fetch(QCMS_API, {
+      const res  = await fetch(OctaQube_API, {
         method:  'POST',
         headers: {
           'Authorization': \`Bearer \${apiKey}\`,
@@ -1442,7 +1442,7 @@ function useQCMSImport(apiKey) {
 }
 
 export function ImportIdeaButton({ apiKey }) {
-  const { importIdea, loading, result } = useQCMSImport(apiKey);
+  const { importIdea, loading, result } = useOctaQubeImport(apiKey);
 
   const handleSubmit = () => importIdea({
     ideaCode:           'IDA-2026-006',
@@ -1464,7 +1464,7 @@ export function ImportIdeaButton({ apiKey }) {
   return (
     <div>
       <button onClick={handleSubmit} disabled={loading}>
-        {loading ? 'Importing...' : 'Import Idea to QCMS'}
+        {loading ? 'Importing...' : 'Import Idea to OctaQube'}
       </button>
       {result && <pre>{JSON.stringify(result.data, null, 2)}</pre>}
     </div>
@@ -1512,7 +1512,7 @@ export function ImportIdeaButton({ apiKey }) {
         function copyActiveCode() {
             const code = document.getElementById('activeCodeSnippet').textContent;
             navigator.clipboard.writeText(code);
-            QCMS.toast('Code snippet copied to clipboard!', 'success');
+            OctaQube.toast('Code snippet copied to clipboard!', 'success');
         }
 
         function downloadActiveCode() {
@@ -1520,7 +1520,7 @@ export function ImportIdeaButton({ apiKey }) {
             const blob = new Blob([code], { type: 'text/plain' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `qcms_integration_${currentLang}.txt`;
+            a.download = `octaqube_integration_${currentLang}.txt`;
             a.click();
         }
 
@@ -1735,8 +1735,8 @@ export function ImportIdeaButton({ apiKey }) {
             const container = btn.closest('.code-block-container');
             const code = (container ? container.querySelector('pre')?.innerText : null) || btn.parentElement.innerText;
             navigator.clipboard.writeText(code.trim());
-            if (window.QCMS && QCMS.toast) {
-                QCMS.toast('Code copied!', 'success');
+            if (window.OctaQube && OctaQube.toast) {
+                OctaQube.toast('Code copied!', 'success');
             }
         };
 

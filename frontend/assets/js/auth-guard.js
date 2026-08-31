@@ -1,5 +1,5 @@
 (function () {
-    const isAuthed = (sessionStorage.getItem('qcms_authenticated') === 'true') || (localStorage.getItem('qcms_authenticated') === 'true');
+    const isAuthed = (sessionStorage.getItem('octaqube_authenticated') === 'true') || (localStorage.getItem('octaqube_authenticated') === 'true') || (sessionStorage.getItem('qcms_authenticated') === 'true') || (localStorage.getItem('qcms_authenticated') === 'true');
     const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
     const token = sessionStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
 
@@ -90,8 +90,8 @@
         fetch('/api/feature-engine/flags')
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'success' && data.flags && window.QCMS_MODULE_MAP) {
-                    const moduleCode = window.QCMS_MODULE_MAP.findByRoute(path);
+                if (data.status === 'success' && data.flags && window.OctaQube_MODULE_MAP) {
+                    const moduleCode = window.OctaQube_MODULE_MAP.findByRoute(path);
                     if (moduleCode && data.flags[moduleCode] === false) {
                         let isSuperAdmin = false;
                         try {
@@ -133,7 +133,7 @@
                     if (data && (data.session_terminated || data.message?.includes('deactivated') || data.message?.includes('expired') || data.message?.includes('Invalid token') || data.message?.includes('User account not found'))) {
                         console.warn('[AuthGuard] 401 received during session check:', data);
                         sessionStorage.clear();
-                        localStorage.removeItem('qcms_authenticated');
+                        localStorage.removeItem('octaqube_authenticated');
                         localStorage.removeItem('user');
                         localStorage.removeItem('token');
                         localStorage.removeItem('access_token');
@@ -230,8 +230,8 @@
 
             // 2. Trigger simple notification toast
             setTimeout(() => {
-                if (window.QCMS && typeof window.QCMS.toast === 'function') {
-                    window.QCMS.toast('Currently this feature is under maintenance.', 'warning');
+                if (window.OctaQube && typeof window.OctaQube.toast === 'function') {
+                    window.OctaQube.toast('Currently this feature is under maintenance.', 'warning');
                 } else if (typeof window.api?.showNotification === 'function') {
                     window.api.showNotification('Currently this feature is under maintenance.', 'warning');
                 }
@@ -275,7 +275,7 @@
         document.documentElement.innerHTML =
             '<!DOCTYPE html><html lang="en"><head>' +
             '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-            '<title>System Under Maintenance — QCMS Enterprise</title>' +
+            '<title>System Under Maintenance — OctaQube Enterprise</title>' +
             '<link rel="preconnect" href="https://fonts.googleapis.com">' +
             '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">' +
             '<style>' +
@@ -398,7 +398,7 @@
                                     '<polyline points="9 12 11 14 15 10"/>' +
                                 '</svg>' +
                             '</div>' +
-                            '<span class="nav-brand-text">QCMS&nbsp;<span>Enterprise</span></span>' +
+                            '<span class="nav-brand-text">OctaQube&nbsp;<span>Enterprise</span></span>' +
                         '</a>' +
                         '<div class="nav-status-badge">' +
                             '<span class="nav-status-dot"></span>' +
@@ -429,7 +429,7 @@
                             '</div>' +
                             '<div class="maint-divider"></div>' +
                             '<div class="maint-footer">' +
-                                'QCMS Enterprise OS' +
+                                'OctaQube Enterprise OS' +
                                 '<span class="fdot"></span>' +
                                 'Secured &amp; Isolated Cloud Instance' +
                                 '<span class="fdot"></span>' +
@@ -440,7 +440,7 @@
                 '</div>' +
 
                 '<footer class="page-footer">' +
-                    '© ' + new Date().getFullYear() + ' QCMS Enterprise · All rights reserved' +
+                    '© ' + new Date().getFullYear() + ' OctaQube Enterprise · All rights reserved' +
                 '</footer>' +
             '</div>' +
             '</body></html>';
@@ -509,17 +509,17 @@
             sessionStorage.removeItem('access_token');
             sessionStorage.removeItem('user');
             sessionStorage.removeItem('role_permissions');
-            sessionStorage.removeItem('qcms_authenticated');
+            sessionStorage.removeItem('octaqube_authenticated');
             localStorage.removeItem('token');
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
             localStorage.removeItem('role_permissions');
-            localStorage.removeItem('qcms_authenticated');
+            localStorage.removeItem('octaqube_authenticated');
             // Clear remembered credentials only on explicit logout or administrative session termination
             if (urlParams.get('logout') === 'true' || urlParams.get('reason') === 'session_terminated') {
                 sessionStorage.clear();
-                localStorage.removeItem('qcms_remember_me');
-                localStorage.removeItem('qcms_remembered_username');
+                localStorage.removeItem('octaqube_remember_me');
+                localStorage.removeItem('octaqube_remembered_username');
             }
         } catch (_) {}
         return;
@@ -585,7 +585,7 @@
                         localStorage.removeItem('token');
                         localStorage.removeItem('access_token');
                         localStorage.removeItem('user');
-                        localStorage.removeItem('qcms_authenticated');
+                        localStorage.removeItem('octaqube_authenticated');
                         window.location.replace('/auth/login.html' + (data.session_terminated ? '?reason=session_terminated' : ''));
                     }
                 }).catch(() => {});
@@ -820,7 +820,7 @@
                     </div>
                     <h1 class="susp-title">Organization Account Suspended</h1>
                     <p class="susp-desc">
-                        Your organization's access to the QCMS platform has been suspended. Please contact the QCMS support team to reactivate your account.
+                        Your organization's access to the OctaQube platform has been suspended. Please contact the OctaQube support team to reactivate your account.
                     </p>
 
                     <div class="susp-form-card">
@@ -1179,7 +1179,7 @@
         } catch (_) {}
         try {
             sessionStorage.clear();
-            localStorage.removeItem('qcms_authenticated');
+            localStorage.removeItem('octaqube_authenticated');
             localStorage.removeItem('token');
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
@@ -1200,7 +1200,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Enterprise Feature Flag & Module Runtime Evaluator
 // ─────────────────────────────────────────────────────────────────────────────
-window.QCMSFeatures = {
+window.OctaQubeFeatures = {
     flags: {},
     loaded: false,
     async init() {
@@ -1213,7 +1213,7 @@ window.QCMSFeatures = {
                 this.applyDOMVisibility();
             }
         } catch (e) {
-            console.warn('[QCMSFeatures] Failed to load feature flags', e);
+            console.warn('[OctaQubeFeatures] Failed to load feature flags', e);
         }
     },
     isEnabled(code) {
@@ -1237,11 +1237,11 @@ window.QCMSFeatures = {
             }
         });
 
-        // 2. Selectors from QCMS_MODULE_MAP for disabled modules
-        if (window.QCMS_MODULE_MAP) {
+        // 2. Selectors from OctaQube_MODULE_MAP for disabled modules
+        if (window.OctaQube_MODULE_MAP) {
             Object.keys(this.flags).forEach(code => {
                 if (this.flags[code] === false) {
-                    const mod = window.QCMS_MODULE_MAP[code];
+                    const mod = window.OctaQube_MODULE_MAP[code];
                     if (mod && mod.selectors) {
                         mod.selectors.forEach(sel => {
                             try {
@@ -1263,8 +1263,10 @@ window.QCMSFeatures = {
     }
 };
 
+window.QCMSFeatures = window.OctaQubeFeatures;
+
 document.addEventListener('DOMContentLoaded', () => {
-    window.QCMSFeatures.init();
+    window.OctaQubeFeatures.init();
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1280,8 +1282,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function recordMovement() {
         lastUserMovementTime = Date.now();
         try {
-            localStorage.setItem('qcms_last_activity', String(lastUserMovementTime));
-            sessionStorage.setItem('qcms_last_activity', String(lastUserMovementTime));
+            localStorage.setItem('octaqube_last_activity', String(lastUserMovementTime));
+            sessionStorage.setItem('octaqube_last_activity', String(lastUserMovementTime));
         } catch (e) {}
     }
 
@@ -1298,7 +1300,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cross-tab synchronization: if user acts in another tab, sync activity time here
     window.addEventListener('storage', (e) => {
-        if (e.key === 'qcms_last_activity' && e.newValue) {
+        if (e.key === 'octaqube_last_activity' && e.newValue) {
             const remoteTime = Number(e.newValue);
             if (!isNaN(remoteTime) && remoteTime > lastUserMovementTime) {
                 lastUserMovementTime = remoteTime;
@@ -1316,7 +1318,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {}
 
     // Initialize activity timestamp safely on page load
-    const storedLast = localStorage.getItem('qcms_last_activity') || sessionStorage.getItem('qcms_last_activity');
+    const storedLast = localStorage.getItem('octaqube_last_activity') || sessionStorage.getItem('octaqube_last_activity');
     const now = Date.now();
     if (storedLast && !isNaN(Number(storedLast))) {
         const parsed = Number(storedLast);
@@ -1338,11 +1340,11 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionStorage.removeItem('token');
         sessionStorage.removeItem('access_token');
         sessionStorage.removeItem('user');
-        sessionStorage.removeItem('qcms_last_activity');
+        sessionStorage.removeItem('octaqube_last_activity');
         localStorage.removeItem('token');
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
-        localStorage.removeItem('qcms_last_activity');
+        localStorage.removeItem('octaqube_last_activity');
 
         const currentPath = window.location.pathname;
         if (!currentPath.includes('login.html') && !currentPath.includes('index.html') && currentPath !== '/') {
@@ -1353,11 +1355,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function sendHeartbeat() {
         if (isTerminating) return;
-        const isAuthed = sessionStorage.getItem('qcms_authenticated') === 'true' || localStorage.getItem('qcms_authenticated') === 'true';
+        const isAuthed = sessionStorage.getItem('octaqube_authenticated') === 'true' || localStorage.getItem('octaqube_authenticated') === 'true';
         if (!isAuthed) return;
 
         // Check latest cross-tab activity from localStorage
-        const latestStored = localStorage.getItem('qcms_last_activity');
+        const latestStored = localStorage.getItem('octaqube_last_activity');
         if (latestStored && !isNaN(Number(latestStored))) {
             const remoteTime = Number(latestStored);
             if (remoteTime > lastUserMovementTime) {

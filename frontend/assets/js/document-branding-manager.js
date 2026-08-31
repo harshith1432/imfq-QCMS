@@ -1,5 +1,5 @@
 /**
- * QCMS Enterprise OS — Centralized Document Identity, Branding & Usage Mapping Explorer Manager
+ * OctaQube Enterprise OS — Centralized Document Identity, Branding & Usage Mapping Explorer Manager
  */
 
 const DocIdentityManager = {
@@ -50,21 +50,21 @@ const DocIdentityManager = {
 
         // Contacts
         this.setValue('di-email-general', ctx.general_email);
-        this.setValue('di-sender-general', ctx.general_sender_name || 'QCMS General Info');
+        this.setValue('di-sender-general', ctx.general_sender_name || 'OctaQube General Info');
         this.setValue('di-email-support', ctx.support_email);
-        this.setValue('di-sender-support', ctx.support_sender_name || 'QCMS Customer Support');
+        this.setValue('di-sender-support', ctx.support_sender_name || 'OctaQube Customer Support');
         this.setValue('di-email-billing', ctx.billing_email);
-        this.setValue('di-sender-billing', ctx.billing_sender_name || 'QCMS Accounts & Billing');
-        this.setValue('di-email-otp', ctx.otp_email || 'otp-auth@qcms.com');
-        this.setValue('di-sender-otp', ctx.otp_sender_name || 'QCMS OTP Verification');
-        this.setValue('di-email-contact', ctx.contact_email || 'contact@qcms.com');
-        this.setValue('di-sender-contact', ctx.contact_sender_name || 'QCMS Business Inquiries');
-        this.setValue('di-email-alerts', ctx.alerts_email || 'alerts@qcms.com');
-        this.setValue('di-sender-alerts', ctx.alerts_sender_name || 'QCMS System Alerts');
-        this.setValue('di-email-feedback', ctx.feedback_email || 'feedback@qcms.com');
-        this.setValue('di-sender-feedback', ctx.feedback_sender_name || 'QCMS Product Feedback');
-        this.setValue('di-email-onboarding', ctx.onboarding_email || 'onboarding@qcms.com');
-        this.setValue('di-sender-onboarding', ctx.onboarding_sender_name || 'QCMS User Onboarding');
+        this.setValue('di-sender-billing', ctx.billing_sender_name || 'OctaQube Accounts & Billing');
+        this.setValue('di-email-otp', ctx.otp_email || 'otp-auth@octaqube.com');
+        this.setValue('di-sender-otp', ctx.otp_sender_name || 'OctaQube OTP Verification');
+        this.setValue('di-email-contact', ctx.contact_email || 'contact@octaqube.com');
+        this.setValue('di-sender-contact', ctx.contact_sender_name || 'OctaQube Business Inquiries');
+        this.setValue('di-email-alerts', ctx.alerts_email || 'alerts@octaqube.com');
+        this.setValue('di-sender-alerts', ctx.alerts_sender_name || 'OctaQube System Alerts');
+        this.setValue('di-email-feedback', ctx.feedback_email || 'feedback@octaqube.com');
+        this.setValue('di-sender-feedback', ctx.feedback_sender_name || 'OctaQube Product Feedback');
+        this.setValue('di-email-onboarding', ctx.onboarding_email || 'onboarding@octaqube.com');
+        this.setValue('di-sender-onboarding', ctx.onboarding_sender_name || 'OctaQube User Onboarding');
         this.setValue('di-phone-general', ctx.general_phone);
         this.setValue('di-phone-emergency', ctx.emergency_phone || '+91 98765 43210');
     },

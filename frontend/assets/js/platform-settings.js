@@ -1,5 +1,5 @@
 /**
- * QCMS Enterprise OS — Platform Settings Manager
+ * OctaQube Enterprise OS — Platform Settings Manager
  * Handles all Super Admin platform-level settings categories.
  * Integrates with /api/super-admin/settings/* endpoints.
  */
@@ -42,7 +42,7 @@ const PlatformSettings = {
 
     async init() {
         const user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
-        const role = window.QCMS && window.QCMS.normalizeRole ? window.QCMS.normalizeRole(user.role) : user.role;
+        const role = window.OctaQube && window.OctaQube.normalizeRole ? window.OctaQube.normalizeRole(user.role) : user.role;
         const isSuperAdmin = role === 'SuperAdmin';
         if (!isSuperAdmin) return;
 
@@ -64,7 +64,7 @@ const PlatformSettings = {
         this.restoreSavedBranding();
 
         // Listen for mode switches to synchronize color pickers with active mode palette
-        window.addEventListener('qcms-theme-change', () => {
+        window.addEventListener('octaqube-theme-change', () => {
             this.syncBrandingInputs();
         });
 
@@ -142,8 +142,8 @@ const PlatformSettings = {
 
     async saveCurrentTab() {
         if (window.SuperAdmin && SuperAdmin.saSubRole && SuperAdmin.saSubRole !== 'Owner' && SuperAdmin.saSubRole !== 'Platform Operations') {
-            if (window.QCMS && QCMS.toast) {
-                QCMS.toast(`Your sub-role '${SuperAdmin.saSubRole}' does not have permission to modify platform settings.`, 'warning');
+            if (window.OctaQube && OctaQube.toast) {
+                OctaQube.toast(`Your sub-role '${SuperAdmin.saSubRole}' does not have permission to modify platform settings.`, 'warning');
             }
             return;
         }
@@ -172,7 +172,7 @@ const PlatformSettings = {
             case 'about': await this.saveAbout(); break;
             case 'landing-cms': await this.saveLandingCMS(); break;
             default:
-                QCMS.toast(`Configuration for "${this._activeTab}" saved successfully.`, 'success');
+                OctaQube.toast(`Configuration for "${this._activeTab}" saved successfully.`, 'success');
                 break;
         }
     },
@@ -184,14 +184,14 @@ const PlatformSettings = {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `qcms_system_config_${new Date().toISOString().slice(0, 10)}.json`;
+            a.download = `octaqube_system_config_${new Date().toISOString().slice(0, 10)}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            QCMS.toast('System configuration exported to JSON file.', 'success');
+            OctaQube.toast('System configuration exported to JSON file.', 'success');
         } catch (e) {
-            QCMS.toast('Export failed.', 'error');
+            OctaQube.toast('Export failed.', 'error');
         }
     },
 
@@ -206,10 +206,10 @@ const PlatformSettings = {
                 const text = await file.text();
                 const json = JSON.parse(text);
                 await this._put('/settings', json);
-                QCMS.toast('Settings imported and updated!', 'success');
+                OctaQube.toast('Settings imported and updated!', 'success');
                 await this.loadAllSettings();
             } catch (err) {
-                QCMS.toast('Invalid JSON settings file.', 'error');
+                OctaQube.toast('Invalid JSON settings file.', 'error');
             }
         };
         input.click();
@@ -492,7 +492,7 @@ const PlatformSettings = {
             this._val('ps-ai-max-tokens', aiS.max_tokens || 2048);
             this._val('ps-ai-usage-limit', aiS.ai_usage_limit_usd || 100);
             this._val('ps-ai-openrouter-site', aiS.openrouter_site_url || 'https://imfq.io');
-            this._val('ps-ai-openrouter-app', aiS.openrouter_app_name || 'QCMS Enterprise OS');
+            this._val('ps-ai-openrouter-app', aiS.openrouter_app_name || 'OctaQube Enterprise OS');
             this._val('ps-ai-fallbacks', aiS.model_fallbacks || 'anthropic/claude-3.5-sonnet, google/gemini-2.0-flash-001, deepseek/deepseek-r1');
             this._chk('ps-ai-logging', aiS.ai_logging !== false);
 
@@ -610,11 +610,11 @@ const PlatformSettings = {
 
         // FAQs
         this._val('ps-cms-faq-title', lCms.faq_title || 'Frequently Asked Questions');
-        this._val('ps-cms-faq-subtitle', lCms.faq_subtitle || 'Everything you need to know about QCMS Enterprise.');
+        this._val('ps-cms-faq-subtitle', lCms.faq_subtitle || 'Everything you need to know about OctaQube Enterprise.');
         const defaultFaqs = [
             { q: 'How does the 14-day free trial work?', a: 'You get full access to all Enterprise features for 14 days. No credit card required.' },
             { q: 'Can we upgrade plans later?', a: 'Yes, you can upgrade your plan at any time from the billing dashboard.' },
-            { q: 'Do you support multiple factories?', a: 'Absolutely. QCMS is built for multi-site enterprise deployments.' },
+            { q: 'Do you support multiple factories?', a: 'Absolutely. OctaQube is built for multi-site enterprise deployments.' },
             { q: 'Is white label branding available?', a: 'Yes, on the Enterprise tier you can fully customize logos, colors, and domains.' },
             { q: 'Can we integrate with ERP/SAP?', a: 'Yes, we offer two-way sync with SAP S/4HANA, Oracle, and Microsoft Dynamics.' }
         ];
@@ -634,7 +634,7 @@ const PlatformSettings = {
 
         // Footer
         this._val('ps-cms-footer-desc', lCms.footer_description || "The world's most advanced quality management system for modern manufacturing and enterprise excellence. Built for scale, security, and precision.");
-        this._val('ps-cms-footer-copy', lCms.footer_copyright || '© 2026 QCMS Precision Core. Engineered for Excellence.');
+        this._val('ps-cms-footer-copy', lCms.footer_copyright || '© 2026 OctaQube Precision Core. Engineered for Excellence.');
         this._val('ps-cms-footer-lang', lCms.footer_lang || 'English (US)');
         this._val('ps-cms-footer-status', lCms.footer_status || 'Operational');
 
@@ -672,10 +672,10 @@ const PlatformSettings = {
         // 2. Automatically save & publish the default template to the backend
         try {
             await this.saveLandingCMS();
-            if (window.QCMS) QCMS.toast('Landing page successfully reset to default system template and published!', 'success');
+            if (window.OctaQube) OctaQube.toast('Landing page successfully reset to default system template and published!', 'success');
         } catch (err) {
             console.error('Error saving default landing CMS:', err);
-            if (window.QCMS) QCMS.toast('Reset to default values in form. Click "Publish Landing Page" to save.', 'info');
+            if (window.OctaQube) OctaQube.toast('Reset to default values in form. Click "Publish Landing Page" to save.', 'info');
         }
     },
 
@@ -947,12 +947,12 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            if (window.QCMS) QCMS.toast('Landing CMS settings saved and published successfully!', 'success');
+            if (window.OctaQube) OctaQube.toast('Landing CMS settings saved and published successfully!', 'success');
             
             // Refresh preview if open
             const iframe = document.getElementById('ps-cms-iframe');
             if(iframe) iframe.src = '/index.html?t=' + Date.now();
-        } catch (e) { if (window.QCMS) QCMS.toast(e.message || 'Save failed.', 'error'); }
+        } catch (e) { if (window.OctaQube) OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async toggleLandingPageStatus(enabled, skipSave = false) {
@@ -1024,8 +1024,8 @@ const PlatformSettings = {
                 global_notification: this._getVal('ps-global-notification')
             };
             await this._put('/settings', payload);
-            QCMS.toast('General settings saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('General settings saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async saveOtpSettings() {
@@ -1033,9 +1033,9 @@ const PlatformSettings = {
             const reqEmail = !!document.getElementById('ps-require-email-otp')?.checked;
             const reqPhone = !!document.getElementById('ps-require-phone-otp')?.checked;
             await this._put('/settings', { require_email_otp: reqEmail, require_phone_otp: reqPhone });
-            QCMS.toast('Registration OTP settings updated successfully.', 'success');
+            OctaQube.toast('Registration OTP settings updated successfully.', 'success');
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to update OTP settings.', 'error');
+            OctaQube.toast(e.message || 'Failed to update OTP settings.', 'error');
         }
     },
 
@@ -1043,9 +1043,9 @@ const PlatformSettings = {
         try {
             const isOpen = !!inputEl.checked;
             await this._put('/settings', { registration_open: isOpen });
-            QCMS.toast(`Self-service sign-up ${isOpen ? 'enabled' : 'disabled'} successfully.`, isOpen ? 'success' : 'info');
+            OctaQube.toast(`Self-service sign-up ${isOpen ? 'enabled' : 'disabled'} successfully.`, isOpen ? 'success' : 'info');
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to update sign-up status.', 'error');
+            OctaQube.toast(e.message || 'Failed to update sign-up status.', 'error');
         }
     },
 
@@ -1091,7 +1091,7 @@ const PlatformSettings = {
                     if (statusEl) { statusEl.textContent = ''; statusEl.style.color = ''; }
                 }, 3000);
             }
-            QCMS.toast(e.message || 'Failed to save setting.', 'error');
+            OctaQube.toast(e.message || 'Failed to save setting.', 'error');
         }
     },
 
@@ -1112,20 +1112,20 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Email settings saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('Email settings saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async testEmail() {
         const toEmail = this._getVal('ps-test-email-to') || '';
-        if (!toEmail) { QCMS.toast('Enter a test recipient email.', 'warning'); return; }
+        if (!toEmail) { OctaQube.toast('Enter a test recipient email.', 'warning'); return; }
         try {
             const btn = document.getElementById('ps-test-email-btn');
             if (btn) { btn.disabled = true; btn.innerText = 'Sending...'; }
             const res = await this._post('/settings/test-email', { to_email: toEmail });
-            QCMS.toast(res.message || 'Test email sent!', 'success');
+            OctaQube.toast(res.message || 'Test email sent!', 'success');
         } catch (e) {
-            QCMS.toast(e.message || 'Test email failed.', 'error');
+            OctaQube.toast(e.message || 'Test email failed.', 'error');
         } finally {
             const btn = document.getElementById('ps-test-email-btn');
             if (btn) { btn.disabled = false; btn.innerText = 'Send Test Email'; }
@@ -1160,8 +1160,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Authentication settings saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('Authentication settings saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async saveSecurity() {
@@ -1187,15 +1187,15 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Security policies saved successfully.', 'success');
+            OctaQube.toast('Security policies saved successfully.', 'success');
             // Refresh KPIs after save
             this.loadSecurityKPIs();
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async loadSecurityKPIs() {
         try {
-            const API_BASE = window.QCMS_API_BASE || '/api/super-admin';
+            const API_BASE = window.OctaQube_API_BASE || '/api/super-admin';
             // Cookie authentication handled via credentials: 'include'
             const r = await fetch(`${API_BASE}/settings/security-kpis`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -1233,7 +1233,7 @@ const PlatformSettings = {
 
     async loadAuthKPIs() {
         try {
-            const API_BASE = window.QCMS_API_BASE || '/api/super-admin';
+            const API_BASE = window.OctaQube_API_BASE || '/api/super-admin';
             // Cookie authentication handled via credentials: 'include'
             const r = await fetch(`${API_BASE}/settings/auth-kpis`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -1288,8 +1288,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Notification settings saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('Notification settings saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async saveStorage() {
@@ -1307,9 +1307,9 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Storage settings saved.', 'success');
+            OctaQube.toast('Storage settings saved.', 'success');
             await this.loadAllSettings();
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     toggleStorageProviderGuide(value) {
@@ -1337,8 +1337,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Backup settings saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('Backup settings saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     toggleBackupDestInputs(value) {
@@ -1353,11 +1353,11 @@ const PlatformSettings = {
             const btn = document.getElementById('ps-trigger-backup-btn');
             if (btn) { btn.disabled = true; btn.innerText = 'Running Backup...'; }
             const res = await this._post('/settings/backup', {});
-            QCMS.toast(res.message || 'Backup completed!', 'success');
+            OctaQube.toast(res.message || 'Backup completed!', 'success');
             // Refresh history
             await this.loadAllSettings();
         } catch (e) {
-            QCMS.toast(e.message || 'Backup failed.', 'error');
+            OctaQube.toast(e.message || 'Backup failed.', 'error');
         } finally {
             const btn = document.getElementById('ps-trigger-backup-btn');
             if (btn) { btn.disabled = false; btn.innerText = 'Run Manual Backup'; }
@@ -1393,8 +1393,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('API settings saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('API settings saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async generateApiKey() {
@@ -1408,7 +1408,7 @@ const PlatformSettings = {
             // Show the secret once in a modal
             this._showApiKeyModal(keyData.secret, label);
             await this.loadAllSettings();
-        } catch (e) { QCMS.toast(e.message || 'Failed to generate API key.', 'error'); }
+        } catch (e) { OctaQube.toast(e.message || 'Failed to generate API key.', 'error'); }
     },
 
     _showApiKeyModal(secret, label) {
@@ -1422,7 +1422,7 @@ const PlatformSettings = {
 
     copyApiKeyFromModal() {
         const val = document.getElementById('ps-api-key-secret-display')?.value;
-        if (val) { navigator.clipboard.writeText(val); QCMS.toast('API key copied to clipboard.', 'success'); }
+        if (val) { navigator.clipboard.writeText(val); OctaQube.toast('API key copied to clipboard.', 'success'); }
     },
 
     loadApiKeys(keys) {
@@ -1452,15 +1452,15 @@ const PlatformSettings = {
         if (!confirm('Revoking this key will immediately break any integrations using it. Proceed?')) return;
         try {
             await this._delete(`/settings/api-keys/${keyId}`);
-            QCMS.toast('API key revoked.', 'success');
+            OctaQube.toast('API key revoked.', 'success');
             await this.loadAllSettings();
-        } catch (e) { QCMS.toast(e.message || 'Failed to revoke key.', 'error'); }
+        } catch (e) { OctaQube.toast(e.message || 'Failed to revoke key.', 'error'); }
     },
 
     async saveWebhooks() {
         const url = this._getVal('ps-new-webhook-url');
         const events = Array.from(document.querySelectorAll('.ps-webhook-event-cb:checked')).map(el => el.value);
-        if (!url) { QCMS.toast('Webhook URL is required.', 'warning'); return; }
+        if (!url) { OctaQube.toast('Webhook URL is required.', 'warning'); return; }
         try {
             const existing = this._data?.webhook_settings?.webhook_configs || [];
             existing.push({
@@ -1479,18 +1479,18 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Webhook saved.', 'success');
+            OctaQube.toast('Webhook saved.', 'success');
             await this.loadAllSettings();
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async testWebhook(url) {
         const target = url || this._getVal('ps-new-webhook-url');
-        if (!target) { QCMS.toast('Enter a webhook URL to test.', 'warning'); return; }
+        if (!target) { OctaQube.toast('Enter a webhook URL to test.', 'warning'); return; }
         try {
             const res = await this._post('/settings/test-webhook', { url: target });
-            QCMS.toast(res.message || 'Webhook test sent.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Webhook test failed.', 'error'); }
+            OctaQube.toast(res.message || 'Webhook test sent.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Webhook test failed.', 'error'); }
     },
 
     loadWebhookConfigs(configs) {
@@ -1521,9 +1521,9 @@ const PlatformSettings = {
                 webhook_settings: { ...(this._data?.webhook_settings || {}), webhook_configs: existing }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Webhook removed.', 'success');
+            OctaQube.toast('Webhook removed.', 'success');
             await this.loadAllSettings();
-        } catch (e) { QCMS.toast(e.message || 'Remove failed.', 'error'); }
+        } catch (e) { OctaQube.toast(e.message || 'Remove failed.', 'error'); }
     },
 
     renderIntegrations(integrations) {
@@ -1582,8 +1582,8 @@ const PlatformSettings = {
             };
             await this._put('/settings', payload);
             this._data.integrations_settings = integrations;
-            QCMS.toast(`${key} ${enabled ? 'enabled' : 'disabled'}.`, 'success');
-        } catch (e) { QCMS.toast(e.message || 'Toggle failed.', 'error'); }
+            OctaQube.toast(`${key} ${enabled ? 'enabled' : 'disabled'}.`, 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Toggle failed.', 'error'); }
     },
 
     configureIntegration(key) {
@@ -1688,7 +1688,7 @@ const PlatformSettings = {
             const el = document.getElementById(`ak-input-${field.id}`);
             if (el) {
                 if (!el.value && field.type !== 'textarea') { // allow empty JSON for now? Actually let's require it.
-                    QCMS.toast(`Please enter ${field.label}.`, 'warning');
+                    OctaQube.toast(`Please enter ${field.label}.`, 'warning');
                     return;
                 }
                 extractedData[field.id] = el.value;
@@ -1732,9 +1732,9 @@ const PlatformSettings = {
             const bsModal = bootstrap.Modal.getInstance(modalEl);
             if (bsModal) bsModal.hide();
 
-            QCMS.toast(`${this.PROVIDER_META[key]?.name || key} API Key configured successfully.`, 'success');
+            OctaQube.toast(`${this.PROVIDER_META[key]?.name || key} API Key configured successfully.`, 'success');
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to save API Key.', 'error');
+            OctaQube.toast(e.message || 'Failed to save API Key.', 'error');
         } finally {
             const btn = document.querySelector('#apiKeyModal .ds-btn-primary');
             if(btn) {
@@ -1747,8 +1747,8 @@ const PlatformSettings = {
     async healthCheck(key) {
         try {
             const res = await this._post('/settings/integration-health', { integration: key });
-            QCMS.toast(res.message, res.status === 'success' ? 'success' : 'error');
-        } catch (e) { QCMS.toast(e.message || 'Health check failed.', 'error'); }
+            OctaQube.toast(res.message, res.status === 'success' ? 'success' : 'error');
+        } catch (e) { OctaQube.toast(e.message || 'Health check failed.', 'error'); }
     },
 
     aiModelPresets: {
@@ -1874,7 +1874,7 @@ const PlatformSettings = {
         const model = this._getVal('ps-ai-model');
 
         try {
-            QCMS.toast(`Testing connection to ${provider.toUpperCase()} (${model})...`, 'info');
+            OctaQube.toast(`Testing connection to ${provider.toUpperCase()} (${model})...`, 'info');
             const res = await this._post('/settings/test-ai', {
                 provider: provider,
                 api_key: apiKey,
@@ -1883,12 +1883,12 @@ const PlatformSettings = {
                 openrouter_app_name: this._getVal('ps-ai-openrouter-app')
             });
             if (res.status === 'success') {
-                QCMS.toast(res.message || `Connected to ${provider} API successfully!`, 'success');
+                OctaQube.toast(res.message || `Connected to ${provider} API successfully!`, 'success');
             } else {
-                QCMS.toast(res.message || 'AI API connection failed.', 'error');
+                OctaQube.toast(res.message || 'AI API connection failed.', 'error');
             }
         } catch (e) {
-            QCMS.toast(e.message || `Failed to connect to ${provider} API.`, 'error');
+            OctaQube.toast(e.message || `Failed to connect to ${provider} API.`, 'error');
         }
     },
 
@@ -1910,8 +1910,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('AI configuration saved successfully.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('AI configuration saved successfully.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     // ──────────────────────────────────────────────────────────
@@ -1966,11 +1966,11 @@ const PlatformSettings = {
                 border_radius: brand.border_radius || '10px',
                 card_style: brand.card_style || 'glass',
                 button_style: brand.button_style || 'rounded',
-                assets: brand.assets || JSON.parse(localStorage.getItem('qcms_brand_assets') || '{}')
+                assets: brand.assets || JSON.parse(localStorage.getItem('octaqube_brand_assets') || '{}')
             };
         }
         this._brandingData = brand;
-        localStorage.setItem('qcms_branding_config', JSON.stringify(brand));
+        localStorage.setItem('octaqube_branding_config', JSON.stringify(brand));
         return brand;
     },
 
@@ -1988,7 +1988,7 @@ const PlatformSettings = {
             if (window.lucide) lucide.createIcons();
         }
 
-        const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('qcms_branding_config') || '{}'));
+        const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('octaqube_branding_config') || '{}'));
         const modePalette = (brand && brand[currentMode]) ? brand[currentMode] : (window.DEFAULT_PALETTES?.[currentMode] || {});
 
         const colorMap = [
@@ -2049,7 +2049,7 @@ const PlatformSettings = {
     applyLiveBranding(key, val) {
         if (!key || !val) return;
         const currentMode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-        const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('qcms_branding_config') || '{}'));
+        const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('octaqube_branding_config') || '{}'));
         if (!brand[currentMode]) brand[currentMode] = { ...(window.DEFAULT_PALETTES?.[currentMode] || {}) };
 
         const colorKeyMap = {
@@ -2077,7 +2077,7 @@ const PlatformSettings = {
         }
 
         this._brandingData = brand;
-        localStorage.setItem('qcms_branding_config', JSON.stringify(brand));
+        localStorage.setItem('octaqube_branding_config', JSON.stringify(brand));
 
         if (window.themeManager) {
             window.themeManager.applyModePalette(currentMode);
@@ -2087,16 +2087,16 @@ const PlatformSettings = {
     resetCurrentModePalette() {
         const currentMode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
         const defaults = window.DEFAULT_PALETTES?.[currentMode] || {};
-        const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('qcms_branding_config') || '{}'));
+        const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('octaqube_branding_config') || '{}'));
         brand[currentMode] = { ...defaults };
         this._brandingData = brand;
-        localStorage.setItem('qcms_branding_config', JSON.stringify(brand));
+        localStorage.setItem('octaqube_branding_config', JSON.stringify(brand));
 
         if (window.themeManager) {
             window.themeManager.applyModePalette(currentMode);
         }
         this.syncBrandingInputs();
-        QCMS.toast(`Reset ${currentMode === 'dark' ? 'Dark' : 'Light'} Mode palette to system defaults!`, 'info');
+        OctaQube.toast(`Reset ${currentMode === 'dark' ? 'Dark' : 'Light'} Mode palette to system defaults!`, 'info');
     },
 
     uploadAsset(type) {
@@ -2129,11 +2129,11 @@ const PlatformSettings = {
                     link.href = dataUrl;
                 }
 
-                const assets = JSON.parse(localStorage.getItem('qcms_brand_assets') || '{}');
+                const assets = JSON.parse(localStorage.getItem('octaqube_brand_assets') || '{}');
                 assets[type] = dataUrl;
-                localStorage.setItem('qcms_brand_assets', JSON.stringify(assets));
+                localStorage.setItem('octaqube_brand_assets', JSON.stringify(assets));
 
-                QCMS.toast(`Uploaded and updated ${type.replace('-', ' ')} in real time!`, 'success');
+                OctaQube.toast(`Uploaded and updated ${type.replace('-', ' ')} in real time!`, 'success');
             };
             reader.readAsDataURL(file);
         };
@@ -2142,13 +2142,13 @@ const PlatformSettings = {
 
     restoreSavedBranding() {
         const currentMode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-        const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('qcms_branding_config') || '{}'));
+        const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('octaqube_branding_config') || '{}'));
         if (window.themeManager) {
             window.themeManager.applyModePalette(currentMode);
         }
         this.syncBrandingInputs();
 
-        const assets = JSON.parse(localStorage.getItem('qcms_brand_assets') || '{}');
+        const assets = JSON.parse(localStorage.getItem('octaqube_brand_assets') || '{}');
         Object.keys(assets).forEach(type => {
             const containerId = `ps-preview-${type}`;
             const container = document.getElementById(containerId);
@@ -2161,7 +2161,7 @@ const PlatformSettings = {
     async saveBranding() {
         try {
             const currentMode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-            const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('qcms_branding_config') || '{}'));
+            const brand = this._brandingData || this._initBrandingData(JSON.parse(localStorage.getItem('octaqube_branding_config') || '{}'));
             if (!brand[currentMode]) brand[currentMode] = {};
 
             brand[currentMode].primary_color = this._getVal('ps-primary-color') || brand[currentMode].primary_color;
@@ -2176,10 +2176,10 @@ const PlatformSettings = {
             brand.border_radius = this._getVal('ps-border-radius') || brand.border_radius;
             brand.card_style = this._getVal('ps-card-style') || brand.card_style;
             brand.button_style = this._getVal('ps-button-style') || brand.button_style;
-            brand.assets = JSON.parse(localStorage.getItem('qcms_brand_assets') || '{}');
+            brand.assets = JSON.parse(localStorage.getItem('octaqube_brand_assets') || '{}');
 
             this._brandingData = brand;
-            localStorage.setItem('qcms_branding_config', JSON.stringify(brand));
+            localStorage.setItem('octaqube_branding_config', JSON.stringify(brand));
 
             if (window.themeManager) {
                 window.themeManager.applyModePalette(currentMode);
@@ -2192,8 +2192,8 @@ const PlatformSettings = {
             };
             await this._put('/settings', payload);
 
-            QCMS.toast(`Branding customizations saved for ${currentMode === 'dark' ? 'Dark' : 'Light'} Mode & applied live!`, 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast(`Branding customizations saved for ${currentMode === 'dark' ? 'Dark' : 'Light'} Mode & applied live!`, 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async saveOrganizations() {
@@ -2210,8 +2210,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Organization tenant governance settings saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('Organization tenant governance settings saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async saveBilling() {
@@ -2229,8 +2229,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Plans & Billing rules saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('Plans & Billing rules saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async saveModules() {
@@ -2242,8 +2242,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Module licenses updated.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('Module licenses updated.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async saveCompliance() {
@@ -2256,8 +2256,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Compliance standards saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('Compliance standards saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async saveSMS() {
@@ -2271,8 +2271,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('SMS gateway settings saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('SMS gateway settings saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async saveIntegrations() {
@@ -2284,8 +2284,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Integrations configuration saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('Integrations configuration saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async saveFeatureFlags() {
@@ -2303,8 +2303,8 @@ const PlatformSettings = {
                 feature_flags: this._data.feature_flags || {}
             };
             await this._put('/settings', payload);
-            QCMS.toast('Feature flags saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('Feature flags saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async saveDeveloper() {
@@ -2317,8 +2317,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Developer diagnostics saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('Developer diagnostics saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async saveAuditLogs() {
@@ -2330,8 +2330,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast('Audit log policy saved.', 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('Audit log policy saved.', 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     async loadSystemHealth() {
@@ -2355,23 +2355,23 @@ const PlatformSettings = {
                     window.lucide.createIcons();
                 }
             }
-            if (window.QCMS) QCMS.toast('Real-time infrastructure metrics refreshed.', 'success');
+            if (window.OctaQube) OctaQube.toast('Real-time infrastructure metrics refreshed.', 'success');
         } catch (e) {
             console.error('Failed to load system health', e);
-            if (window.QCMS) QCMS.toast('Failed to refresh system health.', 'error');
+            if (window.OctaQube) OctaQube.toast('Failed to refresh system health.', 'error');
         }
     },
 
     async saveSystemHealth() {
         try {
             await this.loadSystemHealth();
-        } catch (e) { QCMS.toast(e.message || 'Refresh failed.', 'error'); }
+        } catch (e) { OctaQube.toast(e.message || 'Refresh failed.', 'error'); }
     },
 
     async saveAbout() {
         try {
-            QCMS.toast('About QCMS Enterprise OS specifications up to date.', 'info');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast('About OctaQube Enterprise OS specifications up to date.', 'info');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     renderFeatureFlags(flags) {
@@ -2402,12 +2402,12 @@ const PlatformSettings = {
     async toggleFlag(key, enabled) {
         try {
             const res = await this._put(`/settings/feature-flags/${key}`, { enabled });
-            QCMS.toast(res.message || `Feature flag '${key}' updated successfully.`, 'success');
+            OctaQube.toast(res.message || `Feature flag '${key}' updated successfully.`, 'success');
             if (this._data && this._data.feature_flags && this._data.feature_flags[key]) {
                 this._data.feature_flags[key].enabled = enabled;
             }
         } catch (e) {
-            QCMS.toast(e.message || 'Toggle failed.', 'error');
+            OctaQube.toast(e.message || 'Toggle failed.', 'error');
             const el = document.getElementById(`ff-${key}`);
             if (el) el.checked = !enabled; // revert state
         }
@@ -2426,8 +2426,8 @@ const PlatformSettings = {
                 }
             };
             await this._put('/settings', payload);
-            QCMS.toast(enabled ? '⚠️ Maintenance mode is now ACTIVE.' : 'Maintenance mode disabled.', enabled ? 'warning' : 'success');
-        } catch (e) { QCMS.toast(e.message || 'Save failed.', 'error'); }
+            OctaQube.toast(enabled ? '⚠️ Maintenance mode is now ACTIVE.' : 'Maintenance mode disabled.', enabled ? 'warning' : 'success');
+        } catch (e) { OctaQube.toast(e.message || 'Save failed.', 'error'); }
     },
 
     // ──────────────────────────────────────────────────────────
@@ -2484,10 +2484,10 @@ Object.assign(PlatformSettings, {
                 { id: 'free-trial', title: 'Free Trial', link: 'register-org.html', content: '' }
             ],
             resources: [
-                { id: 'documentation', title: 'Documentation', link: 'page.html?id=documentation', content: '<h1>Documentation</h1><p>Comprehensive guide to QCMS Enterprise platform API, setup, and governance.</p>' },
+                { id: 'documentation', title: 'Documentation', link: 'page.html?id=documentation', content: '<h1>Documentation</h1><p>Comprehensive guide to OctaQube Enterprise platform API, setup, and governance.</p>' },
                 { id: 'api-reference', title: 'API Reference', link: 'page.html?id=api-reference', content: '<h1>API Reference</h1><p>Explore REST endpoints, JWT headers, rate-limiting, and webhook payloads.</p>' },
                 { id: 'support-center', title: 'Support Center', link: 'page.html?id=support-center', content: '<h1>Support Center</h1><p>Contact 24/7 technical support, submit tickets, and browse knowledgebase.</p>' },
-                { id: 'community', title: 'Community', link: 'page.html?id=community', content: '<h1>Community</h1><p>Join the QCMS developer and quality management community.</p>' }
+                { id: 'community', title: 'Community', link: 'page.html?id=community', content: '<h1>Community</h1><p>Join the OctaQube developer and quality management community.</p>' }
             ],
             company: [
                 { id: 'about-us', title: 'About Us', link: 'page.html?id=about-us', content: '<h1>About Us</h1><p>Learn about our mission to standardize enterprise quality control globally.</p>' },
@@ -2497,7 +2497,7 @@ Object.assign(PlatformSettings, {
             ],
             legal: [
                 { id: 'privacy-policy', title: 'Privacy Policy', link: 'page.html?id=privacy-policy', content: '<h1>Privacy Policy</h1><p>Your privacy is important to us. Learn about data collection and protection.</p>' },
-                { id: 'terms-of-service', title: 'Terms of Service', link: 'page.html?id=terms-of-service', content: '<h1>Terms of Service</h1><p>Read the terms and conditions governing the use of QCMS Enterprise OS.</p>' },
+                { id: 'terms-of-service', title: 'Terms of Service', link: 'page.html?id=terms-of-service', content: '<h1>Terms of Service</h1><p>Read the terms and conditions governing the use of OctaQube Enterprise OS.</p>' },
                 { id: 'security', title: 'Security', link: 'page.html?id=security', content: '<h1>Security</h1><p>Detailed breakdown of SOC2 Type II, ISO 27001, AES-256 encryption, and TLS 1.3 standards.</p>' },
                 { id: 'gdpr', title: 'GDPR', link: 'page.html?id=gdpr', content: '<h1>GDPR Compliance</h1><p>Information on EU data protection rights, data processor agreements, and DPO contacts.</p>' }
             ]
@@ -2567,7 +2567,7 @@ Object.assign(PlatformSettings, {
             localStorage.setItem('ps-landing-cms-pages', JSON.stringify(this.footerPagesData));
             this.renderFooterPagesList();
             this.saveLandingCMS();
-            if (window.QCMS) QCMS.toast('Link deleted successfully.', 'success');
+            if (window.OctaQube) OctaQube.toast('Link deleted successfully.', 'success');
         }
     },
 
@@ -2627,7 +2627,7 @@ Object.assign(PlatformSettings, {
         const modal = bootstrap.Modal.getInstance(modalEl);
         if (modal) modal.hide();
         
-        if (window.QCMS) QCMS.toast('Footer link & page content saved successfully.', 'success');
+        if (window.OctaQube) OctaQube.toast('Footer link & page content saved successfully.', 'success');
     },
 
     // ──────────────────────────────────────────────────────────
@@ -2780,12 +2780,12 @@ Object.assign(PlatformSettings, {
 
         try {
             if (!currentPassword) {
-                QCMS.toast('Current password is required to confirm changes.', 'warning');
+                OctaQube.toast('Current password is required to confirm changes.', 'warning');
                 return;
             }
 
             if (newEmail && !this.validateEmail(newEmail)) {
-                QCMS.toast('Please enter a valid email address in format username@domain.extension (e.g. name@domain.com).', 'warning');
+                OctaQube.toast('Please enter a valid email address in format username@domain.extension (e.g. name@domain.com).', 'warning');
                 const emailInput = document.getElementById('ownAdminNewEmail');
                 if (emailInput) {
                     emailInput.classList.add('is-invalid');
@@ -2796,11 +2796,11 @@ Object.assign(PlatformSettings, {
 
             if (newPassword) {
                 if (newPassword.length < 6) {
-                    QCMS.toast('New password must be at least 6 characters long.', 'warning');
+                    OctaQube.toast('New password must be at least 6 characters long.', 'warning');
                     return;
                 }
                 if (newPassword !== confirmPassword) {
-                    QCMS.toast('New password and confirm password do not match.', 'error');
+                    OctaQube.toast('New password and confirm password do not match.', 'error');
                     return;
                 }
             }
@@ -2812,7 +2812,7 @@ Object.assign(PlatformSettings, {
             }, { button: submitBtn });
 
             if (res && res.status === 'success') {
-                QCMS.toast(res.message || 'Super Admin credentials updated successfully!', 'success');
+                OctaQube.toast(res.message || 'Super Admin credentials updated successfully!', 'success');
                 
                 // Update session memory
                 const userObj = JSON.parse(sessionStorage.getItem('user') || '{}');
@@ -2827,7 +2827,7 @@ Object.assign(PlatformSettings, {
                 this.loadAdminLogins();
             }
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to update credentials.', 'error');
+            OctaQube.toast(e.message || 'Failed to update credentials.', 'error');
         } finally {
             if (submitBtn && window.ActionLock) {
                 window.ActionLock.unlockButton(submitBtn);
@@ -2880,7 +2880,7 @@ Object.assign(PlatformSettings, {
             inputEl.classList.add('is-invalid');
             inputEl.classList.remove('is-valid');
             if (errEl) {
-                errEl.textContent = 'Please enter a valid email address in format username@domain.extension (e.g. admin@qcms.com)';
+                errEl.textContent = 'Please enter a valid email address in format username@domain.extension (e.g. admin@octaqube.com)';
                 errEl.style.display = 'block';
             }
         } else {
@@ -2898,12 +2898,12 @@ Object.assign(PlatformSettings, {
         const subRole = document.getElementById('newAdminSubRole')?.value;
 
         if (!username || !email || !password) {
-            QCMS.toast('Username, email, and password are required.', 'warning');
+            OctaQube.toast('Username, email, and password are required.', 'warning');
             return;
         }
 
         if (!this.validateEmail(email)) {
-            QCMS.toast('Please enter a valid email address in format username@domain.extension (e.g. name@domain.com).', 'warning');
+            OctaQube.toast('Please enter a valid email address in format username@domain.extension (e.g. name@domain.com).', 'warning');
             const emailInput = document.getElementById('newAdminEmail');
             if (emailInput) {
                 emailInput.classList.add('is-invalid');
@@ -2913,12 +2913,12 @@ Object.assign(PlatformSettings, {
         }
 
         if (password.length < 6) {
-            QCMS.toast('Password must be at least 6 characters.', 'warning');
+            OctaQube.toast('Password must be at least 6 characters.', 'warning');
             return;
         }
 
         if (password !== confirmPassword) {
-            QCMS.toast('Passwords do not match.', 'error');
+            OctaQube.toast('Passwords do not match.', 'error');
             return;
         }
 
@@ -2931,7 +2931,7 @@ Object.assign(PlatformSettings, {
             });
 
             if (res.status === 'success') {
-                QCMS.toast(res.message || 'New Super Admin created successfully!', 'success');
+                OctaQube.toast(res.message || 'New Super Admin created successfully!', 'success');
 
                 const modalEl = document.getElementById('addSuperAdminModal');
                 const modal = bootstrap.Modal.getInstance(modalEl);
@@ -2940,7 +2940,7 @@ Object.assign(PlatformSettings, {
                 this.loadAdminLogins();
             }
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to create Super Admin account.', 'error');
+            OctaQube.toast(e.message || 'Failed to create Super Admin account.', 'error');
         }
     },
 
@@ -2950,11 +2950,11 @@ Object.assign(PlatformSettings, {
         try {
             const res = await api.delete(`/super-admin/admin-logins/${adminId}`);
             if (res.status === 'success') {
-                QCMS.toast(res.message || 'Admin account removed.', 'success');
+                OctaQube.toast(res.message || 'Admin account removed.', 'success');
                 this.loadAdminLogins();
             }
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to remove admin account.', 'error');
+            OctaQube.toast(e.message || 'Failed to remove admin account.', 'error');
         }
     },
 
@@ -2979,12 +2979,12 @@ Object.assign(PlatformSettings, {
         const password = document.getElementById('editAdminPassword')?.value?.trim();
 
         if (!adminId) {
-            QCMS.toast('Invalid admin account selected.', 'error');
+            OctaQube.toast('Invalid admin account selected.', 'error');
             return;
         }
 
         if (email && !this.validateEmail(email)) {
-            QCMS.toast('Please enter a valid email address in format username@domain.extension (e.g. name@domain.com).', 'warning');
+            OctaQube.toast('Please enter a valid email address in format username@domain.extension (e.g. name@domain.com).', 'warning');
             const emailInput = document.getElementById('editAdminEmail');
             if (emailInput) {
                 emailInput.classList.add('is-invalid');
@@ -2994,7 +2994,7 @@ Object.assign(PlatformSettings, {
         }
 
         if (password && password.length < 6) {
-            QCMS.toast('Password must be at least 6 characters.', 'warning');
+            OctaQube.toast('Password must be at least 6 characters.', 'warning');
             return;
         }
 
@@ -3005,7 +3005,7 @@ Object.assign(PlatformSettings, {
 
             const res = await api.put(`/super-admin/admin-logins/${adminId}`, payload);
             if (res.status === 'success') {
-                QCMS.toast(res.message || 'Super Admin account updated successfully!', 'success');
+                OctaQube.toast(res.message || 'Super Admin account updated successfully!', 'success');
 
                 const modalEl = document.getElementById('editSuperAdminModal');
                 const modal = bootstrap.Modal.getInstance(modalEl);
@@ -3014,7 +3014,7 @@ Object.assign(PlatformSettings, {
                 this.loadAdminLogins();
             }
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to update Super Admin account.', 'error');
+            OctaQube.toast(e.message || 'Failed to update Super Admin account.', 'error');
         }
     }
 });

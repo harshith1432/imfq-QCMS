@@ -678,7 +678,7 @@ const DynamicRenderer = {
             case 'view_link': {
                 const label = sec.label || (type === 'action_btn' ? 'Trigger Action' : 'View / Inspect');
                 contentHtml = `
-                    <button class="ds-btn ds-btn-primary ds-btn-sm" type="button" id="${sec.id}_btn" onclick="if(window.QCMS && QCMS.toast) QCMS.toast('${this.escapeHtml(label)} triggered','info');">
+                    <button class="ds-btn ds-btn-primary ds-btn-sm" type="button" id="${sec.id}_btn" onclick="if(window.OctaQube && OctaQube.toast) OctaQube.toast('${this.escapeHtml(label)} triggered','info');">
                         <i data-lucide="${type === 'action_btn' ? 'play' : 'eye'}" style="width:14px;height:14px;margin-right:4px;"></i>
                         ${this.escapeHtml(label)}
                     </button>
@@ -1450,10 +1450,10 @@ const DynamicRenderer = {
             const res = await api.upload(`/projects/upload`, formData);
             hiddenInput.value = res.url || '';
             statusDiv.textContent = `✓ Uploaded: ${file.name}`;
-            QCMS.toast('File uploaded successfully.', 'success');
+            OctaQube.toast('File uploaded successfully.', 'success');
         } catch (e) {
             statusDiv.textContent = 'Upload failed.';
-            QCMS.toast('Upload failed: ' + e.message, 'error');
+            OctaQube.toast('Upload failed: ' + e.message, 'error');
         }
     },
 
@@ -1965,12 +1965,12 @@ const DynamicRenderer = {
                 case 'categories':
                 case 'sop_categories':
                 case 'org_categories':
-                    if (window.QCMS && typeof window.QCMS.loadCategories === 'function') {
+                    if (window.OctaQube && typeof window.OctaQube.loadCategories === 'function') {
                         // Will be populated asynchronously or from cache
-                        window.QCMS.loadCategories().then(cats => {
+                        window.OctaQube.loadCategories().then(cats => {
                             if (cats && cats.length > 0) {
                                 const firstOpt = sel.firstElementChild ? sel.firstElementChild.outerHTML : '<option value="">-- Select Category --</option>';
-                                sel.innerHTML = firstOpt + cats.map(it => `<option value="${QCMS.escapeHtml(it)}">${QCMS.escapeHtml(it)}</option>`).join('');
+                                sel.innerHTML = firstOpt + cats.map(it => `<option value="${OctaQube.escapeHtml(it)}">${OctaQube.escapeHtml(it)}</option>`).join('');
                             }
                         });
                     }

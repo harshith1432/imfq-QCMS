@@ -1,5 +1,5 @@
 /**
- * QCMS Enterprise - Super Admin Controller
+ * OctaQube Enterprise - Super Admin Controller
  * Manages global platform oversight and multi-tenant control.
  */
 
@@ -48,7 +48,7 @@ const SuperAdmin = {
         }, 900000);
 
         // 6. Global Search suggestions listener
-        window.addEventListener('qcms-global-search', (e) => {
+        window.addEventListener('octaqube-global-search', (e) => {
             this.handleGlobalSearch(e.detail.query);
         });
 
@@ -211,8 +211,8 @@ const SuperAdmin = {
         if (this._permissions && this.saSubRole !== 'Owner') {
             const section = viewId === 'overview' ? 'overview' : viewId;
             if (!this.canRead(section)) {
-                if (window.QCMS && QCMS.toast) {
-                    QCMS.toast(
+                if (window.OctaQube && OctaQube.toast) {
+                    OctaQube.toast(
                         `Your sub-role "${this.saSubRole}" does not have access to this section.`,
                         'warning'
                     );
@@ -411,8 +411,8 @@ const SuperAdmin = {
                     history.pushState(null, '', href);
                 }
                 this.switchView(viewId);
-                if (window.QCMS && typeof window.QCMS.renderMobileBottomNav === 'function') {
-                    window.QCMS.renderMobileBottomNav();
+                if (window.OctaQube && typeof window.OctaQube.renderMobileBottomNav === 'function') {
+                    window.OctaQube.renderMobileBottomNav();
                 }
             }
         });
@@ -1537,7 +1537,7 @@ const SuperAdmin = {
             const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
             const rows = [
-                ['QCMS Platform — Executive Dashboard Report'],
+                ['OctaQube Platform — Executive Dashboard Report'],
                 ['Generated At: ' + dateStr + ' ' + timeStr],
                 ['Exported By: Super Admin'],
                 [],
@@ -1581,7 +1581,7 @@ const SuperAdmin = {
             var blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
             var a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'QCMS_Dashboard_Report_' + now.toISOString().slice(0, 10) + '.csv';
+            a.download = 'OctaQube_Dashboard_Report_' + now.toISOString().slice(0, 10) + '.csv';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1645,7 +1645,7 @@ const SuperAdmin = {
                 
                 // Construct KPI cards with interactive click handlers and rich hover tooltips on the entire card
                 kpiGrid.innerHTML = `
-                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>🏢 TOTAL ORGANIZATIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Total registered customer tenant organizations on QCMS.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>organizations</code> table (active tenant accounts).</div><div style='color:#93c5fd;'>👉 Click to manage organizations</div></div>">
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>🏢 TOTAL ORGANIZATIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Total registered customer tenant organizations on OctaQube.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>organizations</code> table (active tenant accounts).</div><div style='color:#93c5fd;'>👉 Click to manage organizations</div></div>">
                         <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
                             <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
                         </div>
@@ -1750,8 +1750,8 @@ const SuperAdmin = {
                 document.getElementById('dashGrowth').textContent = `${growthVal >= 0 ? '+' : ''}${growthVal}%`;
 
                 // Initialize tooltips on cards
-                if (window.QCMS && QCMS.initTooltips) {
-                    QCMS.initTooltips(kpiGrid);
+                if (window.OctaQube && OctaQube.initTooltips) {
+                    OctaQube.initTooltips(kpiGrid);
                 }
 
                 // Redraw Donut and MRR Charts
@@ -1823,7 +1823,7 @@ const SuperAdmin = {
                                 </div>
                                 <div class="d-flex justify-content-between text-xxs text-secondary mt-1">
                                     <span>${t.organization} &bull; ${t.requester_name}</span>
-                                    <span>${QCMS.formatRelative(t.created_at)}</span>
+                                    <span>${OctaQube.formatRelative(t.created_at)}</span>
                                 </div>
                             </div>
                         `;
@@ -1869,7 +1869,7 @@ const SuperAdmin = {
                                         <div>
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <span class="fw-bold text-xs" style="color:var(--ds-text-main);">${log.action}</span>
-                                                <span class="text-xxs text-muted">${QCMS.formatRelative(log.timestamp)}</span>
+                                                <span class="text-xxs text-muted">${OctaQube.formatRelative(log.timestamp)}</span>
                                             </div>
                                             <p class="text-xxs text-muted mb-0 mt-0.5">By ${log.admin} &bull; Target: ${log.target || 'System'} &bull; IP: ${log.ip}</p>
                                         </div>
@@ -1892,7 +1892,7 @@ const SuperAdmin = {
     sortColumn: 'created_at',
     sortDirection: 'desc',
     selectedOrgIds: new Set(),
-    recentSearches: JSON.parse(localStorage.getItem('qcms_recent_searches') || '[]'),
+    recentSearches: JSON.parse(localStorage.getItem('octaqube_recent_searches') || '[]'),
 
     highlightText(text, searchWord) {
         if (!text) return '—';
@@ -1907,7 +1907,7 @@ const SuperAdmin = {
         this.recentSearches = this.recentSearches.filter(q => q !== query);
         this.recentSearches.unshift(query);
         this.recentSearches = this.recentSearches.slice(0, 5);
-        localStorage.setItem('qcms_recent_searches', JSON.stringify(this.recentSearches));
+        localStorage.setItem('octaqube_recent_searches', JSON.stringify(this.recentSearches));
     },
 
     async loadFilterDropdownOptions() {
@@ -2099,14 +2099,14 @@ const SuperAdmin = {
 
         if (grid) {
             grid.innerHTML = `
-                ${QCMS.kpiCardWithTooltip('Total Organizations', kpi.total, 'building-2', 'blue', 'COUNT(organizations WHERE is_platform_org=FALSE AND is_deleted=FALSE)', 'Total registered customer tenant organizations on QCMS. Sourced from the organizations table.', 'onclick="SuperAdmin.filterByKpi(\'all\')"')}
-                ${QCMS.kpiCardWithTooltip('Paid Organizations', kpi.active, 'check-circle', 'green', 'COUNT(organizations WHERE subscription_status=\'Active\')', 'Tenants currently on an active paid SaaS subscription plan. Sourced from organizations & subscriptions.', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Active\')"')}
-                ${QCMS.kpiCardWithTooltip('On Trial Organizations', kpi.trialing, 'clock', 'orange', 'COUNT(organizations WHERE subscription_status=\'Trialing\')', 'Tenants currently active within their 14-day evaluation trial. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Trialing\')"')}
-                ${QCMS.kpiCardWithTooltip('Expiring Soon', kpi.expiring_soon || 0, 'alert-triangle', 'amber', 'COUNT(organizations WHERE license_expiry_date BETWEEN NOW() AND NOW() + 7 DAYS)', 'Tenants with trials or licenses expiring within 7 days. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'license_status\', \'Expiring Soon\')"')}
-                ${QCMS.kpiCardWithTooltip('Inactive (20d)', kpi.inactive_20d || 0, 'user-x', 'slate', 'COUNT(organizations WHERE created_at < NOW() - 20d AND MAX(last_login) < NOW() - 20d)', 'Tenants registered >20 days ago with zero login activity across all users in last 20 days.', 'onclick="SuperAdmin.filterByKpi(\'license_status\', \'Inactive 20d\')"')}
-                ${QCMS.kpiCardWithTooltip('On Hold', kpi.suspended, 'pause-circle', 'red', 'COUNT(organizations WHERE subscription_status=\'Suspended\')', 'Tenants temporarily suspended from platform access. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Suspended\')"')}
-                ${QCMS.kpiCardWithTooltip('Enterprise', kpi.enterprise, 'crown', 'purple', 'COUNT(organizations WHERE subscription_plan=\'Enterprise\')', 'Client organizations enrolled in the Enterprise SaaS tier. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'plan\', \'Enterprise\')"')}
-                ${QCMS.kpiCardWithTooltip('Expired Subscriptions', kpi.expired, 'x-circle', 'gray', 'COUNT(organizations WHERE subscription_status=\'Expired\' OR license_expiry_date < NOW())', 'Tenants whose trial or subscription has expired. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Expired\')"')}
+                ${OctaQube.kpiCardWithTooltip('Total Organizations', kpi.total, 'building-2', 'blue', 'COUNT(organizations WHERE is_platform_org=FALSE AND is_deleted=FALSE)', 'Total registered customer tenant organizations on OctaQube. Sourced from the organizations table.', 'onclick="SuperAdmin.filterByKpi(\'all\')"')}
+                ${OctaQube.kpiCardWithTooltip('Paid Organizations', kpi.active, 'check-circle', 'green', 'COUNT(organizations WHERE subscription_status=\'Active\')', 'Tenants currently on an active paid SaaS subscription plan. Sourced from organizations & subscriptions.', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Active\')"')}
+                ${OctaQube.kpiCardWithTooltip('On Trial Organizations', kpi.trialing, 'clock', 'orange', 'COUNT(organizations WHERE subscription_status=\'Trialing\')', 'Tenants currently active within their 14-day evaluation trial. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Trialing\')"')}
+                ${OctaQube.kpiCardWithTooltip('Expiring Soon', kpi.expiring_soon || 0, 'alert-triangle', 'amber', 'COUNT(organizations WHERE license_expiry_date BETWEEN NOW() AND NOW() + 7 DAYS)', 'Tenants with trials or licenses expiring within 7 days. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'license_status\', \'Expiring Soon\')"')}
+                ${OctaQube.kpiCardWithTooltip('Inactive (20d)', kpi.inactive_20d || 0, 'user-x', 'slate', 'COUNT(organizations WHERE created_at < NOW() - 20d AND MAX(last_login) < NOW() - 20d)', 'Tenants registered >20 days ago with zero login activity across all users in last 20 days.', 'onclick="SuperAdmin.filterByKpi(\'license_status\', \'Inactive 20d\')"')}
+                ${OctaQube.kpiCardWithTooltip('On Hold', kpi.suspended, 'pause-circle', 'red', 'COUNT(organizations WHERE subscription_status=\'Suspended\')', 'Tenants temporarily suspended from platform access. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Suspended\')"')}
+                ${OctaQube.kpiCardWithTooltip('Enterprise', kpi.enterprise, 'crown', 'purple', 'COUNT(organizations WHERE subscription_plan=\'Enterprise\')', 'Client organizations enrolled in the Enterprise SaaS tier. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'plan\', \'Enterprise\')"')}
+                ${OctaQube.kpiCardWithTooltip('Expired Subscriptions', kpi.expired, 'x-circle', 'gray', 'COUNT(organizations WHERE subscription_status=\'Expired\' OR license_expiry_date < NOW())', 'Tenants whose trial or subscription has expired. Sourced from organizations table.', 'onclick="SuperAdmin.filterByKpi(\'status\', \'Expired\')"')}
             `;
             // Force all cards onto a responsive grid with clean spacing
             grid.style.display = 'grid';
@@ -2118,14 +2118,14 @@ const SuperAdmin = {
         if (window.lucide) lucide.createIcons();
         
         // Initialize tooltips on org cards
-        if (window.QCMS && QCMS.initTooltips) {
-            QCMS.initTooltips(grid);
+        if (window.OctaQube && OctaQube.initTooltips) {
+            OctaQube.initTooltips(grid);
         }
     },
 
     filterByKpi(type, value = '') {
-        if (window.QCMS && QCMS.cleanTooltips) {
-            QCMS.cleanTooltips();
+        if (window.OctaQube && OctaQube.cleanTooltips) {
+            OctaQube.cleanTooltips();
         }
         const elPlan = document.getElementById('filterPlan');
         const elStatus = document.getElementById('filterStatus');
@@ -2188,7 +2188,7 @@ const SuperAdmin = {
         if (countEl) countEl.textContent = `${this.pagination?.total || companies.length} organizations`;
 
         if (!companies || companies.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5">${QCMS.emptyState('No Organizations Found', 'Try adjusting your filters or search query.', 'building-2')}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5">${OctaQube.emptyState('No Organizations Found', 'Try adjusting your filters or search query.', 'building-2')}</td></tr>`;
             return;
         }
 
@@ -2212,7 +2212,7 @@ const SuperAdmin = {
 
             const trialInfo = org.trial_days_left !== null && org.trial_days_left !== undefined
                 ? `<div class="fw-bold" style="font-size: 13px; line-height: 1.4; color: ${org.trial_days_left <= 7 ? '#dc2626' : '#334155'};">${org.trial_days_left}d left</div>`
-                : (org.trial_ends_at ? `<div style="font-size: 12px; color: #475569;">${QCMS.formatDate(org.trial_ends_at)}</div>` : '<span style="font-size: 12px; color: #94a3b8;">—</span>');
+                : (org.trial_ends_at ? `<div style="font-size: 12px; color: #475569;">${OctaQube.formatDate(org.trial_ends_at)}</div>` : '<span style="font-size: 12px; color: #94a3b8;">—</span>');
 
             const subInfo = [org.org_code && org.org_code !== '—' ? org.org_code : null, org.industry && org.industry !== '—' ? org.industry : null].filter(Boolean).join(' · ');
             const isChecked = this.selectedOrgIds.has(org.id) ? 'checked' : '';
@@ -2365,8 +2365,8 @@ const SuperAdmin = {
         `).join('');
 
         if (window.lucide) lucide.createIcons();
-        if (window.QCMS && QCMS.initTooltips) {
-            QCMS.initTooltips(grid);
+        if (window.OctaQube && OctaQube.initTooltips) {
+            OctaQube.initTooltips(grid);
         }
     },
 
@@ -2394,7 +2394,7 @@ const SuperAdmin = {
                     </td>
                     <td data-col-name="plan"><span class="badge" style="background:var(--ds-bg-elevated,rgba(100,116,139,0.15));color:var(--ds-text-main)">${inv.plan_name}</span></td>
                     <td data-col-name="cycle"><span class="text-xs">${inv.billing_cycle}</span></td>
-                    <td data-col-name="dates">${QCMS.formatDate(inv.due_date)}</td>
+                    <td data-col-name="dates">${OctaQube.formatDate(inv.due_date)}</td>
                     <td data-col-name="pricing" class="fw-bold">₹${inv.total_amount.toLocaleString('en-IN')}</td>
                     <td><span class="bill-badge ${statusClass}">${inv.invoice_status}</span></td>
                     <td class="text-end">
@@ -2450,7 +2450,7 @@ const SuperAdmin = {
         if (window.BroadcastChannel) {
             try {
                 if (!this._financialSyncChannel) {
-                    this._financialSyncChannel = new BroadcastChannel('qcms_financial_sync');
+                    this._financialSyncChannel = new BroadcastChannel('octaqube_financial_sync');
                 }
                 this._financialSyncChannel.postMessage({ event: 'FINANCIAL_UPDATE', timestamp: Date.now() });
             } catch(e) {}
@@ -2460,10 +2460,10 @@ const SuperAdmin = {
     initFinancialSyncListener() {
         if (window.BroadcastChannel && !this._financialSyncListenerInitialized) {
             try {
-                this._financialSyncListener = new BroadcastChannel('qcms_financial_sync');
+                this._financialSyncListener = new BroadcastChannel('octaqube_financial_sync');
                 this._financialSyncListener.onmessage = (msg) => {
                     if (msg && msg.data && msg.data.event === 'FINANCIAL_UPDATE') {
-                        console.log('[QCMS Realtime Sync] Financial update broadcast received.');
+                        console.log('[OctaQube Realtime Sync] Financial update broadcast received.');
                         if (this.activeView === 'billing' || this.activeView === 'revenue') {
                             this.loadRevenue();
                         } else if (this.activeView === 'overview' || this.activeView === 'dashboard') {
@@ -2651,7 +2651,7 @@ const SuperAdmin = {
                 badge.className = `bill-badge ${(d.invoice_status||'').toLowerCase()}`;
                 badge.textContent = d.invoice_status;
 
-                document.getElementById('bddDate').textContent = `Date: ${QCMS.formatDate(d.invoice_date)}`;
+                document.getElementById('bddDate').textContent = `Date: ${OctaQube.formatDate(d.invoice_date)}`;
 
                 // Generate Dynamic Tab Panes
                 const tabsContent = document.getElementById('bddTabsContent');
@@ -2661,7 +2661,7 @@ const SuperAdmin = {
                             <div class="col-6 text-muted">Organization Email:</div><div class="col-6 fw-bold">${d.org_email || '—'}</div>
                             <div class="col-6 text-muted">Subscription ID:</div><div class="col-6 font-monospace">${d.subscription_uid || '—'}</div>
                             <div class="col-6 text-muted">Plan & Cycle:</div><div class="col-6">${d.plan_name} (${d.billing_cycle})</div>
-                            <div class="col-6 text-muted">Due Date:</div><div class="col-6">${QCMS.formatDate(d.due_date)}</div>
+                            <div class="col-6 text-muted">Due Date:</div><div class="col-6">${OctaQube.formatDate(d.due_date)}</div>
                             <div class="col-6 text-muted">Currency:</div><div class="col-6">${d.currency}</div>
                             <div class="col-12 mt-3 pt-2 border-top">
                                 <strong>Notes:</strong>
@@ -2696,7 +2696,7 @@ const SuperAdmin = {
                         <div class="timeline text-xs">
                             ${(d.audits||[]).length === 0 ? '<div class="text-muted text-center py-3">No activity logs recorded.</div>' : (d.audits||[]).map(a => `
                                 <div class="mb-3 border-bottom pb-2">
-                                    <div class="d-flex justify-content-between"><strong class="text-primary">${a.action}</strong><span class="text-muted font-monospace text-xxs">${QCMS.formatDate(a.created_at)}</span></div>
+                                    <div class="d-flex justify-content-between"><strong class="text-primary">${a.action}</strong><span class="text-muted font-monospace text-xxs">${OctaQube.formatDate(a.created_at)}</span></div>
                                     <div class="text-muted">By ${a.user_name} (${a.ip_address})</div>
                                 </div>
                             `).join('')}
@@ -2760,11 +2760,11 @@ const SuperAdmin = {
 
         // Extract dynamic branding context (from DB API or local branding manager)
         const b = d.branding || window.DocIdentityManager?.data?.branding_context || {};
-        const softwareName = b.software_display_name || b.software_name || 'QCMS Enterprise OS';
-        const softwareShort = b.software_short_name || 'QCMS';
+        const softwareName = b.software_display_name || b.software_name || 'OctaQube Enterprise OS';
+        const softwareShort = b.software_short_name || 'OctaQube';
         const platformTitle = b.platform_title || 'Quality Management & Enterprise Governance System';
-        const companyLegalName = b.legal_company_name || b.trading_name || 'QCMS Technologies Inc.';
-        const billingEmail = b.billing_email || b.support_email || 'support@qcms.app';
+        const companyLegalName = b.legal_company_name || b.trading_name || 'OctaQube Technologies Inc.';
+        const billingEmail = b.billing_email || b.support_email || 'support@octaqube.app';
         const phone = b.general_phone || '';
         const registeredOffice = b.registered_office || '';
         const gstin = b.gstin || '';
@@ -2868,8 +2868,8 @@ const SuperAdmin = {
             </div>
             <div class="info-card">
                 <div class="card-title">Billing Meta & Terms</div>
-                <div class="info-row"><span class="info-label">Invoice Date:</span><span class="info-val">${QCMS.formatDate(d.invoice_date)}</span></div>
-                <div class="info-row"><span class="info-label">Due Date:</span><span class="info-val">${QCMS.formatDate(d.due_date)}</span></div>
+                <div class="info-row"><span class="info-label">Invoice Date:</span><span class="info-val">${OctaQube.formatDate(d.invoice_date)}</span></div>
+                <div class="info-row"><span class="info-label">Due Date:</span><span class="info-val">${OctaQube.formatDate(d.due_date)}</span></div>
                 <div class="info-row"><span class="info-label">Plan & Cycle:</span><span class="info-val">${d.plan_name} (${d.billing_cycle})</span></div>
                 <div class="info-row"><span class="info-label">Currency:</span><span class="info-val">${d.currency || 'INR'}</span></div>
             </div>
@@ -2971,7 +2971,7 @@ const SuperAdmin = {
                             <td><strong>${a.action}</strong></td>
                             <td>${a.user_name}</td>
                             <td>${a.ip_address || '127.0.0.1'}</td>
-                            <td class="text-right">${QCMS.formatDate(a.created_at)}</td>
+                            <td class="text-right">${OctaQube.formatDate(a.created_at)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -3240,7 +3240,7 @@ const SuperAdmin = {
 
     async openBillCreateWizard() {
         this._bill.wizStep = 1;
-        this._bill.wizItems = [{ description: 'QCMS Platform Subscription Renewal', quantity: 1, unit_price: 15000 }];
+        this._bill.wizItems = [{ description: 'OctaQube Platform Subscription Renewal', quantity: 1, unit_price: 15000 }];
         
         await this.biInitOrgSelector();
 
@@ -3467,8 +3467,8 @@ const SuperAdmin = {
             <div class="row g-2">
                 <div class="col-4 text-muted">Customer Name:</div><div class="col-8 fw-bold">${orgName}</div>
                 <div class="col-4 text-muted">Invoice Identifier:</div><div class="col-8 font-monospace">${num}</div>
-                <div class="col-4 text-muted">Invoice Date:</div><div class="col-8">${QCMS.formatDate(date)}</div>
-                <div class="col-4 text-muted">Due Date:</div><div class="col-8">${QCMS.formatDate(due)}</div>
+                <div class="col-4 text-muted">Invoice Date:</div><div class="col-8">${OctaQube.formatDate(date)}</div>
+                <div class="col-4 text-muted">Due Date:</div><div class="col-8">${OctaQube.formatDate(due)}</div>
                 <div class="col-4 text-muted">Collection Cycle:</div><div class="col-8">${document.getElementById('biTerms').value}</div>
                 <div class="col-4 text-muted text-sm pt-2">Total Amount:</div><div class="col-8 text-primary fw-bold text-sm pt-2">${total}</div>
             </div>
@@ -3851,7 +3851,7 @@ const SuperAdmin = {
             const statusBadge = isApproved 
                 ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i data-lucide="check-circle" style="width:11px;height:11px;" class="me-1"></i>Approved / Active</span>`
                 : (isRejected 
-                    ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" title="${QCMS.escapeHtml(p.rejection_reason || '')}"><i data-lucide="x-circle" style="width:11px;height:11px;" class="me-1"></i>Rejected</span>` 
+                    ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" title="${OctaQube.escapeHtml(p.rejection_reason || '')}"><i data-lucide="x-circle" style="width:11px;height:11px;" class="me-1"></i>Rejected</span>` 
                     : `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1"><i data-lucide="clock" style="width:11px;height:11px;" class="me-1"></i>Pending Verification</span>`);
 
             const proofBtn = p.screenshot_url 
@@ -3879,7 +3879,7 @@ const SuperAdmin = {
                         ` : ''}
                         ${isPending ? `
                             <li>
-                                <a class="dropdown-item text-xs text-danger" href="javascript:void(0)" onclick="SuperAdmin.openRejectModal(${p.id}, '${QCMS.escapeHtml(p.transaction_id)}')">
+                                <a class="dropdown-item text-xs text-danger" href="javascript:void(0)" onclick="SuperAdmin.openRejectModal(${p.id}, '${OctaQube.escapeHtml(p.transaction_id)}')">
                                     <i data-lucide="x-circle" style="width:13px;height:13px;" class="me-1.5 text-danger"></i> Reject Payment
                                 </a>
                             </li>
@@ -3892,19 +3892,19 @@ const SuperAdmin = {
                 <tr>
                     <td>
                         <div class="d-flex align-items-center gap-1.5 mb-0.5">
-                            <strong class="text-main text-xs">${QCMS.escapeHtml(p.org_name)}</strong>
+                            <strong class="text-main text-xs">${OctaQube.escapeHtml(p.org_name)}</strong>
                             <span class="badge bg-secondary-subtle text-secondary font-monospace text-xxs">ID: ${p.org_id}</span>
                         </div>
-                        <div class="text-secondary text-xxs">${QCMS.escapeHtml(p.user_email)}</div>
+                        <div class="text-secondary text-xxs">${OctaQube.escapeHtml(p.user_email)}</div>
                     </td>
                     <td>
-                        <span class="badge bg-primary-subtle text-primary fw-bold text-xxs">${QCMS.escapeHtml(p.plan_name)}</span>
-                        <span class="text-secondary text-xxs d-block mt-0.5">${QCMS.escapeHtml(p.billing_cycle || 'Monthly')}</span>
+                        <span class="badge bg-primary-subtle text-primary fw-bold text-xxs">${OctaQube.escapeHtml(p.plan_name)}</span>
+                        <span class="text-secondary text-xxs d-block mt-0.5">${OctaQube.escapeHtml(p.billing_cycle || 'Monthly')}</span>
                     </td>
                     <td class="fw-bold text-xs text-main">₹${(p.amount || 0).toLocaleString('en-IN')}</td>
                     <td>
-                        <span class="font-monospace text-xs text-main fw-bold d-block">${QCMS.escapeHtml(p.transaction_id)}</span>
-                        ${p.notes ? `<span class="text-secondary text-xxs" title="${QCMS.escapeHtml(p.notes)}">${QCMS.escapeHtml(p.notes.length > 25 ? p.notes.substring(0, 25) + '...' : p.notes)}</span>` : ''}
+                        <span class="font-monospace text-xs text-main fw-bold d-block">${OctaQube.escapeHtml(p.transaction_id)}</span>
+                        ${p.notes ? `<span class="text-secondary text-xxs" title="${OctaQube.escapeHtml(p.notes)}">${OctaQube.escapeHtml(p.notes.length > 25 ? p.notes.substring(0, 25) + '...' : p.notes)}</span>` : ''}
                     </td>
                     <td>${proofBtn}</td>
                     <td class="text-secondary text-xxs">${p.created_at || '—'}</td>
@@ -3942,16 +3942,16 @@ const SuperAdmin = {
         try {
             const res = await api.post(`/billing/offline-payments/${id}/approve`, {});
             if (res && res.status === 'success') {
-                QCMS.toast(res.message || 'Payment proof approved and plan activated!', 'success');
+                OctaQube.toast(res.message || 'Payment proof approved and plan activated!', 'success');
                 this.loadOfflinePayments();
                 this.notifyFinancialSync();
                 const m = bootstrap.Modal.getInstance(document.getElementById('receiptPreviewModal'));
                 if (m) m.hide();
             } else {
-                QCMS.toast(res.message || 'Failed to approve payment', 'error');
+                OctaQube.toast(res.message || 'Failed to approve payment', 'error');
             }
         } catch (e) {
-            QCMS.toast(e.message || 'Approval error', 'error');
+            OctaQube.toast(e.message || 'Approval error', 'error');
         }
     },
 
@@ -3961,12 +3961,12 @@ const SuperAdmin = {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header border-bottom">
-                            <h5 class="modal-title fw-bold text-sm text-danger">Reject Payment Proof (UTR: ${QCMS.escapeHtml(utr)})</h5>
+                            <h5 class="modal-title fw-bold text-sm text-danger">Reject Payment Proof (UTR: ${OctaQube.escapeHtml(utr)})</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body p-4">
                             <label class="ds-label text-xs fw-bold mb-2">Rejection Review / Feedback Reason <span class="text-danger">*</span></label>
-                            <textarea id="rejectReasonInput" class="ds-input text-xs w-100" rows="3" placeholder="Specify why this payment proof is rejected (e.g. UTR mismatch with bank statement, unreadable receipt image, incorrect amount).">${QCMS.escapeHtml('Payment transaction UTR details could not be verified with bank records.')}</textarea>
+                            <textarea id="rejectReasonInput" class="ds-input text-xs w-100" rows="3" placeholder="Specify why this payment proof is rejected (e.g. UTR mismatch with bank statement, unreadable receipt image, incorrect amount).">${OctaQube.escapeHtml('Payment transaction UTR details could not be verified with bank records.')}</textarea>
                             <div class="text-xxs text-secondary mt-2">
                                 <i data-lucide="info" style="width:12px;height:12px;" class="me-1"></i>
                                 This review feedback will be displayed directly to the Organization Admin in their Billing settings.
@@ -4001,17 +4001,17 @@ const SuperAdmin = {
         try {
             const res = await api.post(`/billing/offline-payments/${id}/reject`, { reason });
             if (res && res.status === 'success') {
-                QCMS.toast('Payment proof rejected and feedback sent to organization.', 'info');
+                OctaQube.toast('Payment proof rejected and feedback sent to organization.', 'info');
                 const m = bootstrap.Modal.getInstance(document.getElementById('rejectPaymentModal'));
                 if (m) m.hide();
                 const mReceipt = bootstrap.Modal.getInstance(document.getElementById('receiptPreviewModal'));
                 if (mReceipt) mReceipt.hide();
                 this.loadOfflinePayments();
             } else {
-                QCMS.toast(res.message || 'Failed to reject payment', 'error');
+                OctaQube.toast(res.message || 'Failed to reject payment', 'error');
             }
         } catch (e) {
-            QCMS.toast(e.message || 'Rejection error', 'error');
+            OctaQube.toast(e.message || 'Rejection error', 'error');
         }
     },
 
@@ -4047,7 +4047,7 @@ const SuperAdmin = {
                         <div class="modal-header border-bottom p-3 px-4">
                             <div>
                                 <h5 class="modal-title fw-bold text-sm mb-0">Offline Payment Submission Details</h5>
-                                <div class="text-xxs text-secondary">Transaction UTR: <strong class="font-monospace text-main">${QCMS.escapeHtml(p.transaction_id)}</strong></div>
+                                <div class="text-xxs text-secondary">Transaction UTR: <strong class="font-monospace text-main">${OctaQube.escapeHtml(p.transaction_id)}</strong></div>
                             </div>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
@@ -4102,24 +4102,24 @@ const SuperAdmin = {
 
                                         <div class="glass-card p-3 rounded-3 mb-3 border">
                                             <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">Company / Subscriber Details</div>
-                                            <h6 class="fw-bold text-main mb-1">${QCMS.escapeHtml(p.org_name)} <span class="badge bg-secondary-subtle text-secondary font-monospace text-xxs ms-1">ID: ${p.org_id}</span></h6>
-                                            <div class="text-xs text-secondary mb-0"><i data-lucide="mail" style="width:12px;height:12px;" class="me-1"></i>${QCMS.escapeHtml(p.user_email)}</div>
-                                            <div class="text-xs text-secondary"><i data-lucide="user" style="width:12px;height:12px;" class="me-1"></i>${QCMS.escapeHtml(p.user_name || 'Admin')}</div>
+                                            <h6 class="fw-bold text-main mb-1">${OctaQube.escapeHtml(p.org_name)} <span class="badge bg-secondary-subtle text-secondary font-monospace text-xxs ms-1">ID: ${p.org_id}</span></h6>
+                                            <div class="text-xs text-secondary mb-0"><i data-lucide="mail" style="width:12px;height:12px;" class="me-1"></i>${OctaQube.escapeHtml(p.user_email)}</div>
+                                            <div class="text-xs text-secondary"><i data-lucide="user" style="width:12px;height:12px;" class="me-1"></i>${OctaQube.escapeHtml(p.user_name || 'Admin')}</div>
                                         </div>
 
                                         <div class="glass-card p-3 rounded-3 mb-3 border">
                                             <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">Chosen Plan & Payment Breakdown</div>
                                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                                                <span class="badge bg-primary-subtle text-primary fw-bold text-xs px-2.5 py-1">${QCMS.escapeHtml(p.plan_name)} Plan</span>
+                                                <span class="badge bg-primary-subtle text-primary fw-bold text-xs px-2.5 py-1">${OctaQube.escapeHtml(p.plan_name)} Plan</span>
                                                 <span class="fw-bold text-main fs-6">₹${(p.amount || 0).toLocaleString('en-IN')} <span class="text-xxs text-secondary fw-normal">(incl. 18% GST)</span></span>
                                             </div>
-                                            <div class="text-xs text-secondary">Billing Cycle: <strong>${QCMS.escapeHtml(p.billing_cycle || 'Monthly')}</strong></div>
+                                            <div class="text-xs text-secondary">Billing Cycle: <strong>${OctaQube.escapeHtml(p.billing_cycle || 'Monthly')}</strong></div>
                                         </div>
 
                                         <div class="p-3 rounded-3 border mb-3" style="background:var(--ds-bg-card)">
                                             <div class="text-xxs text-secondary text-uppercase fw-bold mb-1">Transaction Reference (UTR)</div>
-                                            <div class="font-monospace text-sm fw-bold text-main mb-1">${QCMS.escapeHtml(p.transaction_id)}</div>
-                                            ${p.notes ? `<div class="text-xs text-secondary italic">" ${QCMS.escapeHtml(p.notes)} "</div>` : ''}
+                                            <div class="font-monospace text-sm fw-bold text-main mb-1">${OctaQube.escapeHtml(p.transaction_id)}</div>
+                                            ${p.notes ? `<div class="text-xs text-secondary italic">" ${OctaQube.escapeHtml(p.notes)} "</div>` : ''}
                                             <div class="text-xxs text-secondary mt-2"><i data-lucide="calendar" style="width:11px;height:11px;" class="me-1"></i>Submitted on: ${p.created_at || 'N/A'}</div>
                                         </div>
 
@@ -4129,13 +4129,13 @@ const SuperAdmin = {
                                                 Rejection Review Feedback / Remarks <span class="text-danger">*</span>
                                             </label>
                                             <textarea id="modalReviewNotesInput" class="ds-input text-xs w-100 p-2.5 rounded-3" rows="2" 
-                                                placeholder="Write review reason or feedback for the subscriber... (Required when rejecting payment)">${QCMS.escapeHtml(p.rejection_reason || '')}</textarea>
+                                                placeholder="Write review reason or feedback for the subscriber... (Required when rejecting payment)">${OctaQube.escapeHtml(p.rejection_reason || '')}</textarea>
                                         </div>
 
                                         ${isRejected && p.rejection_reason ? `
                                             <div class="p-3 bg-danger-subtle border border-danger-subtle rounded-3 mb-3 text-danger">
                                                 <div class="text-xxs text-uppercase fw-bold mb-1"><i data-lucide="alert-triangle" style="width:12px;height:12px;" class="me-1"></i>Previous Rejection Review</div>
-                                                <div class="text-xs fw-bold">${QCMS.escapeHtml(p.rejection_reason)}</div>
+                                                <div class="text-xs fw-bold">${OctaQube.escapeHtml(p.rejection_reason)}</div>
                                             </div>
                                         ` : ''}
                                     </div>
@@ -4212,14 +4212,14 @@ const SuperAdmin = {
                     const entry = this._offlinePaymentsData.find(p => p.id === proofId);
                     if (entry) entry.screenshot_url = json.screenshot_url;
                 }
-                QCMS.toast('Screenshot uploaded and saved.', 'success');
+                OctaQube.toast('Screenshot uploaded and saved.', 'success');
             } else {
                 if (pane) pane.innerHTML = origHtml;
-                QCMS.toast(json.message || 'Upload failed.', 'error');
+                OctaQube.toast(json.message || 'Upload failed.', 'error');
             }
         } catch (e) {
             if (pane) pane.innerHTML = origHtml;
-            QCMS.toast('Upload error: ' + e.message, 'error');
+            OctaQube.toast('Upload error: ' + e.message, 'error');
         }
     },
 
@@ -4227,15 +4227,15 @@ const SuperAdmin = {
         try {
             const res = await api.post(`/billing/offline-payments/${id}/reject`, { reason });
             if (res && res.status === 'success') {
-                QCMS.toast('Payment proof rejected and feedback sent to organization.', 'info');
+                OctaQube.toast('Payment proof rejected and feedback sent to organization.', 'info');
                 const mReceipt = bootstrap.Modal.getInstance(document.getElementById('receiptPreviewModal'));
                 if (mReceipt) mReceipt.hide();
                 this.loadOfflinePayments();
             } else {
-                QCMS.toast(res.message || 'Failed to reject payment', 'error');
+                OctaQube.toast(res.message || 'Failed to reject payment', 'error');
             }
         } catch (e) {
-            QCMS.toast(e.message || 'Rejection error', 'error');
+            OctaQube.toast(e.message || 'Rejection error', 'error');
         }
     },
 
@@ -4267,7 +4267,7 @@ const SuperAdmin = {
             let html = '<option value="">All Organizations</option>';
             orgs.forEach(o => {
                 const orgName = o.name || o.title || `Org #${o.id}`;
-                html += `<option value="${o.id}">${QCMS.escapeHtml(orgName)}</option>`;
+                html += `<option value="${o.id}">${OctaQube.escapeHtml(orgName)}</option>`;
             });
             select.innerHTML = html;
             if (this.auditFilters.org_id) select.value = this.auditFilters.org_id;
@@ -4342,7 +4342,7 @@ const SuperAdmin = {
         if (val === 'custom') {
             const customDate = document.getElementById('superPurgeCustomDate')?.value;
             if (!customDate) {
-                QCMS.toast('Please select a custom cutoff date.', 'warning');
+                OctaQube.toast('Please select a custom cutoff date.', 'warning');
                 return;
             }
             payload.before_date = customDate;
@@ -4358,7 +4358,7 @@ const SuperAdmin = {
 
         try {
             const res = await api.post('/admin/audit/purge', payload);
-            QCMS.toast(res.message || 'Audit logs purged successfully.', 'success');
+            OctaQube.toast(res.message || 'Audit logs purged successfully.', 'success');
             
             const modalEl = document.getElementById('superPurgeAuditLogsModal');
             if (modalEl) {
@@ -4368,7 +4368,7 @@ const SuperAdmin = {
 
             await this.loadAuditTab();
         } catch (err) {
-            QCMS.toast('Failed to purge audit logs: ' + (err.message || err), 'danger');
+            OctaQube.toast('Failed to purge audit logs: ' + (err.message || err), 'danger');
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -4476,7 +4476,7 @@ const SuperAdmin = {
             else if (log.action && (log.action.includes('DELETE') || log.action.includes('REMOVE') || log.action.includes('LOCKED') || log.action.includes('FAILED'))) badgeClass = 'red';
 
             const summaryHtml = log.change_summary 
-                ? `<div class="text-xxs text-secondary mt-0.5 text-truncate" style="max-width:220px;" title="${QCMS.escapeHtml(log.change_summary)}"><i data-lucide="git-commit" style="width:10px;height:10px;display:inline;"></i> ${QCMS.escapeHtml(log.change_summary)}</div>`
+                ? `<div class="text-xxs text-secondary mt-0.5 text-truncate" style="max-width:220px;" title="${OctaQube.escapeHtml(log.change_summary)}"><i data-lucide="git-commit" style="width:10px;height:10px;display:inline;"></i> ${OctaQube.escapeHtml(log.change_summary)}</div>`
                 : '';
 
             return `
@@ -4583,10 +4583,10 @@ const SuperAdmin = {
         if (!confirm(`Forcefully terminate active session ${sid}?`)) return;
         try {
             await api.post(`/admin/audit/sessions/${sid}/terminate`);
-            QCMS.toast('User session terminated successfully', 'success');
+            OctaQube.toast('User session terminated successfully', 'success');
             await this.loadAuditSessions();
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to terminate session', 'error');
+            OctaQube.toast(e.message || 'Failed to terminate session', 'error');
         }
     },
 
@@ -4692,9 +4692,9 @@ const SuperAdmin = {
                     const aVal = typeof item.after === 'object' ? JSON.stringify(item.after) : String(item.after !== undefined ? item.after : '(None)');
                     tableHtml += `
                     <tr>
-                        <td class="fw-bold font-mono text-xxs text-secondary">${QCMS.escapeHtml(k)}</td>
-                        <td class="diff-past-cell text-xxs">${QCMS.escapeHtml(bVal)}</td>
-                        <td class="diff-current-cell text-xxs">${QCMS.escapeHtml(aVal)}</td>
+                        <td class="fw-bold font-mono text-xxs text-secondary">${OctaQube.escapeHtml(k)}</td>
+                        <td class="diff-past-cell text-xxs">${OctaQube.escapeHtml(bVal)}</td>
+                        <td class="diff-current-cell text-xxs">${OctaQube.escapeHtml(aVal)}</td>
                     </tr>`;
                 });
                 tableHtml += `</tbody></table>`;
@@ -4738,7 +4738,7 @@ const SuperAdmin = {
 
             if (window.lucide) lucide.createIcons();
         } catch (e) {
-            QCMS.toast('Error retrieving audit telemetry detail', 'error');
+            OctaQube.toast('Error retrieving audit telemetry detail', 'error');
         }
     },
 
@@ -4794,10 +4794,10 @@ const SuperAdmin = {
                     tableHtml += `
                     <tr>
                         <td class="fw-bold text-main">
-                            <span class="badge bg-light text-dark font-mono text-xxs border">${QCMS.escapeHtml(k)}</span>
+                            <span class="badge bg-light text-dark font-mono text-xxs border">${OctaQube.escapeHtml(k)}</span>
                         </td>
-                        <td class="diff-past-cell text-xs">${QCMS.escapeHtml(beforeVal)}</td>
-                        <td class="diff-current-cell text-xs">${QCMS.escapeHtml(afterVal)}</td>
+                        <td class="diff-past-cell text-xs">${OctaQube.escapeHtml(beforeVal)}</td>
+                        <td class="diff-current-cell text-xs">${OctaQube.escapeHtml(afterVal)}</td>
                     </tr>`;
                 });
 
@@ -4825,7 +4825,7 @@ const SuperAdmin = {
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
         } catch (e) {
-            QCMS.toast('Failed to load modification diff details', 'error');
+            OctaQube.toast('Failed to load modification diff details', 'error');
         }
     },
 
@@ -4835,7 +4835,7 @@ const SuperAdmin = {
     },
 
     toggleColumnSelector() {
-        QCMS.toast('Dynamic table columns fully optimised for screen bounds', 'info');
+        OctaQube.toast('Dynamic table columns fully optimised for screen bounds', 'info');
     },
 
     buildFourPagePagination(currentPage, totalPages, onClickFnName) {
@@ -5039,21 +5039,21 @@ const SuperAdmin = {
     copyAuditLogId() {
         if (!this.currentAuditDetailId) return;
         navigator.clipboard.writeText(this.currentAuditDetailId.toString());
-        QCMS.toast('Audit Log ID copied to clipboard', 'success');
+        OctaQube.toast('Audit Log ID copied to clipboard', 'success');
     },
 
     async generateAuditIncident() {
         if (!this.currentAuditDetailId) return;
         try {
-            QCMS.toast(`Incident generated for Log ID ${this.currentAuditDetailId}. Security team has been notified.`, 'success');
+            OctaQube.toast(`Incident generated for Log ID ${this.currentAuditDetailId}. Security team has been notified.`, 'success');
             this.closeAuditDrawer();
         } catch (e) {
-            QCMS.toast('Error creating security ticket', 'error');
+            OctaQube.toast('Error creating security ticket', 'error');
         }
     },
 
     async exportAuditCSV() {
-        QCMS.toast('Compiling audit registry fields...', 'info');
+        OctaQube.toast('Compiling audit registry fields...', 'info');
         try {
             const orgParam = this.auditFilters.org_id ? `?org_id=${this.auditFilters.org_id}` : '';
             const res = await api.get(`/admin/audit/export${orgParam}`);
@@ -5064,9 +5064,9 @@ const SuperAdmin = {
             document.body.appendChild(link);
             link.click();
             link.remove();
-            QCMS.toast(`Exported ${res.count} audit trail events.`, 'success');
+            OctaQube.toast(`Exported ${res.count} audit trail events.`, 'success');
         } catch (e) {
-            QCMS.toast('Failed to download compliance report', 'error');
+            OctaQube.toast('Failed to download compliance report', 'error');
         }
     },
 
@@ -5089,7 +5089,7 @@ const SuperAdmin = {
         const supportEmailEl = document.getElementById('support_email') || document.getElementById('ps-support-email');
         const notifEl = document.getElementById('global_notification') || document.getElementById('ps-global-notification');
         const data = {
-            site_name: siteNameEl ? siteNameEl.value : 'QCMS Enterprise OS',
+            site_name: siteNameEl ? siteNameEl.value : 'OctaQube Enterprise OS',
             support_email: supportEmailEl ? supportEmailEl.value : 'support@ifqm.org.in',
             global_notification: notifEl ? notifEl.value : '',
             registration_open: regEl ? regEl.checked : true,
@@ -5149,8 +5149,8 @@ const SuperAdmin = {
                             <div class="fw-bold text-xs"><i data-lucide="shield-alert" style="width:14px;height:14px;" class="me-1"></i> Account Reactivation Request</div>
                             <span class="badge bg-danger text-white text-xxs">Action Required</span>
                         </div>
-                        <div class="text-xs mb-2">Subscriber Organization <strong>${QCMS.escapeHtml(t.organization)}</strong> has requested account reactivation.</div>
-                        <button type="button" class="ds-btn ds-btn-success ds-btn-sm w-100 py-2 fw-bold" onclick="SuperAdmin.reactivateOrgFromTicket(${t.org_id || t.organization_id}, ${t.id}, '${QCMS.escapeHtml(t.organization)}')">
+                        <div class="text-xs mb-2">Subscriber Organization <strong>${OctaQube.escapeHtml(t.organization)}</strong> has requested account reactivation.</div>
+                        <button type="button" class="ds-btn ds-btn-success ds-btn-sm w-100 py-2 fw-bold" onclick="SuperAdmin.reactivateOrgFromTicket(${t.org_id || t.organization_id}, ${t.id}, '${OctaQube.escapeHtml(t.organization)}')">
                             <i data-lucide="check-circle" class="me-1"></i> Reactivate Organization Account & Mark Resolved
                         </button>
                     </div>
@@ -5160,14 +5160,14 @@ const SuperAdmin = {
                     <div class="v-stack gap-2">
                         ${reactivationBox}
                         <div class="h-stack justify-content-between">
-                            <span class="fw-bold">From: ${QCMS.escapeHtml(t.organization)}</span>
-                            <span class="ds-badge outline">${QCMS.escapeHtml(t.priority)} Priority</span>
+                            <span class="fw-bold">From: ${OctaQube.escapeHtml(t.organization)}</span>
+                            <span class="ds-badge outline">${OctaQube.escapeHtml(t.priority)} Priority</span>
                         </div>
                         <div class="text-sm">
-                            <strong>Requester:</strong> ${QCMS.escapeHtml(t.requester_name)} (${QCMS.escapeHtml(t.requester_email)})
+                            <strong>Requester:</strong> ${OctaQube.escapeHtml(t.requester_name)} (${OctaQube.escapeHtml(t.requester_email)})
                         </div>
-                        <div class="text-sm fw-bold">Subject: ${QCMS.escapeHtml(t.subject)}</div>
-                        <div class="ds-well text-sm" style="white-space: pre-wrap; word-break: break-word;">${QCMS.escapeHtml(t.description)}</div>
+                        <div class="text-sm fw-bold">Subject: ${OctaQube.escapeHtml(t.subject)}</div>
+                        <div class="ds-well text-sm" style="white-space: pre-wrap; word-break: break-word;">${OctaQube.escapeHtml(t.description)}</div>
                     </div>
                 `;
                 document.getElementById('ticketResolution').value = t.resolution || '';
@@ -5244,7 +5244,7 @@ const SuperAdmin = {
             const d = res.data;
             this.currentDetailsOrg = d;
             
-            document.getElementById('orgDetailTitle').innerHTML = `${d.name} <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 ms-2" style="font-size:11px;font-family:monospace;">ID: ${d.id}</span> <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 ms-2" style="font-size:11px;">Registered: ${d.created_at ? QCMS.formatDate(d.created_at) : '—'}</span>`;
+            document.getElementById('orgDetailTitle').innerHTML = `${d.name} <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 ms-2" style="font-size:11px;font-family:monospace;">ID: ${d.id}</span> <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 ms-2" style="font-size:11px;">Registered: ${d.created_at ? OctaQube.formatDate(d.created_at) : '—'}</span>`;
             
             // Set active tab to Overview
             document.querySelectorAll('#orgDetailTabs button').forEach(btn => btn.classList.remove('active'));
@@ -5291,13 +5291,13 @@ const SuperAdmin = {
                         <div class="col-6">
                             <div class="ds-card p-3">
                                 <h6 class="fw-bold text-xs text-muted mb-2">REGISTRATION DATE</h6>
-                                <span class="fw-bold text-sm text-primary">${d.created_at ? QCMS.formatDate(d.created_at) : '—'}</span>
+                                <span class="fw-bold text-sm text-primary">${d.created_at ? OctaQube.formatDate(d.created_at) : '—'}</span>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="ds-card p-3">
                                 <h6 class="fw-bold text-xs text-muted mb-2">SUBSCRIPTION EXPIRY</h6>
-                                <span class="fw-bold text-sm text-primary" style="color: var(--ds-primary, #2563eb) !important;">${(d.subscription_expiry || d.trial_ends_at) ? QCMS.formatDate(d.subscription_expiry || d.trial_ends_at) : 'No Expiry'}</span>
+                                <span class="fw-bold text-sm text-primary" style="color: var(--ds-primary, #2563eb) !important;">${(d.subscription_expiry || d.trial_ends_at) ? OctaQube.formatDate(d.subscription_expiry || d.trial_ends_at) : 'No Expiry'}</span>
                             </div>
                         </div>
                     </div>
@@ -5312,7 +5312,7 @@ const SuperAdmin = {
                         <div class="col-6"><div class="detail-label">Code</div><div class="text-sm fw-bold">${d.org_code || d.code || '—'}</div></div>
                         <div class="col-6"><div class="detail-label">Industry</div><div class="text-sm">${d.industry || '—'}</div></div>
                         <div class="col-6"><div class="detail-label">Website</div><div class="text-sm">${d.website && d.website !== '—' ? `<a href="${d.website.startsWith('http') ? d.website : 'https://' + d.website}" target="_blank" rel="noopener noreferrer">${d.website}</a>` : '—'}</div></div>
-                        <div class="col-6"><div class="detail-label">Registered On</div><div class="text-sm fw-bold text-primary">${d.created_at ? QCMS.formatDate(d.created_at) : '—'}</div></div>
+                        <div class="col-6"><div class="detail-label">Registered On</div><div class="text-sm fw-bold text-primary">${d.created_at ? OctaQube.formatDate(d.created_at) : '—'}</div></div>
                         <div class="col-6"><div class="detail-label">GST Number</div><div class="text-sm fw-bold">${d.gst_number || '—'}</div></div>
                         <div class="col-6"><div class="detail-label">PAN Number</div><div class="text-sm fw-bold">${d.pan_number || '—'}</div></div>
                         <div class="col-6"><div class="detail-label">Phone</div><div class="text-sm">${d.phone || '—'}</div></div>
@@ -5328,9 +5328,9 @@ const SuperAdmin = {
                     <div class="row g-3">
                         <div class="col-6"><div class="detail-label">Plan</div><div class="text-sm fw-bold"><span class="ds-badge blue">${d.subscription_plan}</span></div></div>
                         <div class="col-6"><div class="detail-label">Status</div><div class="text-sm fw-bold"><span class="ds-badge green">${d.subscription_status === 'Trialing' || d.subscription_status === 'Trial' ? 'On Trial' : d.subscription_status}</span></div></div>
-                        <div class="col-6"><div class="detail-label">Registered On</div><div class="text-sm fw-bold text-primary">${d.created_at ? QCMS.formatDate(d.created_at) : '—'}</div></div>
+                        <div class="col-6"><div class="detail-label">Registered On</div><div class="text-sm fw-bold text-primary">${d.created_at ? OctaQube.formatDate(d.created_at) : '—'}</div></div>
                         <div class="col-6"><div class="detail-label">Timezone</div><div class="text-sm">${d.timezone}</div></div>
-                        <div class="col-6"><div class="detail-label">Subscription / Trial Expiry</div><div class="text-sm fw-bold text-primary">${(d.subscription_expiry || d.trial_ends_at) ? QCMS.formatDate(d.subscription_expiry || d.trial_ends_at) : '—'}</div></div>
+                        <div class="col-6"><div class="detail-label">Subscription / Trial Expiry</div><div class="text-sm fw-bold text-primary">${(d.subscription_expiry || d.trial_ends_at) ? OctaQube.formatDate(d.subscription_expiry || d.trial_ends_at) : '—'}</div></div>
                         <div class="col-6"><div class="detail-label">Remaining Trial</div><div class="text-sm">${d.trial_days_left !== null ? d.trial_days_left + ' days left' : '—'}</div></div>
                     </div>
 
@@ -5369,8 +5369,8 @@ const SuperAdmin = {
                     <tr>
                         <td><strong>₹${p.amount.toLocaleString('en-IN')}</strong></td>
                         <td class="text-xs font-monospace text-secondary">${p.transaction_id}</td>
-                        <td class="text-xs text-muted">${QCMS.formatDate(p.date)}</td>
-                        <td>${QCMS.statusBadge(p.status)}</td>
+                        <td class="text-xs text-muted">${OctaQube.formatDate(p.date)}</td>
+                        <td>${OctaQube.statusBadge(p.status)}</td>
                     </tr>
                 `).join('');
                 if (payments.length === 0) rows = `<tr><td colspan="4" class="text-center py-4 text-muted">No billing invoices found.</td></tr>`;
@@ -5404,8 +5404,8 @@ const SuperAdmin = {
                         <td><span class="text-xs font-monospace">#${t.id}</span></td>
                         <td><strong>${t.subject}</strong></td>
                         <td><span class="ds-badge outline">${t.priority}</span></td>
-                        <td>${QCMS.statusBadge(t.status)}</td>
-                        <td class="text-xs text-muted">${QCMS.formatDate(t.created_at)}</td>
+                        <td>${OctaQube.statusBadge(t.status)}</td>
+                        <td class="text-xs text-muted">${OctaQube.formatDate(t.created_at)}</td>
                     </tr>
                 `).join('');
                 if (tickets.length === 0) rows = `<tr><td colspan="5" class="text-center py-4 text-muted">No support tickets found.</td></tr>`;
@@ -5440,7 +5440,7 @@ const SuperAdmin = {
                         <div>
                             <span class="fw-bold text-primary">${log.action}</span> by <span class="fw-semibold">${log.admin}</span>
                         </div>
-                        <span class="text-muted font-monospace text-xxs">${QCMS.formatRelative(log.timestamp)}</span>
+                        <span class="text-muted font-monospace text-xxs">${OctaQube.formatRelative(log.timestamp)}</span>
                     </div>
                 `).join('');
                 if (logs.length === 0) list = `<div class="text-center py-4 text-muted text-xs">No audit logs found.</div>`;
@@ -5487,7 +5487,7 @@ const SuperAdmin = {
                     <td class="text-xs text-muted">${this._escapeHTML(u.email)}</td>
                     <td><span class="ds-badge outline">${this._escapeHTML(u.role || 'Member')}</span></td>
                     <td><span class="ds-badge ${u.status === 'Active' || u.is_active ? 'green' : 'red'}" style="font-size:10px; padding:2px 6px;">${this._escapeHTML(u.status || (u.is_active ? 'Active' : 'Inactive'))}</span></td>
-                    <td class="text-xs text-muted">${u.last_login ? QCMS.formatRelative(u.last_login) : 'Never'}</td>
+                    <td class="text-xs text-muted">${u.last_login ? OctaQube.formatRelative(u.last_login) : 'Never'}</td>
                 </tr>
             `).join('');
 
@@ -5763,7 +5763,7 @@ const SuperAdmin = {
                     const blob = await response.blob();
                     const link = document.createElement('a');
                     link.href = window.URL.createObjectURL(blob);
-                    link.download = `qcms_organizations_custom_export_${new Date().toISOString().slice(0,10)}.csv`;
+                    link.download = `octaqube_organizations_custom_export_${new Date().toISOString().slice(0,10)}.csv`;
                     document.body.appendChild(link);
                     link.click();
                     link.remove();
@@ -5822,7 +5822,7 @@ const SuperAdmin = {
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = `qcms_organizations_custom_export_${new Date().toISOString().slice(0,10)}.csv`;
+                link.download = `octaqube_organizations_custom_export_${new Date().toISOString().slice(0,10)}.csv`;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
@@ -6507,8 +6507,8 @@ const SuperAdmin = {
                     <div class="kpi-accent" style="background:${k.accent};"></div>
                 </div>`).join('');
             if(window.lucide) lucide.createIcons();
-            if (window.QCMS && QCMS.initTooltips) {
-                QCMS.initTooltips(grid);
+            if (window.OctaQube && OctaQube.initTooltips) {
+                OctaQube.initTooltips(grid);
             }
         } catch(e) {
             grid.innerHTML = `<div class="text-xs text-muted text-center py-2" style="grid-column:1/-1;">Dashboard unavailable — subscriptions not yet created.</div>`;
@@ -6743,7 +6743,7 @@ const SuperAdmin = {
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `qcms_subscriptions_export_${new Date().toISOString().slice(0,10)}.csv`;
+            a.download = `octaqube_subscriptions_export_${new Date().toISOString().slice(0,10)}.csv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -6934,7 +6934,7 @@ const SuperAdmin = {
         } catch (e) { console.warn('Could not fetch dynamic branding for invoice preview', e); }
 
         const titleHeader = tmpl.header_title || 'INVOICE';
-        const companyBrandName = ctx.legal_company_name || ctx.trading_name || ctx.software_display_name || ctx.software_name || 'QCMS Enterprise OS';
+        const companyBrandName = ctx.legal_company_name || ctx.trading_name || ctx.software_display_name || ctx.software_name || 'OctaQube Enterprise OS';
         const supportEmail = ctx.support_email || ctx.general_email || 'support@ifqm.org.in';
         const companyAddress = ctx.registered_office || ctx.corporate_office || '';
         const gstinText = ctx.gstin ? `GSTIN: ${ctx.gstin}` : '';
@@ -7402,8 +7402,8 @@ const SuperAdmin = {
             `;
             if (window.lucide) lucide.createIcons();
             
-            if (window.QCMS && QCMS.initTooltips) {
-                QCMS.initTooltips(grid);
+            if (window.OctaQube && OctaQube.initTooltips) {
+                OctaQube.initTooltips(grid);
             }
         } catch (e) {
             grid.innerHTML = `<div class="text-xs text-muted text-center py-2 col-12">Statistics unavailable — Backend offline.</div>`;
@@ -7959,7 +7959,7 @@ const SuperAdmin = {
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `qcms_licenses_export_${new Date().toISOString().slice(0,10)}.csv`;
+            a.download = `octaqube_licenses_export_${new Date().toISOString().slice(0,10)}.csv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -9481,7 +9481,7 @@ const SuperAdmin = {
         const telemetryBody = document.getElementById('paygTelemetryTableBody');
 
         if (recipientInput) recipientInput.value = 'Loading recipient email...';
-        if (subjectInput) subjectInput.value = `Monthly Metered Invoice - ${orgName} (QCMS Platform)`;
+        if (subjectInput) subjectInput.value = `Monthly Metered Invoice - ${orgName} (OctaQube Platform)`;
         if (emailBodyContainer) emailBodyContainer.innerHTML = `<div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading live email body preview for ${orgName}...</div>`;
         if (invoiceDocContainer) invoiceDocContainer.innerHTML = `<div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading official tax invoice document...</div>`;
 
@@ -9528,7 +9528,7 @@ const SuperAdmin = {
             }
 
             const d = result.data;
-            if (recipientInput) recipientInput.value = d.recipient_email || `${orgName.toLowerCase().replace(/\s+/g, '')}@qcms-tenant.com`;
+            if (recipientInput) recipientInput.value = d.recipient_email || `${orgName.toLowerCase().replace(/\s+/g, '')}@octaqube-tenant.com`;
             if (subjectInput) subjectInput.value = d.subject || `Monthly Metered Invoice - ${orgName}`;
             if (totalEl) totalEl.textContent = d.estimated_total_fmt || `₹${d.estimated_total}`;
 
@@ -9557,7 +9557,7 @@ const SuperAdmin = {
                 <div style="background:linear-gradient(135deg,#312e81 0%,#4f46e5 100%);padding:24px;color:#ffffff;">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
                         <div>
-                            <h3 style="margin:0;font-size:20px;font-weight:800;letter-spacing:-0.5px;">QCMS Enterprise OS</h3>
+                            <h3 style="margin:0;font-size:20px;font-weight:800;letter-spacing:-0.5px;">OctaQube Enterprise OS</h3>
                             <div style="font-size:12px;opacity:0.85;margin-top:2px;">Official Monthly Pay-As-You-Go Statement</div>
                         </div>
                         <span style="background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;">OFFICIAL INVOICE</span>
@@ -10077,9 +10077,9 @@ const SuperAdmin = {
             const sel = (s.selectedIds && typeof s.selectedIds.has === 'function') ? s.selectedIds.has(m.id) : false;
             const statusStr = m.status || 'Inactive';
             const badgeClass = statusStr.toLowerCase().replace(/\s+/g, '-');
-            const escName = this._modHighlight(QCMS.escapeHtml(m.name || ''), s.q);
-            const escCode = this._modHighlight(QCMS.escapeHtml(m.code || ''), s.q);
-            const escDesc = this._modHighlight(QCMS.escapeHtml(m.description || ''), s.q);
+            const escName = this._modHighlight(OctaQube.escapeHtml(m.name || ''), s.q);
+            const escCode = this._modHighlight(OctaQube.escapeHtml(m.code || ''), s.q);
+            const escDesc = this._modHighlight(OctaQube.escapeHtml(m.description || ''), s.q);
             const colorVal = m.color || '#3b82f6';
             const plansList = Array.isArray(m.plans) ? m.plans : [];
             
@@ -10291,7 +10291,7 @@ const SuperAdmin = {
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `QCMS_Feature_Modules_${new Date().toISOString().slice(0,10)}.csv`);
+        link.setAttribute("download", `OctaQube_Feature_Modules_${new Date().toISOString().slice(0,10)}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -11311,8 +11311,8 @@ const SuperAdmin = {
             api.showNotification('Requesting administrative impersonation...', 'info');
             const res = await api.post(`/super-admin/companies/${id}/impersonate`);
             if (res.status === 'success' || res.token) {
-                sessionStorage.setItem('qcms_authenticated', 'true');
-                localStorage.setItem('qcms_authenticated', 'true');
+                sessionStorage.setItem('octaqube_authenticated', 'true');
+                localStorage.setItem('octaqube_authenticated', 'true');
                 sessionStorage.removeItem('token');
                 localStorage.removeItem('token');
                 sessionStorage.removeItem('access_token');
@@ -11420,7 +11420,7 @@ const SuperAdmin = {
         tbody.innerHTML = pageItems.map(item => {
             const planColors = { 'Starter': 'blue', 'Professional': 'purple', 'Enterprise': 'indigo', 'Custom': 'gray' };
             const planColor  = planColors[item.subscription_plan] || 'gray';
-            const nameEsc    = QCMS.escapeHtml(item.name).replace(/'/g, "\\'");
+            const nameEsc    = OctaQube.escapeHtml(item.name).replace(/'/g, "\\'");
 
             // Use backend computed days_remaining as primary source of truth, fallback to client-side math
             const deletedAtMs   = item.deleted_at ? new Date(item.deleted_at).getTime() : Date.now();
@@ -11441,18 +11441,18 @@ const SuperAdmin = {
                         </div>
                     </td>
                     <td>
-                        <div class="fw-bold text-sm" style="color:var(--ds-text-main);">${QCMS.escapeHtml(item.name)}</div>
-                        <div class="text-xs text-muted">ID: ${item.id} ${item.org_code && item.org_code !== '—' ? '· ' + QCMS.escapeHtml(item.org_code) : ''}</div>
+                        <div class="fw-bold text-sm" style="color:var(--ds-text-main);">${OctaQube.escapeHtml(item.name)}</div>
+                        <div class="text-xs text-muted">ID: ${item.id} ${item.org_code && item.org_code !== '—' ? '· ' + OctaQube.escapeHtml(item.org_code) : ''}</div>
                     </td>
                     <td>
-                        <div class="text-sm font-medium" style="color:var(--ds-text-main);">${QCMS.escapeHtml(item.admin_name)}</div>
-                        <div class="text-xs text-muted">${QCMS.escapeHtml(item.email)}</div>
+                        <div class="text-sm font-medium" style="color:var(--ds-text-main);">${OctaQube.escapeHtml(item.admin_name)}</div>
+                        <div class="text-xs text-muted">${OctaQube.escapeHtml(item.email)}</div>
                     </td>
                     <td>
-                        <span class="ds-badge ds-badge-${planColor}">${QCMS.escapeHtml(item.subscription_plan)}</span>
+                        <span class="ds-badge ds-badge-${planColor}">${OctaQube.escapeHtml(item.subscription_plan)}</span>
                     </td>
                     <td>
-                        <div class="text-xs" style="color:var(--ds-text-main);font-weight:500;">${QCMS.formatDate(item.deleted_at)}</div>
+                        <div class="text-xs" style="color:var(--ds-text-main);font-weight:500;">${OctaQube.formatDate(item.deleted_at)}</div>
                         <div class="text-xs text-muted">Purge: ${purgeDate}</div>
                     </td>
                     <td>

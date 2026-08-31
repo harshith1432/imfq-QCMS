@@ -1,6 +1,6 @@
-# QCMS Frontend Developer Guide
+# OctaQube Frontend Developer Guide
 
-The QCMS frontend is a lightweight, responsive Single Page Application (SPA) architecture built with vanilla ES6+ JavaScript, HTML5, and CSS3. It prioritizes performance and maintainability without the overhead of heavy frameworks.
+The OctaQube frontend is a lightweight, responsive Single Page Application (SPA) architecture built with vanilla ES6+ JavaScript, HTML5, and CSS3. It prioritizes performance and maintainability without the overhead of heavy frameworks.
 
 ## 📁 Architectural Overview
 
@@ -20,10 +20,10 @@ frontend/
 
 ## 🚀 Key Patterns
 
-### 1. The `QCMS` Global Object
-To prevent namespace pollution, most utility functions are attached to a global `QCMS` object in `assets/js/components.js`.
-- `QCMS.statusBadge(status)`: Returns standardized HTML for status labels.
-- `QCMS.formatCurrency(amount)`: Formats numbers for financial displays.
+### 1. The `OctaQube` Global Object
+To prevent namespace pollution, most utility functions are attached to a global `OctaQube` object in `assets/js/components.js`.
+- `OctaQube.statusBadge(status)`: Returns standardized HTML for status labels.
+- `OctaQube.formatCurrency(amount)`: Formats numbers for financial displays.
 
 ### 2. Role-Based Loading
 Pages like `dashboard.html` or `workspace.html` dynamically import the relevant logic based on the user's role stored in `localStorage`.

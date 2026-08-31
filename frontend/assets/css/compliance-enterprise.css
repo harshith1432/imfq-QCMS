@@ -1,16 +1,16 @@
 /* ==========================================================================
-   QCMS ENTERPRISE COMPLIANCE STANDARDS DESIGN SYSTEM
-   Natively matched to QCMS Design System (design-system.css & glass.css)
+   OctaQube ENTERPRISE COMPLIANCE STANDARDS DESIGN SYSTEM
+   Natively matched to OctaQube Design System (design-system.css & glass.css)
    ========================================================================== */
 
-/* Remove custom font import - use native QCMS font stack */
+/* Remove custom font import - use native OctaQube font stack */
 
 .ce-container {
   font-family: inherit;
   color: var(--ds-text-primary, var(--ds-text-main, #111827));
 }
 
-/* Base Card Styling using QCMS design system */
+/* Base Card Styling using OctaQube design system */
 .ce-card {
   background: var(--ds-bg-card, var(--ds-surface, #ffffff));
   border: 1px solid var(--ds-border-color, #e5e7eb);

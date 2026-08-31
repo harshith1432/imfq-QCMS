@@ -6,18 +6,18 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings | QCMS Enterprise</title>
+    <title>Settings | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
     <link rel="stylesheet" href="/assets/css/compliance-enterprise.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -833,7 +833,7 @@
                                             <i data-lucide="plug" style="width:16px;height:16px;color:var(--ds-accent-primary)"></i>
                                             Integration Endpoint: Receive Approved Ideas
                                         </h6>
-                                        <p class="text-xs ds-text-secondary mb-0">External Ideation Tool Integration API — push approved ideas directly into QCMS using your API key.</p>
+                                        <p class="text-xs ds-text-secondary mb-0">External Ideation Tool Integration API — push approved ideas directly into OctaQube using your API key.</p>
                                     </div>
                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-1">POST /api/v1/integrations/ideas</span>
                                 </div>
@@ -1011,8 +1011,8 @@
                                     <div class="tab-content border border-top-0 rounded-bottom-3 bg-dark" id="apiCodeTabsContent">
                                         <!-- cURL -->
                                         <div class="tab-pane fade show active p-3" id="code-curl" role="tabpanel">
-                                            <pre class="mb-0 text-light font-monospace" style="font-size:11px; white-space:pre-wrap;">curl -X POST "http://your-qcms-server/api/v1/integrations/ideas" \
-  -H "Authorization: Bearer qcms_live_your_key_here" \
+                                            <pre class="mb-0 text-light font-monospace" style="font-size:11px; white-space:pre-wrap;">curl -X POST "http://your-octaqube-server/api/v1/integrations/ideas" \
+  -H "Authorization: Bearer octaqube_live_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{
     "ideaCode": "IDA-2026-006",
@@ -1035,8 +1035,8 @@
                                         <div class="tab-pane fade p-3" id="code-python" role="tabpanel">
                                             <pre class="mb-0 text-light font-monospace" style="font-size:11px; white-space:pre-wrap;"><span class="text-warning">import</span> requests
 
-API_KEY = <span class="text-success">"qcms_live_your_key_here"</span>
-BASE_URL = <span class="text-success">"http://your-qcms-server/api/v1/integrations"</span>
+API_KEY = <span class="text-success">"octaqube_live_your_key_here"</span>
+BASE_URL = <span class="text-success">"http://your-octaqube-server/api/v1/integrations"</span>
 
 payload = {
     <span class="text-success">"ideaCode"</span>:           <span class="text-success">"IDA-2026-006"</span>,
@@ -1064,10 +1064,10 @@ print(response.json())</pre>
                                         </div>
                                         <!-- JavaScript -->
                                         <div class="tab-pane fade p-3" id="code-js" role="tabpanel">
-                                            <pre class="mb-0 text-light font-monospace" style="font-size:11px; white-space:pre-wrap;"><span class="text-warning">const</span> response = <span class="text-warning">await</span> fetch(<span class="text-success">'http://your-qcms-server/api/v1/integrations/ideas'</span>, {
+                                            <pre class="mb-0 text-light font-monospace" style="font-size:11px; white-space:pre-wrap;"><span class="text-warning">const</span> response = <span class="text-warning">await</span> fetch(<span class="text-success">'http://your-octaqube-server/api/v1/integrations/ideas'</span>, {
     method: <span class="text-success">'POST'</span>,
     headers: {
-        <span class="text-success">'Authorization'</span>: <span class="text-success">'Bearer qcms_live_your_key_here'</span>,
+        <span class="text-success">'Authorization'</span>: <span class="text-success">'Bearer octaqube_live_your_key_here'</span>,
         <span class="text-success">'Content-Type'</span>: <span class="text-success">'application/json'</span>
     },
     body: JSON.stringify({
@@ -1129,7 +1129,7 @@ console.log(data);
                                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                                     <div>
                                         <h4 class="fw-bold ds-text-main mb-1" data-i18n="settings.compliance.title">Regulatory Compliance</h4>
-                                        <p class="text-sm ds-text-secondary mb-0" data-i18n="settings.compliance.desc">Select the standards that govern your organization. QCMS will adjust reporting templates accordingly.</p>
+                                        <p class="text-sm ds-text-secondary mb-0" data-i18n="settings.compliance.desc">Select the standards that govern your organization. OctaQube will adjust reporting templates accordingly.</p>
                                     </div>
                                     <div class="d-flex flex-wrap align-items-center gap-2">
                                         <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="ComplianceEnterprise.openAddStandardModal()">
@@ -1419,7 +1419,7 @@ console.log(data);
                                         <i data-lucide="book-open" style="width:20px;height:20px;" class="text-primary"></i>
                                         8S Problem Solving User Manual
                                     </h5>
-                                    <p class="ds-text-secondary mb-0 text-sm">Detailed guide for completing all 8 stages of the QCMS 8S workflow.</p>
+                                    <p class="ds-text-secondary mb-0 text-sm">Detailed guide for completing all 8 stages of the OctaQube 8S workflow.</p>
                                 </div>
                                 <div class="ds-card-body p-4" style="max-height: 70vh; overflow-y: auto;">
                                     
@@ -2781,7 +2781,7 @@ console.log(data);
                                                                 <tr>
                                                                     <td class="fw-semibold">8.6 Team Recognition</td>
                                                                     <td><span class="badge bg-secondary-subtle text-dark border-0">Rewards Table</span></td>
-                                                                    <td>Records recognition awards, certificates, and QCMS gamification incentive points awarded to team circle members.</td>
+                                                                    <td>Records recognition awards, certificates, and OctaQube gamification incentive points awarded to team circle members.</td>
                                                                     <td class="fw-medium text-success bg-success-soft font-mono">'Deepak: Star Performer (+150 Pts) | Sunil: Technical Champion (+120 Pts)'</td>
                                                                 </tr>
                                                                 <tr>
@@ -3077,13 +3077,13 @@ console.log(data);
                                         <div class="col-md-6">
                                             <div class="ds-field">
                                                 <label class="ds-label">DEFAULT FROM SENDER NAME</label>
-                                                <input type="text" class="ds-input" id="ps-from-name" placeholder="QCMS Portal">
+                                                <input type="text" class="ds-input" id="ps-from-name" placeholder="OctaQube Portal">
                                             </div>
                                         </div>
                                         <div class="col-md-12">
                                             <div class="ds-field">
                                                 <label class="ds-label">DEFAULT FROM SENDER EMAIL</label>
-                                                <input type="email" class="ds-input" id="ps-from-email" placeholder="noreply@qcms.com">
+                                                <input type="email" class="ds-input" id="ps-from-email" placeholder="noreply@octaqube.com">
                                             </div>
                                         </div>
                                     </div>
@@ -3544,7 +3544,7 @@ console.log(data);
                                         <div class="col-md-6">
                                             <div class="ds-field">
                                                 <label class="ds-label">S3 BUCKET NAME</label>
-                                                <input type="text" class="ds-input text-xs" id="ps-backup-s3-bucket" placeholder="qcms-enterprise-vault">
+                                                <input type="text" class="ds-input text-xs" id="ps-backup-s3-bucket" placeholder="octaqube-enterprise-vault">
                                             </div>
                                         </div>
                                         <div class="col-md-6">
@@ -4222,8 +4222,8 @@ console.log(data);
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
-    <script src="/assets/dist/platform-settings.db365a31.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
+    <script src="/assets/dist/platform-settings.7a139a87.min.js"></script>
     <script>
     const settingsManager = {
         isDirty: false,
@@ -4262,7 +4262,7 @@ console.log(data);
             
             const user = JSON.parse(userStr);
             this.currentUser = user;
-            const role = window.QCMS && window.QCMS.normalizeRole ? window.QCMS.normalizeRole(user.role) : (user.role || 'Team Member');
+            const role = window.OctaQube && window.OctaQube.normalizeRole ? window.OctaQube.normalizeRole(user.role) : (user.role || 'Team Member');
             const isAdmin = ['Admin', 'SuperAdmin'].includes(role);
 
             // Role-Based Access Control - Hide organization settings for non-admins
@@ -4275,7 +4275,7 @@ console.log(data);
                 document.getElementById('gov-group')?.remove();
             }
 
-            QCMS.init();
+            OctaQube.init();
             this.setupTabNavigation();
             await this.loadPersonalProfile();
             
@@ -4290,7 +4290,7 @@ console.log(data);
             if (!target) return;
             const targetPane = document.getElementById(`pane-${target}`);
             if (!targetPane) {
-                console.warn(`[QCMS Settings] Target pane #pane-${target} not found`);
+                console.warn(`[OctaQube Settings] Target pane #pane-${target} not found`);
                 return;
             }
 
@@ -4397,16 +4397,16 @@ console.log(data);
                     : `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 text-xxs font-monospace">Custom Role</span>`;
 
                 const roleInput = isSystem 
-                    ? `<div class="fw-bold text-xs text-main">${QCMS.escapeHtml(item.role)}</div><div class="text-xxs text-muted">${QCMS.escapeHtml(item.notes || '')}</div>` 
-                    : `<input type="text" class="form-control form-control-sm text-xs fw-semibold" placeholder="e.g. HR Manager" value="${QCMS.escapeHtml(item.role || '')}" onchange="settingsManager.updateSignoffField(${idx}, 'role', this.value)">`;
+                    ? `<div class="fw-bold text-xs text-main">${OctaQube.escapeHtml(item.role)}</div><div class="text-xxs text-muted">${OctaQube.escapeHtml(item.notes || '')}</div>` 
+                    : `<input type="text" class="form-control form-control-sm text-xs fw-semibold" placeholder="e.g. HR Manager" value="${OctaQube.escapeHtml(item.role || '')}" onchange="settingsManager.updateSignoffField(${idx}, 'role', this.value)">`;
 
                 const deptInput = isSystem 
                     ? `<span class="text-xs text-muted">Auto (Project Dept)</span>` 
-                    : `<input type="text" class="form-control form-control-sm text-xs" placeholder="e.g. Human Resources" value="${QCMS.escapeHtml(item.department || '')}" onchange="settingsManager.updateSignoffField(${idx}, 'department', this.value)">`;
+                    : `<input type="text" class="form-control form-control-sm text-xs" placeholder="e.g. Human Resources" value="${OctaQube.escapeHtml(item.department || '')}" onchange="settingsManager.updateSignoffField(${idx}, 'department', this.value)">`;
 
                 const nameInput = isSystem 
                     ? `<span class="text-xs text-muted">Auto (Project Assignee)</span>` 
-                    : `<input type="text" class="form-control form-control-sm text-xs" placeholder="Optional: Designated Person" value="${QCMS.escapeHtml(item.name || '')}" onchange="settingsManager.updateSignoffField(${idx}, 'name', this.value)">`;
+                    : `<input type="text" class="form-control form-control-sm text-xs" placeholder="Optional: Designated Person" value="${OctaQube.escapeHtml(item.name || '')}" onchange="settingsManager.updateSignoffField(${idx}, 'name', this.value)">`;
 
                 const deleteBtn = isSystem 
                     ? `<button class="btn btn-sm btn-ghost p-1 text-muted" disabled title="System Core Role cannot be removed"><i data-lucide="lock" style="width:14px;height:14px;"></i></button>` 
@@ -4462,7 +4462,7 @@ console.log(data);
         removeSignoffRole(idx) {
             if (!this.signoffHierarchy || !this.signoffHierarchy[idx]) return;
             if (this.signoffHierarchy[idx].type === 'system') {
-                if (window.QCMS && QCMS.toast) QCMS.toast('Core system roles cannot be deleted', 'warning');
+                if (window.OctaQube && OctaQube.toast) OctaQube.toast('Core system roles cannot be deleted', 'warning');
                 return;
             }
             this.signoffHierarchy.splice(idx, 1);
@@ -4475,21 +4475,21 @@ console.log(data);
                 const res = await api.put('/admin/signoff-hierarchy', { reset: true });
                 this.signoffHierarchy = (res && res.hierarchy) ? res.hierarchy : this.getDefaultSignoffHierarchy();
                 this.renderSignoffHierarchy();
-                if (window.QCMS && QCMS.toast) QCMS.toast('Sign-off hierarchy reset to system defaults', 'success');
+                if (window.OctaQube && OctaQube.toast) OctaQube.toast('Sign-off hierarchy reset to system defaults', 'success');
             } catch (err) {
-                if (window.QCMS && QCMS.toast) QCMS.toast(err.message || 'Failed to reset hierarchy', 'error');
+                if (window.OctaQube && OctaQube.toast) OctaQube.toast(err.message || 'Failed to reset hierarchy', 'error');
             }
         },
 
         async saveSignoffHierarchy() {
             try {
                 const res = await api.put('/admin/signoff-hierarchy', { hierarchy: this.signoffHierarchy });
-                if (window.QCMS && QCMS.toast) {
-                    QCMS.toast(res.message || 'Sign-off hierarchy configuration saved successfully!', 'success');
+                if (window.OctaQube && OctaQube.toast) {
+                    OctaQube.toast(res.message || 'Sign-off hierarchy configuration saved successfully!', 'success');
                 }
             } catch (err) {
-                if (window.QCMS && QCMS.toast) {
-                    QCMS.toast(err.message || 'Failed to save sign-off hierarchy', 'error');
+                if (window.OctaQube && OctaQube.toast) {
+                    OctaQube.toast(err.message || 'Failed to save sign-off hierarchy', 'error');
                 }
             }
         },
@@ -4533,7 +4533,7 @@ console.log(data);
                 accordion.innerHTML = stages.map((stg, stgIdx) => {
                     const stgNum = stg.stage_id || (stgIdx + 1);
                     const origId = stg.original_id || stgNum;
-                    const stgTitle = QCMS.escapeHtml(stg.title || `Stage ${stgNum}`);
+                    const stgTitle = OctaQube.escapeHtml(stg.title || `Stage ${stgNum}`);
                     const collapseId = `collapseStage${stgNum}`;
 
                     const objectiveText = stg.objective || builtInObjectives[origId] || "Execute process improvement and quality control steps for this stage.";
@@ -4548,8 +4548,8 @@ console.log(data);
                         `;
                     } else {
                         sectionsHtml = sections.map((sec, secIdx) => {
-                            const secTitle = QCMS.escapeHtml(sec.label || sec.title || `Section ${stgNum}.${secIdx + 1}`);
-                            const secDesc = QCMS.escapeHtml(sec.description || sec.about || sec.purpose || '');
+                            const secTitle = OctaQube.escapeHtml(sec.label || sec.title || `Section ${stgNum}.${secIdx + 1}`);
+                            const secDesc = OctaQube.escapeHtml(sec.description || sec.about || sec.purpose || '');
                             
                             // Extract fields
                             let fieldsList = [];
@@ -4594,16 +4594,16 @@ console.log(data);
                                             </thead>
                                             <tbody>
                                                 ${fieldsList.map(f => {
-                                                    const fLabel = QCMS.escapeHtml(f.label || f.name || 'Field Component');
+                                                    const fLabel = OctaQube.escapeHtml(f.label || f.name || 'Field Component');
                                                     const isReq = f.required !== false;
-                                                    const fType = QCMS.escapeHtml(f.type || 'text');
+                                                    const fType = OctaQube.escapeHtml(f.type || 'text');
                                                     
-                                                    const desc = QCMS.escapeHtml(
+                                                    const desc = OctaQube.escapeHtml(
                                                         f.manual_description || f.help_text || f.purpose || f.placeholder ||
                                                         `Complete ${fLabel} according to frontline quality guidelines.`
                                                     );
                                                     
-                                                    const sample = QCMS.escapeHtml(
+                                                    const sample = OctaQube.escapeHtml(
                                                         f.sample_data || f.sample ||
                                                         (fType === 'number' ? '12.5' : (fType === 'select' ? 'Option 1' : 'Valid Entry'))
                                                     );
@@ -4640,7 +4640,7 @@ console.log(data);
                             <div id="${collapseId}" class="accordion-collapse collapse ${stgIdx === 0 ? 'show' : ''}" data-bs-parent="#manualAccordion">
                                 <div class="accordion-body p-4 bg-light-subtle">
                                     <div class="alert alert-primary mb-4 text-xs" style="background:rgba(var(--ds-primary-rgb),.05); border-left:4px solid var(--ds-primary);">
-                                        <strong>Objective</strong>: ${QCMS.escapeHtml(objectiveText)}
+                                        <strong>Objective</strong>: ${OctaQube.escapeHtml(objectiveText)}
                                     </div>
                                     ${sectionsHtml}
                                 </div>
@@ -4775,7 +4775,7 @@ console.log(data);
             formData.append('profile_picture', file);
 
             try {
-                QCMS.toast('Uploading avatar...', 'info');
+                OctaQube.toast('Uploading avatar...', 'info');
                 const token = sessionStorage.getItem('token') || localStorage.getItem('token');
                 const response = await fetch(`${api.baseUrl || '/api'}/auth/profile`, {
                     method: 'PUT',
@@ -4793,11 +4793,11 @@ console.log(data);
                 const synchedUser = JSON.stringify(user);
                 sessionStorage.setItem('user', synchedUser);
                 localStorage.setItem('user', synchedUser);
-                QCMS.user = user;
-                QCMS.renderNavbar(); // Refresh navbar avatar
-                QCMS.toast('Avatar updated successfully.', 'success');
+                OctaQube.user = user;
+                OctaQube.renderNavbar(); // Refresh navbar avatar
+                OctaQube.toast('Avatar updated successfully.', 'success');
             } catch (e) {
-                QCMS.toast(e.message, 'error');
+                OctaQube.toast(e.message, 'error');
             }
         },
 
@@ -4806,11 +4806,11 @@ console.log(data);
             const newPass = document.getElementById('personal_new_pass').value;
             
             if (!oldPass || !newPass) {
-                QCMS.toast('Please fill in both password fields.', 'error');
+                OctaQube.toast('Please fill in both password fields.', 'error');
                 return;
             }
             if (newPass.length < 8) {
-                QCMS.toast('New password must be at least 8 characters long.', 'error');
+                OctaQube.toast('New password must be at least 8 characters long.', 'error');
                 return;
             }
 
@@ -4819,11 +4819,11 @@ console.log(data);
                     current_password: oldPass,
                     new_password: newPass
                 });
-                QCMS.toast('Password updated successfully.', 'success');
+                OctaQube.toast('Password updated successfully.', 'success');
                 document.getElementById('personal_old_pass').value = '';
                 document.getElementById('personal_new_pass').value = '';
             } catch (e) {
-                QCMS.toast(e.message || 'Failed to update password.', 'error');
+                OctaQube.toast(e.message || 'Failed to update password.', 'error');
             }
         },
 
@@ -4838,9 +4838,9 @@ console.log(data);
             const val = parseInt(document.getElementById('project_inactivity_days')?.value, 10) || 30;
             try {
                 await api.put('/admin/org-settings', { project_inactivity_days: val });
-                QCMS.toast(`Project inactivity threshold set to ${val} days`, 'success');
+                OctaQube.toast(`Project inactivity threshold set to ${val} days`, 'success');
             } catch (e) {
-                QCMS.toast('Failed to save timeline settings', 'error');
+                OctaQube.toast('Failed to save timeline settings', 'error');
             }
         },
 
@@ -4850,9 +4850,9 @@ console.log(data);
             };
             try {
                 await api.put('/admin/org-settings', secPayload);
-                QCMS.toast('Security settings saved successfully', 'success');
+                OctaQube.toast('Security settings saved successfully', 'success');
             } catch (e) {
-                QCMS.toast('Failed to save security settings', 'error');
+                OctaQube.toast('Failed to save security settings', 'error');
             }
         },
 
@@ -4876,9 +4876,9 @@ console.log(data);
                                 const synchedUser = JSON.stringify(uObj);
                                 sessionStorage.setItem('user', synchedUser);
                                 localStorage.setItem('user', synchedUser);
-                                if (window.QCMS) window.QCMS.user = uObj;
-                                if (window.QCMS && typeof window.QCMS.applyBranding === 'function') {
-                                    window.QCMS.applyBranding();
+                                if (window.OctaQube) window.OctaQube.user = uObj;
+                                if (window.OctaQube && typeof window.OctaQube.applyBranding === 'function') {
+                                    window.OctaQube.applyBranding();
                                 }
                             }
                         } catch(e) {}
@@ -5061,24 +5061,24 @@ console.log(data);
                 }
             } catch (e) { console.warn('Could not fetch dynamic branding for invoice, using fallbacks', e); }
 
-            const swDisplay   = safe(ctx.software_display_name || ctx.software_name || 'QCMS ENTERPRISE OS');
+            const swDisplay   = safe(ctx.software_display_name || ctx.software_name || 'OctaQube ENTERPRISE OS');
             const invHeader   = safe(tmpl.header_title || 'TAX INVOICE');
             const invSub      = safe(tmpl.subtitle || 'OFFICIAL SUBSCRIPTION BILLING RECEIPT');
-            const compLegal   = safe(ctx.legal_company_name || 'QCMS Technologies Pvt. Ltd.');
+            const compLegal   = safe(ctx.legal_company_name || 'OctaQube Technologies Pvt. Ltd.');
             const compTrading = safe(ctx.trading_name || 'Enterprise Licensing & Cloud Services');
             const compTax     = safe(`GSTIN: ${ctx.gstin || '27AAACQ1234F1Z9'} | CIN: ${ctx.cin || 'U72200MH2026PTC123456'}`);
-            const compEmail   = safe(`Email: ${ctx.billing_email || 'billing@qcms.com'}`);
+            const compEmail   = safe(`Email: ${ctx.billing_email || 'billing@octaqube.com'}`);
             const footerText  = safe(tmpl.footer_text || tmpl.terms_and_conditions || 'This is an official computer-generated tax invoice and payment receipt. No physical signature required.');
-            const footerBrand = safe(`${ctx.software_name || 'QCMS OS'} | ${ctx.website || 'https://qcms.io'} | Support: ${ctx.support_email || 'support@ifqm.org.in'}`);
+            const footerBrand = safe(`${ctx.software_name || 'OctaQube OS'} | ${ctx.website || 'https://octaqube.io'} | Support: ${ctx.support_email || 'support@ifqm.org.in'}`);
 
             const subtotalVal = amtVal / 1.18;
             const gstValVal   = amtVal - subtotalVal;
             const subtotal    = subtotalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const gstVal      = gstValVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-            const orgName  = safe(this.initialData?.name || document.getElementById('org_name')?.value || ctx.organization_name || 'QCMS Enterprise Account');
+            const orgName  = safe(this.initialData?.name || document.getElementById('org_name')?.value || ctx.organization_name || 'OctaQube Enterprise Account');
             const adminName= safe(this.initialData?.admin_name || document.getElementById('org_admin_name')?.value || 'System Administrator');
-            const orgEmail = safe(this.initialData?.email || document.getElementById('org_email')?.value || 'admin@qcms.com');
+            const orgEmail = safe(this.initialData?.email || document.getElementById('org_email')?.value || 'admin@octaqube.com');
             const invNo    = `INV-2026-${tx.length > 8 ? tx.slice(-8) : tx}`;
 
             const pdfStream = `% Invoice Meta Header (Clean Top Layout without Dark Navy Bar)
@@ -5282,8 +5282,8 @@ ET`;
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-            if (window.QCMS && QCMS.toast) {
-                QCMS.toast(`Official Tax Invoice PDF saved: ${filename}`, 'success');
+            if (window.OctaQube && OctaQube.toast) {
+                OctaQube.toast(`Official Tax Invoice PDF saved: ${filename}`, 'success');
             }
         },
 
@@ -5385,18 +5385,18 @@ ET`;
                     const synchedUser = JSON.stringify(user);
                     sessionStorage.setItem('user', synchedUser);
                     localStorage.setItem('user', synchedUser);
-                    QCMS.user = user;
+                    OctaQube.user = user;
                     
                     if (window.i18n) window.i18n.setLanguage(lang);
-                    if (typeof QCMS.renderNavbar === 'function') QCMS.renderNavbar();
+                    if (typeof OctaQube.renderNavbar === 'function') OctaQube.renderNavbar();
                     
-                    QCMS.toast('Personal profile updated successfully.', 'success');
+                    OctaQube.toast('Personal profile updated successfully.', 'success');
                     if (typeof this.captureInitialValues === 'function') this.captureInitialValues();
                     const unsavedBadge = document.getElementById('unsaved-badge');
                     if (unsavedBadge) unsavedBadge.style.display = 'none';
                     this.isDirty = false;
                 } catch (e) {
-                    QCMS.toast(e.message || 'Failed to save personal profile.', 'error');
+                    OctaQube.toast(e.message || 'Failed to save personal profile.', 'error');
                 }
                 return;
             }
@@ -5404,7 +5404,7 @@ ET`;
             // Save Organization Settings (Admins only)
             const isAdmin = ['Admin', 'SuperAdmin'].includes(this.currentUser?.role);
             if (!isAdmin) {
-                QCMS.toast('Access Denied.', 'error');
+                OctaQube.toast('Access Denied.', 'error');
                 return;
             }
 
@@ -5419,7 +5419,7 @@ ET`;
 
             const zipVal = getV('org_zip').trim();
             if (zipVal && !/^\d{5,6}$/.test(zipVal)) {
-                QCMS.toast('Invalid zip code format. Must be 5 or 6 digits.', 'warning');
+                OctaQube.toast('Invalid zip code format. Must be 5 or 6 digits.', 'warning');
                 return;
             }
 
@@ -5457,7 +5457,7 @@ ET`;
             
             try {
                 await api.put('/admin/org-settings', payload);
-                QCMS.toast('Organization settings updated successfully.', 'success');
+                OctaQube.toast('Organization settings updated successfully.', 'success');
                 if (typeof this.captureInitialValues === 'function') this.captureInitialValues();
 
                 const unsavedBadge = document.getElementById('unsaved-badge');
@@ -5476,15 +5476,15 @@ ET`;
                     sessionStorage.setItem('user', synchedUser);
                     localStorage.setItem('user', synchedUser);
                     
-                    QCMS.user = user;
-                    if (typeof QCMS.applyBranding === 'function') QCMS.applyBranding();
-                    if (typeof QCMS.renderSidebar === 'function') QCMS.renderSidebar();
+                    OctaQube.user = user;
+                    if (typeof OctaQube.applyBranding === 'function') OctaQube.applyBranding();
+                    if (typeof OctaQube.renderSidebar === 'function') OctaQube.renderSidebar();
                 }
 
                 // Refresh Corporate Profile Progress & Notification Banner
                 this.renderCorporateProfileProgress(payload);
             } catch (e) {
-                QCMS.toast(e.message || 'Failed to save organization settings.', 'error');
+                OctaQube.toast(e.message || 'Failed to save organization settings.', 'error');
             }
         },
 
@@ -5561,8 +5561,8 @@ ET`;
             if (window.lucide) lucide.createIcons();
 
             // Trigger global banner re-evaluation
-            if (window.QCMS && typeof QCMS.checkProfileCompletion === 'function') {
-                QCMS.checkProfileCompletion();
+            if (window.OctaQube && typeof OctaQube.checkProfileCompletion === 'function') {
+                OctaQube.checkProfileCompletion();
             }
         },
 
@@ -5579,7 +5579,7 @@ ET`;
             document.getElementById('logo_preview').src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><circle cx='8.5' cy='8.5' r='1.5'></circle><polyline points='21 15 16 10 5 21'></polyline></svg>";
             document.getElementById('favicon_preview').src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><circle cx='8.5' cy='8.5' r='1.5'></circle><polyline points='21 15 16 10 5 21'></polyline></svg>";
             this.markDirty();
-            QCMS.toast('Branding reset to default. Click Save Settings to apply.', 'info');
+            OctaQube.toast('Branding reset to default. Click Save Settings to apply.', 'info');
         },
 
         async loadOrgApiKey() {
@@ -5649,18 +5649,18 @@ ET`;
                 const fullApiBase = `${baseUrl}/api/v1/integrations`;
 
                 const curlEl = document.querySelector('#code-curl pre');
-                if (curlEl && curlEl.textContent.includes('http://your-qcms-server/api/v1/integrations')) {
-                    curlEl.textContent = curlEl.textContent.replaceAll('http://your-qcms-server/api/v1/integrations', fullApiBase);
+                if (curlEl && curlEl.textContent.includes('http://your-octaqube-server/api/v1/integrations')) {
+                    curlEl.textContent = curlEl.textContent.replaceAll('http://your-octaqube-server/api/v1/integrations', fullApiBase);
                 }
 
                 const pyEl = document.querySelector('#code-python pre');
-                if (pyEl && pyEl.innerHTML.includes('http://your-qcms-server/api/v1/integrations')) {
-                    pyEl.innerHTML = pyEl.innerHTML.replaceAll('http://your-qcms-server/api/v1/integrations', fullApiBase);
+                if (pyEl && pyEl.innerHTML.includes('http://your-octaqube-server/api/v1/integrations')) {
+                    pyEl.innerHTML = pyEl.innerHTML.replaceAll('http://your-octaqube-server/api/v1/integrations', fullApiBase);
                 }
 
                 const jsEl = document.querySelector('#code-js pre');
-                if (jsEl && jsEl.innerHTML.includes('http://your-qcms-server/api/v1/integrations')) {
-                    jsEl.innerHTML = jsEl.innerHTML.replaceAll('http://your-qcms-server/api/v1/integrations', fullApiBase);
+                if (jsEl && jsEl.innerHTML.includes('http://your-octaqube-server/api/v1/integrations')) {
+                    jsEl.innerHTML = jsEl.innerHTML.replaceAll('http://your-octaqube-server/api/v1/integrations', fullApiBase);
                 }
             } catch (e) {
                 console.warn('Could not sync integration base URL:', e);
@@ -5697,7 +5697,7 @@ ET`;
                             <label class="ds-label text-xs font-mono mb-1">YOUR SECRET API KEY</label>
                             <div class="input-group">
                                 <input type="text" readonly class="ds-input font-mono text-sm fw-bold p-3" style="background:rgba(0,0,0,0.05); color:var(--ds-text-main);" value="${fullKey}">
-                                <button class="ds-btn ds-btn-primary px-3" onclick="navigator.clipboard.writeText('${fullKey}'); QCMS.toast('API Key copied to clipboard!', 'success');">
+                                <button class="ds-btn ds-btn-primary px-3" onclick="navigator.clipboard.writeText('${fullKey}'); OctaQube.toast('API Key copied to clipboard!', 'success');">
                                     <i data-lucide="copy" style="width:14px;height:14px;"></i> Copy Key
                                 </button>
                             </div>
@@ -5715,7 +5715,7 @@ ET`;
 
         async generateOrgApiKey() {
             try {
-                QCMS.toast('Generating API Key...', 'info');
+                OctaQube.toast('Generating API Key...', 'info');
                 const res = await api.post('/admin/integrations/api-key/generate');
                 this.currentApiKey = res.api_key;
                 this.maskedApiKey = res.secret_key_masked;
@@ -5724,14 +5724,14 @@ ET`;
                 this.showKeyGeneratedModal(res.api_key, 'Generated');
                 await this.loadOrgApiKey();
             } catch (e) {
-                QCMS.toast(e.message || 'Failed to generate API Key.', 'error');
+                OctaQube.toast(e.message || 'Failed to generate API Key.', 'error');
             }
         },
 
         async regenerateOrgApiKey() {
             if (!confirm('Warning: Regenerating your API key will immediately invalidate the current one. External integrations using the old key will stop working. Proceed?')) return;
             try {
-                QCMS.toast('Regenerating API Key...', 'info');
+                OctaQube.toast('Regenerating API Key...', 'info');
                 const res = await api.post('/admin/integrations/api-key/regenerate');
                 this.currentApiKey = res.api_key;
                 this.maskedApiKey = res.secret_key_masked;
@@ -5740,7 +5740,7 @@ ET`;
                 this.showKeyGeneratedModal(res.api_key, 'Regenerated');
                 await this.loadOrgApiKey();
             } catch (e) {
-                QCMS.toast(e.message || 'Failed to regenerate API Key.', 'error');
+                OctaQube.toast(e.message || 'Failed to regenerate API Key.', 'error');
             }
         },
 
@@ -5749,10 +5749,10 @@ ET`;
                 const toggleSwitch = document.getElementById('orgApiKeyToggleSwitch');
                 const targetStatus = toggleSwitch?.checked ? 'Active' : 'Disabled';
                 const res = await api.post('/admin/integrations/api-key/toggle-status', { status: targetStatus });
-                QCMS.toast(res.message || `API Key status changed to ${targetStatus}.`, 'success');
+                OctaQube.toast(res.message || `API Key status changed to ${targetStatus}.`, 'success');
                 await this.loadOrgApiKey();
             } catch (e) {
-                QCMS.toast(e.message || 'Failed to toggle API Key status.', 'error');
+                OctaQube.toast(e.message || 'Failed to toggle API Key status.', 'error');
                 await this.loadOrgApiKey();
             }
         },
@@ -5763,10 +5763,10 @@ ET`;
                 await api.delete('/admin/integrations/api-key');
                 this.currentApiKey = '';
                 this.maskedApiKey = '';
-                QCMS.toast('API Key deleted successfully.', 'success');
+                OctaQube.toast('API Key deleted successfully.', 'success');
                 await this.loadOrgApiKey();
             } catch (e) {
-                QCMS.toast(e.message || 'Failed to delete API Key.', 'error');
+                OctaQube.toast(e.message || 'Failed to delete API Key.', 'error');
             }
         },
 
@@ -5797,11 +5797,11 @@ ET`;
         copyApiKey() {
             const key = this.currentApiKey;
             if (!key) {
-                QCMS.toast('No API Key to copy. Please generate an API Key first.', 'warning');
+                OctaQube.toast('No API Key to copy. Please generate an API Key first.', 'warning');
                 return;
             }
             navigator.clipboard.writeText(key);
-            QCMS.toast('Full secret API Key copied to clipboard!', 'success');
+            OctaQube.toast('Full secret API Key copied to clipboard!', 'success');
         },
 
         triggerLogoUpload(type) {
@@ -5827,7 +5827,7 @@ ET`;
             formData.append('type', type);
 
             try {
-                QCMS.toast(`Uploading ${type}...`, 'info');
+                OctaQube.toast(`Uploading ${type}...`, 'info');
                 
                 // We use fetch directly or extend api.js to handle FormData
                 const token = sessionStorage.getItem('token');
@@ -5842,7 +5842,7 @@ ET`;
                 const res = await response.json();
                 if (!response.ok) throw new Error(res.message || res.msg || 'Upload failed');
 
-                QCMS.toast(`${type.charAt(0).toUpperCase() + type.slice(1)} uploaded successfully!`, 'success');
+                OctaQube.toast(`${type.charAt(0).toUpperCase() + type.slice(1)} uploaded successfully!`, 'success');
                 
                 // Update input and preview
                 document.getElementById(`${type}_url`).value = res.url;
@@ -5851,7 +5851,7 @@ ET`;
                 this.isDirty = true;
                 document.getElementById('unsaved-badge').style.display = 'block';
             } catch (e) {
-                QCMS.toast(e.message, 'error');
+                OctaQube.toast(e.message, 'error');
             }
         },
 
@@ -5948,17 +5948,17 @@ ET`;
 
                     this.captureInitialValues('pane-rbac');
 
-                    if (window.QCMS && typeof QCMS.toast === 'function') {
-                        QCMS.toast('Role Access Control matrix saved successfully!', 'success');
+                    if (window.OctaQube && typeof OctaQube.toast === 'function') {
+                        OctaQube.toast('Role Access Control matrix saved successfully!', 'success');
                     }
-                    if (window.QCMS && typeof QCMS.renderSidebar === 'function') {
-                        QCMS.renderSidebar();
+                    if (window.OctaQube && typeof OctaQube.renderSidebar === 'function') {
+                        OctaQube.renderSidebar();
                     }
                 }
             } catch (e) {
                 console.error('Failed to save role permissions', e);
-                if (window.QCMS && typeof QCMS.toast === 'function') {
-                    QCMS.toast(e.message || 'Failed to save Role Access Control matrix', 'error');
+                if (window.OctaQube && typeof OctaQube.toast === 'function') {
+                    OctaQube.toast(e.message || 'Failed to save Role Access Control matrix', 'error');
                 }
             }
         },
@@ -5977,8 +5977,8 @@ ET`;
                 if (res && res.status === 'success') {
                     this.rolePermissionsData = res;
                     this.renderRolePermissions();
-                    if (window.QCMS && typeof QCMS.toast === 'function') {
-                        QCMS.toast('Role Access Control matrix reset to platform defaults successfully!', 'success');
+                    if (window.OctaQube && typeof OctaQube.toast === 'function') {
+                        OctaQube.toast('Role Access Control matrix reset to platform defaults successfully!', 'success');
                     }
                     if (window.initAppNavigation) {
                         try { initAppNavigation(); } catch (err) {}
@@ -5986,8 +5986,8 @@ ET`;
                 }
             } catch (e) {
                 console.error('Failed to reset role permissions', e);
-                if (window.QCMS && typeof QCMS.toast === 'function') {
-                    QCMS.toast(e.message || 'Failed to reset role permissions', 'error');
+                if (window.OctaQube && typeof OctaQube.toast === 'function') {
+                    OctaQube.toast(e.message || 'Failed to reset role permissions', 'error');
                 }
             }
         }
@@ -6099,7 +6099,7 @@ ET`;
                 <div class="modal-body p-4 text-center">
                     <div class="p-5 bg-white border rounded-4 shadow-sm position-relative">
                         <div class="d-flex justify-content-between align-items-center mb-4">
-                            <span class="badge bg-dark text-white p-2">QCMS VERIFIED CERTIFICATE</span>
+                            <span class="badge bg-dark text-white p-2">OctaQube VERIFIED CERTIFICATE</span>
                             <i data-lucide="shield-check" class="text-success" style="width:36px;height:36px;"></i>
                         </div>
                         <h2 class="fw-bold ds-text-main mb-1" id="ce-preview-name">ISO 9001:2015</h2>
@@ -6202,7 +6202,7 @@ ET`;
                     </div>
                     <div class="mb-3">
                         <label class="ds-label mb-1">CERTIFICATE NUMBER</label>
-                        <input type="text" class="ds-input" placeholder="e.g. QCMS-2026-0009">
+                        <input type="text" class="ds-input" placeholder="e.g. OctaQube-2026-0009">
                     </div>
                     <div class="mb-3">
                         <label class="ds-label mb-1">EXPIRATION DATE</label>
@@ -6290,8 +6290,8 @@ ET`;
                                 <div id="upiQrContainer" class="mt-4 text-center d-none" style="background: white; padding: 15px; border-radius: 8px; border: 1px dashed var(--ds-primary);">
                                     <div class="text-xs text-muted mb-2 fw-bold">Scan to pay with any UPI App</div>
                                     <img id="upiQrImage" src="" alt="UPI QR Code" style="width: 160px; height: 160px;" />
-                                    <div class="text-xs text-main fw-bold mt-2" id="upiVpaText">qcms@upi</div>
-                                    <div class="text-xxs text-secondary mt-0.5" id="upiAccountNameText">QCMS Enterprise Solutions Pvt Ltd</div>
+                                    <div class="text-xs text-main fw-bold mt-2" id="upiVpaText">octaqube@upi</div>
+                                    <div class="text-xxs text-secondary mt-0.5" id="upiAccountNameText">OctaQube Enterprise Solutions Pvt Ltd</div>
                                     <button type="button" class="ds-btn ds-btn-success ds-btn-sm w-100 mt-3" onclick="showProofSubmissionForm()">
                                         <i data-lucide="check-circle" class="me-1"></i> Done / I Have Paid
                                     </button>
@@ -6329,7 +6329,7 @@ ET`;
     </div>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script src="/assets/dist/compliance-enterprise.00805cc2.min.js"></script>
+    <script src="/assets/dist/compliance-enterprise.d08ddd6b.min.js"></script>
     <script>
         let currentPlanPrice = 7999;
         let activeGateways = {};
@@ -6402,8 +6402,8 @@ ET`;
                 <div class="p-3 border rounded plan-card-item d-flex justify-content-between align-items-center mb-2 ${initialClass}" style="cursor: pointer; transition: all 0.2s ease;" onclick="selectCheckoutPlan('${planKey}')" id="checkoutPlanCard_${planKey}">
                     <div>
                         <div class="fw-bold d-flex align-items-center gap-2 text-main">
-                            ${QCMS.escapeHtml(p.name || p.plan_name)}
-                            ${p.code ? `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25" style="font-size:10px;padding:1px 5px;font-family:monospace;">${QCMS.escapeHtml(p.code)}</span>` : ''}
+                            ${OctaQube.escapeHtml(p.name || p.plan_name)}
+                            ${p.code ? `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25" style="font-size:10px;padding:1px 5px;font-family:monospace;">${OctaQube.escapeHtml(p.code)}</span>` : ''}
                             ${isPayg ? `<span class="badge" style="background:rgba(139,92,246,0.15);color:#7c3aed;font-size:10px;font-weight:700;">Pay-As-You-Go</span>` : ''}
                         </div>
                         <div class="text-xs text-muted mt-1">
@@ -6412,7 +6412,7 @@ ET`;
                     </div>
                     <div class="d-flex align-items-center gap-3">
                         <div class="fw-bold fs-5 text-main">₹${priceFmt}<span class="text-xs text-muted">/${isPayg ? 'mo base' : (p.billing_cycle || 'mo')}</span></div>
-                        <input class="form-check-input" type="radio" name="planSelect" id="planRadio_${planKey}" value="${QCMS.escapeHtml(p.name || p.plan_name)}" ${isChecked}>
+                        <input class="form-check-input" type="radio" name="planSelect" id="planRadio_${planKey}" value="${OctaQube.escapeHtml(p.name || p.plan_name)}" ${isChecked}>
                     </div>
                 </div>`;
             }).join('');
@@ -6476,7 +6476,7 @@ ET`;
             if (modulesContainer) {
                 const mods = plan.enabled_modules || plan.features || [];
                 if (mods && mods.length > 0) {
-                    modulesContainer.innerHTML = mods.slice(0, 8).map(m => `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25" style="font-size:10px;padding:2px 6px;margin:2px;">${QCMS.escapeHtml(m)}</span>`).join('');
+                    modulesContainer.innerHTML = mods.slice(0, 8).map(m => `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25" style="font-size:10px;padding:2px 6px;margin:2px;">${OctaQube.escapeHtml(m)}</span>`).join('');
                 } else {
                     modulesContainer.innerHTML = '<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25" style="font-size:10px;padding:2px 6px;">All Standard Modules</span>';
                 }
@@ -6519,17 +6519,17 @@ ET`;
             const qrInfo = activeGateways['dynamic_qr'] || activeGateways['upi'];
             if (!qrInfo) return;
             
-            const pn = encodeURIComponent(qrInfo.account_name || 'QCMS Enterprise Solutions Pvt Ltd');
-            const pa = encodeURIComponent(qrInfo.upi_id || 'qcms@upi');
+            const pn = encodeURIComponent(qrInfo.account_name || 'OctaQube Enterprise Solutions Pvt Ltd');
+            const pa = encodeURIComponent(qrInfo.upi_id || 'octaqube@upi');
             const am = paymentTotal.toFixed(2);
             const plan = selectedPlanObj ? (selectedPlanObj.name || selectedPlanObj.plan_name) : (document.querySelector('input[name="planSelect"]:checked')?.value || 'Professional');
-            const uri = `upi://pay?pa=${pa}&pn=${pn}&am=${am}&cu=INR&tn=QCMS%20Plan%20Upgrade%20to%20${plan}`;
+            const uri = `upi://pay?pa=${pa}&pn=${pn}&am=${am}&cu=INR&tn=OctaQube%20Plan%20Upgrade%20to%20${plan}`;
             
             const qrUrl = qrInfo.qr_code_url || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(uri)}`;
             document.getElementById('upiQrImage').src = qrUrl;
-            document.getElementById('upiVpaText').innerText = qrInfo.upi_id || 'qcms@upi';
+            document.getElementById('upiVpaText').innerText = qrInfo.upi_id || 'octaqube@upi';
             if (document.getElementById('upiAccountNameText')) {
-                document.getElementById('upiAccountNameText').innerText = qrInfo.account_name || 'QCMS Enterprise Solutions Pvt Ltd';
+                document.getElementById('upiAccountNameText').innerText = qrInfo.account_name || 'OctaQube Enterprise Solutions Pvt Ltd';
             }
         }
 
@@ -6737,12 +6737,12 @@ ET`;
                 if (selectedGateway === 'razorpay') {
                     const orderRes = await api.post('/billing/razorpay/create-order', { plan_name: plan });
                     
-                    const rzKey = activeGateways.razorpay?.key_id || 'rzp_live_qcms_enterprise_key';
+                    const rzKey = activeGateways.razorpay?.key_id || 'rzp_live_octaqube_enterprise_key';
                     const options = {
                         "key": rzKey,
                         "amount": Math.round(paymentTotal * 100),
                         "currency": "INR",
-                        "name": "QCMS Enterprise OS",
+                        "name": "OctaQube Enterprise OS",
                         "description": `Subscription Upgrade to ${plan} Plan`,
                         "handler": async function (response) {
                             try {
@@ -6783,12 +6783,12 @@ ET`;
             }
 
             if (!txnId) {
-                if (typeof QCMS !== 'undefined' && QCMS.toast) QCMS.toast('Please enter your Transaction ID / UTR Number.', 'warning');
+                if (typeof OctaQube !== 'undefined' && OctaQube.toast) OctaQube.toast('Please enter your Transaction ID / UTR Number.', 'warning');
                 else alert('Please enter your Transaction ID / UTR Number.');
                 return;
             }
             if (!fileInput.files || fileInput.files.length === 0) {
-                if (typeof QCMS !== 'undefined' && QCMS.toast) QCMS.toast('Please upload your payment screenshot/receipt image.', 'warning');
+                if (typeof OctaQube !== 'undefined' && OctaQube.toast) OctaQube.toast('Please upload your payment screenshot/receipt image.', 'warning');
                 else alert('Please upload your payment screenshot/receipt image.');
                 return;
             }
@@ -6822,8 +6822,8 @@ ET`;
 
                 if (res.ok && (data.status === 'success' || data.message)) {
                     const successMsg = data.message || 'Your payment reference has been submitted successfully! Your plan will be activated within 24 hours after verification.';
-                    if (typeof QCMS !== 'undefined' && QCMS.toast) {
-                        QCMS.toast(successMsg, 'success');
+                    if (typeof OctaQube !== 'undefined' && OctaQube.toast) {
+                        OctaQube.toast(successMsg, 'success');
                     } else {
                         alert(successMsg);
                     }
@@ -6837,16 +6837,16 @@ ET`;
                     }
                 } else {
                     const errorMsg = data.message || data.error || (res.statusText ? `Request failed (${res.status}): ${res.statusText}` : 'Submission failed. Please verify your details.');
-                    if (typeof QCMS !== 'undefined' && QCMS.toast) {
-                        QCMS.toast(errorMsg, 'error');
+                    if (typeof OctaQube !== 'undefined' && OctaQube.toast) {
+                        OctaQube.toast(errorMsg, 'error');
                     } else {
                         alert(errorMsg);
                     }
                 }
             } catch (err) {
                 const errMsg = err.message || String(err);
-                if (typeof QCMS !== 'undefined' && QCMS.toast) {
-                    QCMS.toast('Error submitting payment proof: ' + errMsg, 'error');
+                if (typeof OctaQube !== 'undefined' && OctaQube.toast) {
+                    OctaQube.toast('Error submitting payment proof: ' + errMsg, 'error');
                 } else {
                     alert('Error submitting payment proof: ' + errMsg);
                 }
@@ -6875,7 +6875,7 @@ ET`;
                                 <span class="badge bg-danger text-white text-xxs px-2 py-1">Payment Required</span>
                             </div>
                             <div class="text-xs text-secondary mb-3">
-                                Your monthly metered invoice <strong>${QCMS.escapeHtml(paygBill.invoice_number)}</strong> for <strong>₹${paygBill.amount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</strong> (${paygBill.period_start || ''} to ${paygBill.period_end || ''}) has been generated and is ready for payment.
+                                Your monthly metered invoice <strong>${OctaQube.escapeHtml(paygBill.invoice_number)}</strong> for <strong>₹${paygBill.amount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</strong> (${paygBill.period_start || ''} to ${paygBill.period_end || ''}) has been generated and is ready for payment.
                             </div>
                             <div class="d-flex justify-content-end align-items-center gap-2">
                                 <button type="button" class="ds-btn ds-btn-primary ds-btn-sm py-2 px-4 fw-bold text-white shadow-sm" onclick="openCheckoutModal('${paygBill.invoice_id}', ${paygBill.amount})">
@@ -6902,7 +6902,7 @@ ET`;
                                     <span class="badge bg-warning text-dark text-xxs">24h Review Window</span>
                                 </div>
                                 <div class="text-xs text-secondary">
-                                    Submitted UTR: <strong class="font-monospace text-main">${QCMS.escapeHtml(p.transaction_id)}</strong> for <strong>${QCMS.escapeHtml(p.plan_name)} Plan</strong> on ${p.created_at}.
+                                    Submitted UTR: <strong class="font-monospace text-main">${OctaQube.escapeHtml(p.transaction_id)}</strong> for <strong>${OctaQube.escapeHtml(p.plan_name)} Plan</strong> on ${p.created_at}.
                                     Your plan will be activated within 24 hours upon SuperAdmin verification.
                                 </div>
                             </div>
@@ -6917,15 +6917,15 @@ ET`;
                                     <span class="badge bg-danger text-white text-xxs">Action Required</span>
                                 </div>
                                 <div class="text-xs mb-2">
-                                    Your payment proof for <strong>${QCMS.escapeHtml(p.plan_name)} Plan</strong> (UTR: <span class="font-monospace fw-bold">${QCMS.escapeHtml(p.transaction_id)}</span>) was declined by Administrator.
+                                    Your payment proof for <strong>${OctaQube.escapeHtml(p.plan_name)} Plan</strong> (UTR: <span class="font-monospace fw-bold">${OctaQube.escapeHtml(p.transaction_id)}</span>) was declined by Administrator.
                                 </div>
                                 <div class="p-3 bg-white rounded border border-danger-subtle text-xs mb-3 text-dark">
                                     <div class="text-xxs text-danger text-uppercase fw-bold mb-1"><i data-lucide="message-square" style="width:12px;height:12px;" class="me-1"></i>Rejection Review Feedback:</div>
-                                    <div class="fw-bold text-main" style="line-height:1.5;">${QCMS.escapeHtml(p.rejection_reason || 'Payment details could not be verified with bank records.')}</div>
+                                    <div class="fw-bold text-main" style="line-height:1.5;">${OctaQube.escapeHtml(p.rejection_reason || 'Payment details could not be verified with bank records.')}</div>
                                 </div>
                                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 text-xs">
                                     <div class="text-secondary">
-                                        Need assistance? Email Support: <a href="mailto:${QCMS.escapeHtml(p.support_email || 'support@ifqm.org.in')}" class="fw-bold text-danger text-decoration-underline">${QCMS.escapeHtml(p.support_email || 'support@ifqm.org.in')}</a>
+                                        Need assistance? Email Support: <a href="mailto:${OctaQube.escapeHtml(p.support_email || 'support@ifqm.org.in')}" class="fw-bold text-danger text-decoration-underline">${OctaQube.escapeHtml(p.support_email || 'support@ifqm.org.in')}</a>
                                     </div>
                                     <button type="button" class="ds-btn ds-btn-danger ds-btn-sm py-1.5 px-3" onclick="openCheckoutModal()">
                                         <i data-lucide="refresh-cw" class="me-1"></i> Submit New Payment Proof
@@ -6943,7 +6943,7 @@ ET`;
                                     <span class="badge bg-success text-white text-xxs">Active</span>
                                 </div>
                                 <div class="text-xs text-secondary mt-1">
-                                    Your payment (UTR: <strong class="font-monospace text-main">${QCMS.escapeHtml(p.transaction_id)}</strong>) for <strong>${QCMS.escapeHtml(p.plan_name)} Plan</strong> was approved on ${p.verified_at || 'N/A'}.
+                                    Your payment (UTR: <strong class="font-monospace text-main">${OctaQube.escapeHtml(p.transaction_id)}</strong>) for <strong>${OctaQube.escapeHtml(p.plan_name)} Plan</strong> was approved on ${p.verified_at || 'N/A'}.
                                 </div>
                             </div>
                         `;
@@ -7080,7 +7080,7 @@ ET`;
             const reasonInput = document.getElementById('extendTrialReason');
             const reason = (reasonInput?.value || '').trim();
             if (!reason) {
-                if (window.QCMS && QCMS.toast) QCMS.toast('Please provide a reason for the trial extension', 'warning');
+                if (window.OctaQube && OctaQube.toast) OctaQube.toast('Please provide a reason for the trial extension', 'warning');
                 return;
             }
             const btn = document.getElementById('btnSubmitTrialExt');
@@ -7088,8 +7088,8 @@ ET`;
 
             try {
                 const res = await api.post('/subscriptions/request-trial-extension', { reason });
-                if (window.QCMS && QCMS.toast) {
-                    QCMS.toast(res.message || 'Your trial extension request has been submitted! It will take up to 24 hours for review.', 'info');
+                if (window.OctaQube && OctaQube.toast) {
+                    OctaQube.toast(res.message || 'Your trial extension request has been submitted! It will take up to 24 hours for review.', 'info');
                 }
                 const modalEl = document.getElementById('extendTrialModal');
                 if (modalEl) {
@@ -7100,7 +7100,7 @@ ET`;
                     SettingsCenter.loadUsageStats();
                 }
             } catch(e) {
-                if (window.QCMS && QCMS.toast) QCMS.toast(e.message || 'Failed to submit trial extension request', 'error');
+                if (window.OctaQube && OctaQube.toast) OctaQube.toast(e.message || 'Failed to submit trial extension request', 'error');
             } finally {
                 if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="send" style="width: 14px; height: 14px;" class="me-1"></i> Submit Extension Request'; }
                 if (window.lucide) lucide.createIcons();
@@ -7118,6 +7118,6 @@ ET`;
             }
         }
     </script>
-    <script src="/assets/dist/document-branding-manager.39b3ff56.min.js"></script>
+    <script src="/assets/dist/document-branding-manager.52597b0b.min.js"></script>
 </body>
 </html>

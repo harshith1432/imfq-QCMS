@@ -1,5 +1,5 @@
 /**
- * Enterprise Form Validator & Input Sanitizer (QCMS Platform)
+ * Enterprise Form Validator & Input Sanitizer (OctaQube Platform)
  * Implements real-time input validation, ARIA accessibility, submit protection,
  * auto-trimming, character counting, and XSS sanitization across all forms.
  */

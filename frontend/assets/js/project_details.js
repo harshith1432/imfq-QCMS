@@ -6,7 +6,7 @@ const projectDetails = {
     projectId: new URLSearchParams(window.location.search).get('id'),
 
     init() {
-        if (typeof QCMS !== 'undefined') QCMS.init();
+        if (typeof OctaQube !== 'undefined') OctaQube.init();
         
         if (!this.projectId) {
             window.location.href = 'dashboard-team-leader.html';
@@ -31,8 +31,8 @@ const projectDetails = {
 
             // Render Stepper
             const stepper = document.getElementById('stepperContainer');
-            if (stepper && typeof QCMS !== 'undefined') {
-                stepper.innerHTML = QCMS.stageStepper(data.stage);
+            if (stepper && typeof OctaQube !== 'undefined') {
+                stepper.innerHTML = OctaQube.stageStepper(data.stage);
             }
 
             const memberList = document.getElementById('memberList');
@@ -55,7 +55,7 @@ const projectDetails = {
             if (window.lucide) lucide.createIcons();
         } catch (err) {
             console.error(err);
-            QCMS.toast('Critical: Failed to synchronize project state.', 'error');
+            OctaQube.toast('Critical: Failed to synchronize project state.', 'error');
         }
     },
 
@@ -99,10 +99,10 @@ const projectDetails = {
             await api.post(`/team-leader/action/${this.projectId}/proceed`, {
                 stage: currentStageValue
             });
-            QCMS.toast(`Operational stage ${currentStageValue} validated. Proceeding to next phase.`, 'success');
+            OctaQube.toast(`Operational stage ${currentStageValue} validated. Proceeding to next phase.`, 'success');
             this.loadDetails();
         } catch (err) {
-            QCMS.toast('State transition failed: ' + err.message, 'error');
+            OctaQube.toast('State transition failed: ' + err.message, 'error');
         }
     },
 
@@ -127,10 +127,10 @@ const projectDetails = {
             };
 
             await api.post(`/team-leader/submit-proposal/${this.projectId}`, payload);
-            QCMS.toast('Strategic proposal dispatched to Reviewer.', 'success');
+            OctaQube.toast('Strategic proposal dispatched to Reviewer.', 'success');
             this.loadDetails();
         } catch (err) {
-            QCMS.toast('Proposal submission failed: ' + err.message, 'error');
+            OctaQube.toast('Proposal submission failed: ' + err.message, 'error');
         }
     }
 };

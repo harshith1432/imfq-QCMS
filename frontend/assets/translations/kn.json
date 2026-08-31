@@ -147,7 +147,7 @@
       "org_health_sub": "Composite efficiency index",
       "insight_velocity": "Average project stage completion time is {days} days.",
       "insight_success": "Project success rate stands at {rate}% across {total} initiatives.",
-      "insight_participation": "{active} departments ({rate}%) are actively utilizing the QCMS platform.",
+      "insight_participation": "{active} departments ({rate}%) are actively utilizing the OctaQube platform.",
       "insight_recommendation": "Recommendation: Increase facilitator engagement in underperforming units.",
       "active_initiatives_sub": "of {total} total projects",
       "executive_access": "Executive Access",

@@ -6,16 +6,16 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Repository | QCMS Enterprise</title>
+    <title>Project Repository | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
-    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .stalled-row { background: rgba(239, 68, 68, 0.05) !important; border-left: 3px solid #ef4444 !important; }
@@ -80,7 +80,7 @@
                     <div class="h-stack justify-content-between w-100">
                         <div class="v-stack">
                             <h1 class="ds-title mb-0">Project Repository</h1>
-                            <p class="ds-text-secondary mb-0">Real-time database of all QCMS initiatives. Monitor progress, efficiency, and identify inactive projects across the organization.</p>
+                            <p class="ds-text-secondary mb-0">Real-time database of all OctaQube initiatives. Monitor progress, efficiency, and identify inactive projects across the organization.</p>
                         </div>
                         <button class="ds-btn ds-btn-primary ds-btn-sm" id="initProjectBtn" 
                             onclick="repoUI.openInitModal()"
@@ -585,7 +585,7 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
     function esc(str) {
         if (!str) return '';
@@ -637,7 +637,7 @@
         },
 
         async init() {
-            QCMS.init();
+            OctaQube.init();
             
             const searchInput = document.getElementById('globalSearchInput');
             if (searchInput) {
@@ -1269,8 +1269,8 @@
             }
 
             if (this.crossDeptModal) this.crossDeptModal.hide();
-            if (window.QCMS && QCMS.toast) {
-                QCMS.toast(`Selected ${name} as Project ${this.crossDeptRole}`, 'success');
+            if (window.OctaQube && OctaQube.toast) {
+                OctaQube.toast(`Selected ${name} as Project ${this.crossDeptRole}`, 'success');
             }
         },
 
@@ -1305,8 +1305,8 @@
 
             this.renderSelectedMembersList();
             if (this.crossDeptModal) this.crossDeptModal.hide();
-            if (window.QCMS && QCMS.toast) {
-                QCMS.toast(`Updated project team members`, 'success');
+            if (window.OctaQube && OctaQube.toast) {
+                OctaQube.toast(`Updated project team members`, 'success');
             }
         },
 
@@ -1677,7 +1677,7 @@
                     const idea = res.idea;
                     this.importedIdeaData = idea;
 
-                    const formattedBenefit = idea.tangible_benefit ? (window.QCMS && QCMS.formatINR ? QCMS.formatINR(idea.tangible_benefit) : `₹${Number(idea.tangible_benefit).toLocaleString()}`) : 'Non-monetary';
+                    const formattedBenefit = idea.tangible_benefit ? (window.OctaQube && OctaQube.formatINR ? OctaQube.formatINR(idea.tangible_benefit) : `₹${Number(idea.tangible_benefit).toLocaleString()}`) : 'Non-monetary';
 
                     // Display Success Message
                     statusDiv.innerHTML = `
@@ -1744,8 +1744,8 @@
                     // Notification helper
                     if (window.api && typeof api.showNotification === 'function') {
                         api.showNotification('Approved Idea fetched successfully! Form fields populated.', 'success');
-                    } else if (window.QCMS && typeof QCMS.toast === 'function') {
-                        QCMS.toast('Approved Idea fetched successfully! Form fields populated.', 'success');
+                    } else if (window.OctaQube && typeof OctaQube.toast === 'function') {
+                        OctaQube.toast('Approved Idea fetched successfully! Form fields populated.', 'success');
                     }
                 } else {
                     this.importedIdeaData = null;
@@ -1919,7 +1919,7 @@
             if (type === 'Other') {
                 type = (document.getElementById('projTypeCustom')?.value || '').trim();
                 if (!type) {
-                    return QCMS.toast('Please enter custom Project Type.', 'warning');
+                    return OctaQube.toast('Please enter custom Project Type.', 'warning');
                 }
             }
             const deptHidden = document.getElementById('projDepartmentId')?.value;
@@ -1935,7 +1935,7 @@
             if (source === 'Other') {
                 source = (document.getElementById('projSourceCustom')?.value || '').trim();
                 if (!source) {
-                    return QCMS.toast('Please enter custom Project Source.', 'warning');
+                    return OctaQube.toast('Please enter custom Project Source.', 'warning');
                 }
             }
             const refNumber = document.getElementById('projRefNumber').value.trim();
@@ -1957,12 +1957,12 @@
                 const codeInput = document.getElementById('ideaCodeInput');
                 ideaCodeVal = codeInput ? codeInput.value.trim() : '';
                 if (!ideaCodeVal) {
-                    return QCMS.toast('Idea Reference Code is required when "Import Approved Idea" is selected.', 'warning');
+                    return OctaQube.toast('Idea Reference Code is required when "Import Approved Idea" is selected.', 'warning');
                 }
             }
 
             if (!title || !type || !workArea || !deptId || !plant || !source || !facilitatorId || !reviewerId || !teamLeaderId || !startDate || !endDate) {
-                return QCMS.toast('Please fill all required (*) fields and designate a Team Leader.', 'warning');
+                return OctaQube.toast('Please fill all required (*) fields and designate a Team Leader.', 'warning');
             }
 
             const payload = {
@@ -1975,7 +1975,7 @@
                 member_ids: member_ids,
                 deadline: endDate,
                 idea_code: ideaCodeVal,
-                source: this.activeSourceOption === 'import' ? 'Ideation Tool' : 'QCMS',
+                source: this.activeSourceOption === 'import' ? 'Ideation Tool' : 'OctaQube',
                 init_data: {
                     work_area: workArea,
                     plant,
@@ -1990,13 +1990,13 @@
 
             try {
                 const res = await api.post('/projects', payload);
-                QCMS.toast('Project created! Redirecting to Stage 1...', 'success');
+                OctaQube.toast('Project created! Redirecting to Stage 1...', 'success');
                 if (this.initModal) this.initModal.hide();
                 setTimeout(() => {
                     window.location.href = `/projects/project-details.html?id=${res.id}`;
                 }, 800);
             } catch (e) {
-                QCMS.toast(e.message || 'Failed to create project', 'error');
+                OctaQube.toast(e.message || 'Failed to create project', 'error');
             }
         },
 
@@ -2095,7 +2095,7 @@
                 const el = document.getElementById(id);
                 if (!el) return;
                 if (id === 'globalSearchInput') {
-                    el.addEventListener('input', QCMS.debounce(() => this.loadData(1), 400));
+                    el.addEventListener('input', OctaQube.debounce(() => this.loadData(1), 400));
                 } else {
                     el.addEventListener('change', () => this.loadData(1));
                     el.addEventListener('input', () => this.loadData(1));
@@ -2127,9 +2127,9 @@
                 this.renderTable();
                 this.renderPagination();
             } catch (e) {
-                QCMS.toast('Failed to sync repository data', 'danger');
+                OctaQube.toast('Failed to sync repository data', 'danger');
                 document.getElementById('repoTableBody').innerHTML = 
-                    `<tr><td colspan="6">${QCMS.emptyState('System Error', e.message, 'alert-circle')}</td></tr>`;
+                    `<tr><td colspan="6">${OctaQube.emptyState('System Error', e.message, 'alert-circle')}</td></tr>`;
                 if (window.lucide) lucide.createIcons();
             }
         },
@@ -2173,16 +2173,16 @@
             const container = document.getElementById('repoStats');
             container.innerHTML = `
                 <div class="col-xl-3 col-md-6 col-sm-6">
-                    ${QCMS.kpiCard('Total Projects', stats.total || 0, 'layers', 'blue', null, "javascript:repoUI.filterByStatus('')")}
+                    ${OctaQube.kpiCard('Total Projects', stats.total || 0, 'layers', 'blue', null, "javascript:repoUI.filterByStatus('')")}
                 </div>
                 <div class="col-xl-3 col-md-6 col-sm-6">
-                    ${QCMS.kpiCard('Active Projects', stats.active || 0, 'activity', 'green', null, "javascript:repoUI.filterByStatus('Active')")}
+                    ${OctaQube.kpiCard('Active Projects', stats.active || 0, 'activity', 'green', null, "javascript:repoUI.filterByStatus('Active')")}
                 </div>
                 <div class="col-xl-3 col-md-6 col-sm-6">
-                    ${QCMS.kpiCard('Inactive Projects', stats.stalled || 0, 'clock', 'orange', null, "javascript:repoUI.filterByStatus('Inactive')")}
+                    ${OctaQube.kpiCard('Inactive Projects', stats.stalled || 0, 'clock', 'orange', null, "javascript:repoUI.filterByStatus('Inactive')")}
                 </div>
                 <div class="col-xl-3 col-md-6 col-sm-6">
-                    ${QCMS.kpiCard('Total Projects Stopped', stats.stopped || 0, 'x-circle', 'red', null, "javascript:repoUI.filterByStatus('Stopped')")}
+                    ${OctaQube.kpiCard('Total Projects Stopped', stats.stopped || 0, 'x-circle', 'red', null, "javascript:repoUI.filterByStatus('Stopped')")}
                 </div>
             `;
             if (window.lucide) lucide.createIcons();
@@ -2206,7 +2206,7 @@
             if (!this.data || !this.data.length) {
                 if (hasActiveFilters) {
                     body.innerHTML = `<tr><td colspan="6" class="text-center py-5">
-                        ${QCMS.emptyState('No Matching Projects', query ? `No projects match "${query}" with current filters.` : 'No projects match your selected filter criteria.', 'layers')}
+                        ${OctaQube.emptyState('No Matching Projects', query ? `No projects match "${query}" with current filters.` : 'No projects match your selected filter criteria.', 'layers')}
                         <div class="mt-3">
                             <button class="ds-btn ds-btn-ghost ds-btn-sm" onclick="repoUI.resetFilters()">
                                 <i data-lucide="rotate-ccw"></i> Reset Filters
@@ -2215,7 +2215,7 @@
                     </td></tr>`;
                 } else {
                     body.innerHTML = `<tr><td colspan="6" class="text-center py-5">
-                        ${QCMS.emptyState('Archive Empty', 'No projects found in the repository.', 'layers')}
+                        ${OctaQube.emptyState('Archive Empty', 'No projects found in the repository.', 'layers')}
                     </td></tr>`;
                 }
                 if (window.lucide) lucide.createIcons();
@@ -2233,7 +2233,7 @@
                             <div class="h-stack gap-2 align-items-center text-xs opacity-75">
                                 <span class="fw-bold text-accent">${p.project_uid}</span>
                                 <span class="text-muted">•</span>
-                                ${QCMS.categoryBadge(p.category)}
+                                ${OctaQube.categoryBadge(p.category)}
                                 <span class="text-muted">•</span>
                                 <span class="text-muted">${p.department}</span>
                             </div>
@@ -2243,7 +2243,7 @@
                         <div class="text-sm fw-medium">${p.team_leader}</div>
                     </td>
                     <td style="width:180px;">
-                        ${QCMS.projectProgress(p.current_stage || 1, 8, p.progress_pct ?? p.progress)}
+                        ${OctaQube.projectProgress(p.current_stage || 1, 8, p.progress_pct ?? p.progress)}
                     </td>
                     <td>
                         <div class="text-sm fw-bold ${p.efficiency > 0 ? 'text-green' : 'text-muted'}">${p.efficiency}% Improvement</div>
@@ -2252,7 +2252,7 @@
                         </div>
                     </td>
                     <td>
-                        <div class="text-sm fw-medium">${QCMS.formatRelative(p.last_updated)}</div>
+                        <div class="text-sm fw-medium">${OctaQube.formatRelative(p.last_updated)}</div>
                         <div class="text-xs text-muted">Latest update</div>
                     </td>
                     <td class="text-end" onclick="event.stopPropagation()">
@@ -2288,7 +2288,7 @@
 
         downloadReport(id, uid, title, status) {
             if (status && status !== 'Closed' && status !== 'Completed') {
-                QCMS.toast('Report is only available after project closure (Stage 8 completion).', 'warning');
+                OctaQube.toast('Report is only available after project closure (Stage 8 completion).', 'warning');
                 return;
             }
             if (window.FeatureEngine) {
@@ -2298,17 +2298,17 @@
                     return;
                 }
             }
-            QCMS.toast(`Generating PDF report for "${title || uid}"...`, 'info');
+            OctaQube.toast(`Generating PDF report for "${title || uid}"...`, 'info');
             const safeUid = uid || `PRJ-${id}`;
             api.downloadFile(`/reports/export/pdf/${id}`, `${safeUid}_QC_Story_Report.pdf`)
-                .then(() => QCMS.toast(`Report downloaded for "${title || uid}"`, 'success'))
+                .then(() => OctaQube.toast(`Report downloaded for "${title || uid}"`, 'success'))
                 .catch(err => {
                     console.warn('PDF direct export failed:', err);
                     if (window.FeatureEngine && FeatureEngine.isEnabled('reports.pdf') === false) {
                         FeatureEngine.showDisabledModuleNotice('reports.pdf');
                         return;
                     }
-                    QCMS.toast(err.message || 'PDF export failed', 'error');
+                    OctaQube.toast(err.message || 'PDF export failed', 'error');
                 });
         },
 
@@ -2339,7 +2339,7 @@
                 
                 this.renderGovernanceModal();
             } catch (e) {
-                body.innerHTML = `<div class="p-4">${QCMS.emptyState('alert-circle', 'Error', 'Failed to load project details: ' + e.message)}</div>`;
+                body.innerHTML = `<div class="p-4">${OctaQube.emptyState('alert-circle', 'Error', 'Failed to load project details: ' + e.message)}</div>`;
             }
         },
 
@@ -2602,7 +2602,7 @@
         addMemberToGovModal() {
             const select = document.getElementById('govAddMemberSelect');
             if (!select || !select.value) {
-                return QCMS.toast('Please select a member to add.', 'warning');
+                return OctaQube.toast('Please select a member to add.', 'warning');
             }
             const userId = parseInt(select.value);
             this.selectGovMemberSearchResult(userId);
@@ -2631,11 +2631,11 @@
                 };
 
                 await api.put(`/projects/${this.activeGovProjectId}`, payload);
-                QCMS.toast('Project governance & team updated successfully!', 'success');
+                OctaQube.toast('Project governance & team updated successfully!', 'success');
                 if (this.govModal) this.govModal.hide();
                 this.loadData(this.currentPage);
             } catch (e) {
-                QCMS.toast('Failed to update project team: ' + e.message, 'danger');
+                OctaQube.toast('Failed to update project team: ' + e.message, 'danger');
             }
         }
     };

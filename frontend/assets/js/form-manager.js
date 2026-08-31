@@ -1,5 +1,5 @@
 /**
- * QCMS Centralized Form State & Transactional Form Manager
+ * OctaQube Centralized Form State & Transactional Form Manager
  * Ensures zero auto-save / zero automatic DB updates while typing or editing.
  * DB updates occur strictly when the user clicks 'Save Changes'.
  */

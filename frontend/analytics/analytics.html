@@ -6,15 +6,15 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Performance Analytics | QCMS Enterprise</title>
+    <title>Performance Analytics | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
-    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -399,7 +399,7 @@
                                             <img id="indLeaderAvatar" src="https://ui-avatars.com/api/?name=Team+Leader" class="rounded-circle border flex-shrink-0" style="width:34px;height:34px; object-fit: cover;" alt="Leader">
                                             <div class="min-w-0">
                                                 <div id="indLeaderName" class="fw-bold text-main text-xs text-truncate">Assigned Team Leader</div>
-                                                <div id="indLeaderEmail" class="text-xxs text-muted text-truncate">leader@qcms.internal</div>
+                                                <div id="indLeaderEmail" class="text-xxs text-muted text-truncate">leader@octaqube.internal</div>
                                             </div>
                                         </div>
                                     </div>
@@ -413,7 +413,7 @@
                                             <img id="indFacilAvatar" src="https://ui-avatars.com/api/?name=Facilitator" class="rounded-circle border flex-shrink-0" style="width:34px;height:34px; object-fit: cover;" alt="Facil">
                                             <div class="min-w-0">
                                                 <div id="indFacilName" class="fw-bold text-main text-xs text-truncate">Assigned Facilitator</div>
-                                                <div id="indFacilEmail" class="text-xxs text-muted text-truncate">facilitator@qcms.internal</div>
+                                                <div id="indFacilEmail" class="text-xxs text-muted text-truncate">facilitator@octaqube.internal</div>
                                             </div>
                                         </div>
                                     </div>
@@ -427,7 +427,7 @@
                                             <img id="indRevAvatar" src="https://ui-avatars.com/api/?name=Reviewer" class="rounded-circle border flex-shrink-0" style="width:34px;height:34px; object-fit: cover;" alt="Rev">
                                             <div class="min-w-0">
                                                 <div id="indRevName" class="fw-bold text-main text-xs text-truncate">Assigned Reviewer</div>
-                                                <div id="indRevEmail" class="text-xxs text-muted text-truncate">reviewer@qcms.internal</div>
+                                                <div id="indRevEmail" class="text-xxs text-muted text-truncate">reviewer@octaqube.internal</div>
                                             </div>
                                         </div>
                                     </div>
@@ -517,7 +517,7 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
         const Analytics = {
             currentScope: 'overall',
@@ -685,7 +685,7 @@
             },
 
             async init() {
-                if (window.QCMS) QCMS.init();
+                if (window.OctaQube) OctaQube.init();
 
                 // Setup dynamic Financial Year based on system/calendar date
                 const fyInfo = this.getFinancialYearInfo();
@@ -766,7 +766,7 @@
 
                 const setKpi = (id, label, val, icon, color) => {
                     const el = document.getElementById(id);
-                    if (el) el.innerHTML = QCMS.kpiCard(label, val, icon, color);
+                    if (el) el.innerHTML = OctaQube.kpiCard(label, val, icon, color);
                 };
 
                 setKpi('kpi-total', 'Total Projects', total, 'briefcase', 'blue');
@@ -824,7 +824,7 @@
                     </div>`;
                 }
 
-                setKpi('kpi-savings', 'Total Cost Savings', (window.QCMS && QCMS.formatINR ? QCMS.formatINR(totalSav) : ('₹' + totalSav)), 'indian-rupee', 'green');
+                setKpi('kpi-savings', 'Total Cost Savings', (window.OctaQube && OctaQube.formatINR ? OctaQube.formatINR(totalSav) : ('₹' + totalSav)), 'indian-rupee', 'green');
                 setKpi('kpi-delivery-time', 'Avg Delivery Time', `${avgVel} Days`, 'zap', 'purple');
 
                 if (window.lucide) lucide.createIcons();
@@ -1054,17 +1054,17 @@
                 // Team Leader, Facilitator & Reviewer
                 const leader = indData.team_leader || {};
                 const leaderName = leader.name || details.manager || 'Assigned Team Leader';
-                const leaderEmail = leader.email || 'leader@qcms.internal';
+                const leaderEmail = leader.email || 'leader@octaqube.internal';
                 if (document.getElementById('indLeaderName')) document.getElementById('indLeaderName').textContent = leaderName;
                 if (document.getElementById('indLeaderEmail')) document.getElementById('indLeaderEmail').textContent = leaderEmail;
                 if (document.getElementById('indLeaderAvatar')) document.getElementById('indLeaderAvatar').src = leader.avatar || `https://ui-avatars.com/api/?name=${(leaderName || 'TL').replace(/ /g, '+')}&background=3b82f6&color=fff`;
 
                 if (document.getElementById('indFacilName')) document.getElementById('indFacilName').textContent = facil.name || 'Assigned Facilitator';
-                if (document.getElementById('indFacilEmail')) document.getElementById('indFacilEmail').textContent = facil.email || 'facilitator@qcms.internal';
+                if (document.getElementById('indFacilEmail')) document.getElementById('indFacilEmail').textContent = facil.email || 'facilitator@octaqube.internal';
                 if (document.getElementById('indFacilAvatar')) document.getElementById('indFacilAvatar').src = facil.avatar || `https://ui-avatars.com/api/?name=${(facil.name || 'F').replace(/ /g, '+')}&background=10b981&color=fff`;
 
                 if (document.getElementById('indRevName')) document.getElementById('indRevName').textContent = rev.name || 'Assigned Reviewer';
-                if (document.getElementById('indRevEmail')) document.getElementById('indRevEmail').textContent = rev.email || 'reviewer@qcms.internal';
+                if (document.getElementById('indRevEmail')) document.getElementById('indRevEmail').textContent = rev.email || 'reviewer@octaqube.internal';
                 if (document.getElementById('indRevAvatar')) document.getElementById('indRevAvatar').src = rev.avatar || `https://ui-avatars.com/api/?name=${(rev.name || 'R').replace(/ /g, '+')}&background=f59e0b&color=fff`;
 
                 // Team members list with user data entry inspection & lifecycle status
@@ -1102,20 +1102,20 @@
                             return `
                                 <div class="team-member-item d-flex align-items-center justify-content-between p-2.5 rounded-3 shadow-xs mb-2">
                                     <div class="d-flex align-items-center gap-2.5 min-w-0" style="flex: 1 1 auto; max-width: calc(100% - 110px);">
-                                        <img src="${mAvatar}" class="rounded-circle border flex-shrink-0" style="width:34px;height:34px; object-fit: cover;" alt="${QCMS.escapeHtml(mName)}">
+                                        <img src="${mAvatar}" class="rounded-circle border flex-shrink-0" style="width:34px;height:34px; object-fit: cover;" alt="${OctaQube.escapeHtml(mName)}">
                                         <div class="min-w-0 flex-grow-1">
                                             <div class="d-flex align-items-center gap-1.5 mb-0.5 flex-wrap">
-                                                <span class="fw-bold text-main text-xs text-truncate" title="${QCMS.escapeHtml(mName)}">${QCMS.escapeHtml(mName)}</span>
-                                                <span class="badge ${badgeClass} text-xxs flex-shrink-0 px-2 py-0.5">${QCMS.escapeHtml(statusLabel)}</span>
+                                                <span class="fw-bold text-main text-xs text-truncate" title="${OctaQube.escapeHtml(mName)}">${OctaQube.escapeHtml(mName)}</span>
+                                                <span class="badge ${badgeClass} text-xxs flex-shrink-0 px-2 py-0.5">${OctaQube.escapeHtml(statusLabel)}</span>
                                             </div>
-                                            <div class="text-xxs text-muted text-truncate" title="${QCMS.escapeHtml(mEmail)}">
-                                                <span class="fw-medium text-secondary">${QCMS.escapeHtml(mRole)}</span>
-                                                ${mEmail ? `<span class="opacity-75"> &bull; ${QCMS.escapeHtml(mEmail)}</span>` : ''}
+                                            <div class="text-xxs text-muted text-truncate" title="${OctaQube.escapeHtml(mEmail)}">
+                                                <span class="fw-medium text-secondary">${OctaQube.escapeHtml(mRole)}</span>
+                                                ${mEmail ? `<span class="opacity-75"> &bull; ${OctaQube.escapeHtml(mEmail)}</span>` : ''}
                                             </div>
                                         </div>
                                     </div>
                                     <div class="flex-shrink-0 ms-2">
-                                        <button class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 text-xxs d-inline-flex align-items-center gap-1 text-nowrap fw-medium" onclick="Analytics.openUserEntriesModal(${uId})" title="View logs & entries by ${QCMS.escapeHtml(mName)}">
+                                        <button class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 text-xxs d-inline-flex align-items-center gap-1 text-nowrap fw-medium" onclick="Analytics.openUserEntriesModal(${uId})" title="View logs & entries by ${OctaQube.escapeHtml(mName)}">
                                             <i data-lucide="file-text" style="width:12px;height:12px;"></i> View Data (${entriesCount})
                                         </button>
                                     </div>
@@ -1145,12 +1145,12 @@
                 // 6 KPIs
                 const setIndKpi = (id, label, val, icon, color) => {
                     const el = document.getElementById(id);
-                    if (el) el.innerHTML = QCMS.kpiCard(label, val, icon, color);
+                    if (el) el.innerHTML = OctaQube.kpiCard(label, val, icon, color);
                 };
 
                 setIndKpi('indKpiDaysLeft', 'Days Remaining', `${kpis.days_remaining || 0} Days`, 'calendar', 'orange');
                 setIndKpi('indKpiMilestones', 'Milestones Done', `${kpis.completed_milestones || 0}/8`, 'flag', 'green');
-                setIndKpi('indKpiRisk', 'Cost Savings', (window.QCMS && QCMS.formatINR ? QCMS.formatINR(kpis.cost_savings || 0) : `₹${kpis.cost_savings || 0}`), 'indian-rupee', 'green');
+                setIndKpi('indKpiRisk', 'Cost Savings', (window.OctaQube && OctaQube.formatINR ? OctaQube.formatINR(kpis.cost_savings || 0) : `₹${kpis.cost_savings || 0}`), 'indian-rupee', 'green');
 
                 // 8 Stages rendering
                 const stagesContainer = document.getElementById('ind8StagesContainer');
@@ -1215,7 +1215,7 @@
                     return;
                 }
 
-                const escape = (str) => (window.QCMS && QCMS.escapeHtml) ? QCMS.escapeHtml(str || '') : (str || '');
+                const escape = (str) => (window.OctaQube && OctaQube.escapeHtml) ? OctaQube.escapeHtml(str || '') : (str || '');
 
                 listContainer.innerHTML = projects.map(p => {
                     const pId = p.id;
@@ -1307,15 +1307,15 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                     let parsed = null;
                     try { parsed = JSON.parse(details); } catch(e) {}
                     if (!parsed) {
-                        return `<div class="text-xxs text-secondary mt-1" style="white-space:pre-wrap;max-width:650px;">${QCMS.escapeHtml(details)}</div>`;
+                        return `<div class="text-xxs text-secondary mt-1" style="white-space:pre-wrap;max-width:650px;">${OctaQube.escapeHtml(details)}</div>`;
                     }
                     const renderVal = (v) => {
                         if (v === null || v === undefined) return '<em class="text-muted">—</em>';
                         if (typeof v === 'boolean') return v ? '✔ Yes' : '✘ No';
-                        if (typeof v === 'number') return QCMS.escapeHtml(String(v));
-                        if (typeof v === 'string') return QCMS.escapeHtml(v);
+                        if (typeof v === 'number') return OctaQube.escapeHtml(String(v));
+                        if (typeof v === 'string') return OctaQube.escapeHtml(v);
                         if (Array.isArray(v)) return `<em class="text-muted">${v.length} item${v.length !== 1 ? 's' : ''}</em>`;
-                        return QCMS.escapeHtml(JSON.stringify(v));
+                        return OctaQube.escapeHtml(JSON.stringify(v));
                     };
                     const buildMetricTable = (arr) => {
                         const rows = arr.map(r => {
@@ -1323,13 +1323,13 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                             const base = r.baseline !== undefined ? r.baseline : (r.before !== undefined ? r.before : null);
                             const fin = r.final !== undefined ? r.final : (r.after !== undefined ? r.after : null);
                             const pctRaw = r.kpi_improvement_pct !== undefined ? r.kpi_improvement_pct : null;
-                            let cols = `<td class="pe-3 text-xxs text-dark fw-medium">${QCMS.escapeHtml(String(lbl))}</td>`;
-                            if (base !== null) cols += `<td class="pe-3 text-xxs text-muted">Before: <strong>${QCMS.escapeHtml(String(base))}</strong></td>`;
-                            if (fin !== null) cols += `<td class="pe-3 text-xxs text-muted">After: <strong>${QCMS.escapeHtml(String(fin))}</strong></td>`;
+                            let cols = `<td class="pe-3 text-xxs text-dark fw-medium">${OctaQube.escapeHtml(String(lbl))}</td>`;
+                            if (base !== null) cols += `<td class="pe-3 text-xxs text-muted">Before: <strong>${OctaQube.escapeHtml(String(base))}</strong></td>`;
+                            if (fin !== null) cols += `<td class="pe-3 text-xxs text-muted">After: <strong>${OctaQube.escapeHtml(String(fin))}</strong></td>`;
                             if (pctRaw !== null) {
                                 const pct = Number(pctRaw);
                                 const c = pct >= 0 ? 'success' : 'danger';
-                                cols += `<td class="text-xxs text-${c} fw-semibold">${pct >= 0 ? '▲' : '▼'} ${QCMS.escapeHtml(String(Math.abs(pct)))}%</td>`;
+                                cols += `<td class="text-xxs text-${c} fw-semibold">${pct >= 0 ? '▲' : '▼'} ${OctaQube.escapeHtml(String(Math.abs(pct)))}%</td>`;
                             }
                             return `<tr>${cols}</tr>`;
                         }).join('');
@@ -1340,7 +1340,7 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                         const hasShape = typeof parsed[0] === 'object' && parsed[0] !== null
                             && parsed.every(r => r && (r.label !== undefined || r.name !== undefined));
                         if (hasShape) return buildMetricTable(parsed);
-                        const items = parsed.map(item => `<li class="text-xxs">${typeof item === 'object' ? QCMS.escapeHtml(JSON.stringify(item)) : QCMS.escapeHtml(String(item))}</li>`).join('');
+                        const items = parsed.map(item => `<li class="text-xxs">${typeof item === 'object' ? OctaQube.escapeHtml(JSON.stringify(item)) : OctaQube.escapeHtml(String(item))}</li>`).join('');
                         return `<ul class="mt-1 mb-0 ps-3" style="max-width:650px;">${items}</ul>`;
                     }
                     if (typeof parsed === 'object') {
@@ -1349,14 +1349,14 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                             .filter(([k, v]) => !skip.has(k) && typeof v !== 'object')
                             .map(([k, v]) => {
                                 const lbl = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                                return `<span class="me-3 text-xxs"><span class="text-muted">${QCMS.escapeHtml(lbl)}:</span> <span class="text-dark fw-medium">${renderVal(v)}</span></span>`;
+                                return `<span class="me-3 text-xxs"><span class="text-muted">${OctaQube.escapeHtml(lbl)}:</span> <span class="text-dark fw-medium">${renderVal(v)}</span></span>`;
                             });
                         const mKey = Object.keys(parsed).find(k => Array.isArray(parsed[k]) && parsed[k].length && parsed[k][0] && parsed[k][0].label);
                         const mBlock = mKey ? buildMetricTable(parsed[mKey]) : '';
                         const kvHtml = kvRows.length ? `<div class="mt-1 d-flex flex-wrap gap-1" style="max-width:650px;">${kvRows.join('')}</div>` : '';
-                        return (kvHtml + mBlock) || `<div class="text-xxs text-secondary mt-1">${QCMS.escapeHtml(details)}</div>`;
+                        return (kvHtml + mBlock) || `<div class="text-xxs text-secondary mt-1">${OctaQube.escapeHtml(details)}</div>`;
                     }
-                    return `<div class="text-xxs text-secondary mt-1">${QCMS.escapeHtml(String(parsed))}</div>`;
+                    return `<div class="text-xxs text-secondary mt-1">${OctaQube.escapeHtml(String(parsed))}</div>`;
                 };
 
                 const getBadge = (eventType, log) => {
@@ -1413,11 +1413,11 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                             <div class="mt-2.5 p-3 rounded-3" style="background:${decBg}; border:1px solid ${decBorder}; border-left:4px solid ${decColor};">
                                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1.5">
                                     <div class="d-flex align-items-center gap-2">
-                                        ${stageText ? `<span class="badge" style="background:#ffffff; color:#334155; border:1px solid #cbd5e1; font-weight:600; font-size:0.72rem;">${QCMS.escapeHtml(stageText)}</span>` : ''}
-                                        ${decision ? `<span class="badge" style="background:#ffffff; color:${decColor}; border:1px solid ${decBorder}; font-weight:700; font-size:0.74rem;"><i data-lucide="${decIcon}" style="width:12px;height:12px;" class="me-1"></i>${QCMS.escapeHtml(decision)}</span>` : ''}
+                                        ${stageText ? `<span class="badge" style="background:#ffffff; color:#334155; border:1px solid #cbd5e1; font-weight:600; font-size:0.72rem;">${OctaQube.escapeHtml(stageText)}</span>` : ''}
+                                        ${decision ? `<span class="badge" style="background:#ffffff; color:${decColor}; border:1px solid ${decBorder}; font-weight:700; font-size:0.74rem;"><i data-lucide="${decIcon}" style="width:12px;height:12px;" class="me-1"></i>${OctaQube.escapeHtml(decision)}</span>` : ''}
                                     </div>
                                 </div>
-                                ${remarks ? `<div class="mt-1.5 pt-1.5" style="border-top:1px solid ${decBorder}; font-size:0.78rem; color:#1e293b;"><strong style="color:#64748b;">Remarks:</strong> ${QCMS.escapeHtml(remarks)}</div>` : ''}
+                                ${remarks ? `<div class="mt-1.5 pt-1.5" style="border-top:1px solid ${decBorder}; font-size:0.78rem; color:#1e293b;"><strong style="color:#64748b;">Remarks:</strong> ${OctaQube.escapeHtml(remarks)}</div>` : ''}
                             </div>
                         `;
                     } else if (log.event_type === 'member_lifecycle') {
@@ -1450,13 +1450,13 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2" style="border-bottom:1px solid ${themeColor.border};">
                                         <div class="d-flex align-items-center gap-2">
                                             <span class="badge" style="background:${themeColor.badgeBg}; color:${themeColor.badgeText}; font-weight:700; font-size:0.72rem; padding:3px 8px; border-radius:6px; border:1px solid ${themeColor.border};">
-                                                <i data-lucide="${isLeft ? 'user-minus' : 'user-check'}" style="width:12px;height:12px;" class="me-1"></i>${QCMS.escapeHtml(statusText)}
+                                                <i data-lucide="${isLeft ? 'user-minus' : 'user-check'}" style="width:12px;height:12px;" class="me-1"></i>${OctaQube.escapeHtml(statusText)}
                                             </span>
-                                            <span style="color:${themeColor.text}; font-size:0.76rem; font-weight:600;">${QCMS.escapeHtml(roleTitle)}</span>
+                                            <span style="color:${themeColor.text}; font-size:0.76rem; font-weight:600;">${OctaQube.escapeHtml(roleTitle)}</span>
                                         </div>
                                         <div style="font-size:0.74rem; color:#475569; font-weight:500;">
                                             <i data-lucide="${isLeft ? 'calendar-x' : 'calendar'}" style="width:12px;height:12px;" class="me-1 ${isLeft ? 'text-danger' : 'text-primary'}"></i>
-                                            <strong>${isLeft ? 'Departure Date:' : 'Effective Date:'}</strong> ${QCMS.escapeHtml(effectiveDate)}
+                                            <strong>${isLeft ? 'Departure Date:' : 'Effective Date:'}</strong> ${OctaQube.escapeHtml(effectiveDate)}
                                         </div>
                                     </div>
                                     <div class="row g-2" style="font-size:0.76rem;">
@@ -1464,11 +1464,11 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                                             <div style="color:#64748b; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">Working Tenure & Duration</div>
                                             <div class="fw-semibold text-dark mt-0.5 d-flex align-items-center gap-1">
                                                 <i data-lucide="clock" style="width:12px;height:12px;" class="${isLeft ? 'text-danger' : 'text-secondary'}"></i>
-                                                <span>${QCMS.escapeHtml(durationText)}</span>
+                                                <span>${OctaQube.escapeHtml(durationText)}</span>
                                             </div>
                                             ${isLeft && mData.joined_at ? `
                                             <div class="mt-1" style="font-size:0.7rem; color:#64748b;">
-                                                <span>Joined: <strong>${QCMS.escapeHtml(mData.joined_at)}</strong></span> &rarr; <span>Left: <strong class="text-danger">${QCMS.escapeHtml(mData.left_at || log.timestamp || 'Mid-Project')}</strong></span>
+                                                <span>Joined: <strong>${OctaQube.escapeHtml(mData.joined_at)}</strong></span> &rarr; <span>Left: <strong class="text-danger">${OctaQube.escapeHtml(mData.left_at || log.timestamp || 'Mid-Project')}</strong></span>
                                             </div>` : ''}
                                         </div>
                                         ${actorText ? `
@@ -1476,11 +1476,11 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                                             <div style="color:#64748b; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">${isLeft ? 'Removed / Replaced By' : 'Assigned / Enrolled By'}</div>
                                             <div class="fw-semibold text-dark mt-0.5 d-flex align-items-center gap-1">
                                                 <i data-lucide="user" style="width:12px;height:12px;" class="text-secondary"></i>
-                                                <span>${QCMS.escapeHtml(actorText)}</span>
+                                                <span>${OctaQube.escapeHtml(actorText)}</span>
                                             </div>
                                             ${mData.reason ? `
                                             <div class="mt-1" style="font-size:0.7rem; color:#b91c1c;">
-                                                <em>${QCMS.escapeHtml(mData.reason)}</em>
+                                                <em>${OctaQube.escapeHtml(mData.reason)}</em>
                                             </div>` : ''}
                                         </div>` : ''}
                                     </div>
@@ -1499,17 +1499,17 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                             <img src="${displayAvatar}" class="rounded-circle mt-0.5 flex-shrink-0" style="width:38px; height:38px; object-fit:cover; border:2px solid #e2e8f0;" alt="User">
                             <div style="min-width:0; flex:1;">
                                 <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-                                    <span class="fw-bold text-dark" style="font-size:0.9rem;">${QCMS.escapeHtml(displayName)}</span>
-                                    <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; font-size:0.72rem; font-weight:600; padding:2px 8px; border-radius:6px;">${QCMS.escapeHtml(displayRole)}</span>
+                                    <span class="fw-bold text-dark" style="font-size:0.9rem;">${OctaQube.escapeHtml(displayName)}</span>
+                                    <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; font-size:0.72rem; font-weight:600; padding:2px 8px; border-radius:6px;">${OctaQube.escapeHtml(displayRole)}</span>
                                     ${getBadge(log.event_type, log)}
                                 </div>
-                                <div class="fw-semibold text-dark" style="font-size:0.84rem; color:#1e293b;">${QCMS.escapeHtml(log.action || '')}</div>
+                                <div class="fw-semibold text-dark" style="font-size:0.84rem; color:#1e293b;">${OctaQube.escapeHtml(log.action || '')}</div>
                                 ${detailsHtml}
                             </div>
                         </div>
                         <div class="text-end flex-shrink-0 ps-2">
                             <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-2" style="background:#f8fafc; border:1px solid #e2e8f0; color:#64748b; font-size:0.72rem; font-weight:500;">
-                                <i data-lucide="clock" style="width:11px; height:11px; color:#94a3b8;"></i> ${QCMS.escapeHtml(log.timestamp || '')}
+                                <i data-lucide="clock" style="width:11px; height:11px; color:#94a3b8;"></i> ${OctaQube.escapeHtml(log.timestamp || '')}
                             </span>
                         </div>
                     </div>`;
@@ -1552,7 +1552,7 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
 
                 if (stagesEl) {
                     const stages = userContrib.stages_contributed || [];
-                    stagesEl.innerHTML = stages.map(s => `<span class="badge bg-primary-soft text-primary text-xxs font-mono">${QCMS.escapeHtml(s)}</span>`).join('');
+                    stagesEl.innerHTML = stages.map(s => `<span class="badge bg-primary-soft text-primary text-xxs font-mono">${OctaQube.escapeHtml(s)}</span>`).join('');
                 }
 
                 if (listEl) {
@@ -1565,10 +1565,10 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                                 ${entries.map(entry => `
                                     <div class="p-2.5 bg-white rounded-2 border shadow-xs">
                                         <div class="d-flex align-items-center justify-content-between mb-1">
-                                            <span class="badge bg-primary-soft text-primary fw-bold text-xxs">${QCMS.escapeHtml(entry.stage || 'Stage Data')}</span>
-                                            <span class="text-xxs text-muted"><i data-lucide="clock" style="width:10px;height:10px;"></i> ${QCMS.escapeHtml(entry.date || '')}</span>
+                                            <span class="badge bg-primary-soft text-primary fw-bold text-xxs">${OctaQube.escapeHtml(entry.stage || 'Stage Data')}</span>
+                                            <span class="text-xxs text-muted"><i data-lucide="clock" style="width:10px;height:10px;"></i> ${OctaQube.escapeHtml(entry.date || '')}</span>
                                         </div>
-                                        <div class="text-xs text-dark">${QCMS.escapeHtml(entry.summary || '')}</div>
+                                        <div class="text-xs text-dark">${OctaQube.escapeHtml(entry.summary || '')}</div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -1695,7 +1695,7 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                 const from = document.getElementById('customDateFrom')?.value;
                 const to = document.getElementById('customDateTo')?.value;
                 if (!from || !to) {
-                    if (window.QCMS && QCMS.toast) QCMS.toast('Please select both Start and End dates.', 'warning');
+                    if (window.OctaQube && OctaQube.toast) OctaQube.toast('Please select both Start and End dates.', 'warning');
                     return;
                 }
                 const label = `${from} to ${to}`;
@@ -1737,19 +1737,19 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
             async exportReport(type) {
                 if (type === 'excel') {
                     try {
-                        QCMS.toast('Exporting Excel report...', 'info');
-                        await api.downloadFile('/reports/export/excel', 'QCMS_Projects_Report.xlsx');
-                        QCMS.toast('Excel report downloaded successfully.', 'success');
+                        OctaQube.toast('Exporting Excel report...', 'info');
+                        await api.downloadFile('/reports/export/excel', 'OctaQube_Projects_Report.xlsx');
+                        OctaQube.toast('Excel report downloaded successfully.', 'success');
                     } catch (e) {
-                        QCMS.toast(e.message || 'Failed to export Excel report', 'danger');
+                        OctaQube.toast(e.message || 'Failed to export Excel report', 'danger');
                     }
                 } else if (type === 'csv') {
                     try {
-                        QCMS.toast('Exporting CSV report...', 'info');
-                        await api.downloadFile('/reports/export/csv', 'QCMS_Analytics_Report.csv');
-                        QCMS.toast('CSV report downloaded successfully.', 'success');
+                        OctaQube.toast('Exporting CSV report...', 'info');
+                        await api.downloadFile('/reports/export/csv', 'OctaQube_Analytics_Report.csv');
+                        OctaQube.toast('CSV report downloaded successfully.', 'success');
                     } catch (e) {
-                        QCMS.toast(e.message || 'Failed to export CSV report', 'danger');
+                        OctaQube.toast(e.message || 'Failed to export CSV report', 'danger');
                     }
                 } else if (type === 'print') {
                     window.print();
@@ -1764,8 +1764,8 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                         btn.disabled = true;
                         btn.innerHTML = `<span class="spinner-border spinner-border-sm text-danger" role="status" style="width:12px;height:12px;"></span> <span class="text-xs">Generating Report...</span>`;
                     }
-                    if (window.QCMS && QCMS.toast) {
-                        QCMS.toast('Generating comprehensive QC Story PDF report...', 'info');
+                    if (window.OctaQube && OctaQube.toast) {
+                        OctaQube.toast('Generating comprehensive QC Story PDF report...', 'info');
                     }
 
                     if (this.selectedProjectId) {
@@ -1773,16 +1773,16 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                         const safeUid = proj ? (proj.project_uid || `PRJ-${proj.id}`) : `Project_${this.selectedProjectId}`;
                         await api.downloadFile('/reports/export/pdf/' + this.selectedProjectId, `${safeUid}_QC_Story_Report.pdf`);
                     } else {
-                        await api.downloadFile('/reports/export/pdf/all', 'QCMS_All_Project_Reports.zip');
+                        await api.downloadFile('/reports/export/pdf/all', 'OctaQube_All_Project_Reports.zip');
                     }
 
-                    if (window.QCMS && QCMS.toast) {
-                        QCMS.toast('Report downloaded successfully!', 'success');
+                    if (window.OctaQube && OctaQube.toast) {
+                        OctaQube.toast('Report downloaded successfully!', 'success');
                     }
                 } catch (err) {
                     console.error('[Analytics] PDF download failed:', err);
-                    if (window.QCMS && QCMS.toast) {
-                        QCMS.toast(err.message || 'Failed to download report', 'danger');
+                    if (window.OctaQube && OctaQube.toast) {
+                        OctaQube.toast(err.message || 'Failed to download report', 'danger');
                     } else {
                         alert('Failed to download report: ' + (err.message || 'Unknown error'));
                     }

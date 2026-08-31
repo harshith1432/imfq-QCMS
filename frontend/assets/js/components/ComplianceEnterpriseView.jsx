@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 /* ==========================================================================
-   QCMS ENTERPRISE COMPLIANCE STANDARDS REACT MODULE
+   OctaQube ENTERPRISE COMPLIANCE STANDARDS REACT MODULE
    Microsoft Admin Center / Atlassian / Linear Minimal Enterprise Theme
    ========================================================================== */
 
@@ -118,7 +118,7 @@ export const ComplianceStandardCard = ({ item, onPreview, onUpload }) => {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6 pt-5 border-t border-gray-100 text-xs">
         <div>
           <span className="text-gray-400 block uppercase tracking-wider font-semibold">Certificate No</span>
-          <span className="font-semibold text-gray-900">{item.certNo || 'QCMS-2026-001'}</span>
+          <span className="font-semibold text-gray-900">{item.certNo || 'OctaQube-2026-001'}</span>
         </div>
         <div>
           <span className="text-gray-400 block uppercase tracking-wider font-semibold">Issue Date</span>
@@ -160,11 +160,11 @@ export default function ComplianceEnterpriseView() {
   const [selectedCert, setSelectedCert] = useState(null);
 
   const standardsData = [
-    { id: 'iso9001', name: 'ISO 9001:2015', description: 'Quality Management System Standard', status: 'certified', certNo: 'QCMS-2026-0001', issueDate: '12 Jan 2026', expiryDate: '12 Jan 2029', lastAudit: 'May 2026', nextAudit: 'Nov 2026', score: 95, departments: ['QA', 'Manufacturing', 'Ops'] },
-    { id: 'iso14001', name: 'ISO 14001:2015', description: 'Environmental Management System', status: 'certified', certNo: 'QCMS-2026-0002', issueDate: '10 Feb 2025', expiryDate: '10 Feb 2028', lastAudit: 'Apr 2026', nextAudit: 'Oct 2026', score: 88, departments: ['EHS', 'Facilities', 'Ops'] },
-    { id: 'as9100', name: 'AS9100 Rev D', description: 'Aerospace Quality Management System', status: 'pending', certNo: 'QCMS-2026-0003', issueDate: '01 Mar 2024', expiryDate: '01 Mar 2027', lastAudit: 'Dec 2025', nextAudit: 'Aug 2026', score: 72, departments: ['Aerospace', 'QA'] },
-    { id: 'iatf16949', name: 'IATF 16949:2016', description: 'Automotive Quality Management System', status: 'pending', certNo: 'QCMS-2026-0004', issueDate: '15 Jun 2025', expiryDate: '15 Jun 2028', lastAudit: 'Jan 2026', nextAudit: 'Sep 2026', score: 84, departments: ['Automotive', 'Plant A'] },
-    { id: 'soc2', name: 'SOC 2 Type II', description: 'Security, Availability & Confidentiality Trust Criteria', status: 'certified', certNo: 'QCMS-2026-0005', issueDate: '01 Jan 2026', expiryDate: '01 Jan 2027', lastAudit: 'Jun 2026', nextAudit: 'Dec 2026', score: 96, departments: ['IT', 'InfoSec', 'Engineering'] },
+    { id: 'iso9001', name: 'ISO 9001:2015', description: 'Quality Management System Standard', status: 'certified', certNo: 'OctaQube-2026-0001', issueDate: '12 Jan 2026', expiryDate: '12 Jan 2029', lastAudit: 'May 2026', nextAudit: 'Nov 2026', score: 95, departments: ['QA', 'Manufacturing', 'Ops'] },
+    { id: 'iso14001', name: 'ISO 14001:2015', description: 'Environmental Management System', status: 'certified', certNo: 'OctaQube-2026-0002', issueDate: '10 Feb 2025', expiryDate: '10 Feb 2028', lastAudit: 'Apr 2026', nextAudit: 'Oct 2026', score: 88, departments: ['EHS', 'Facilities', 'Ops'] },
+    { id: 'as9100', name: 'AS9100 Rev D', description: 'Aerospace Quality Management System', status: 'pending', certNo: 'OctaQube-2026-0003', issueDate: '01 Mar 2024', expiryDate: '01 Mar 2027', lastAudit: 'Dec 2025', nextAudit: 'Aug 2026', score: 72, departments: ['Aerospace', 'QA'] },
+    { id: 'iatf16949', name: 'IATF 16949:2016', description: 'Automotive Quality Management System', status: 'pending', certNo: 'OctaQube-2026-0004', issueDate: '15 Jun 2025', expiryDate: '15 Jun 2028', lastAudit: 'Jan 2026', nextAudit: 'Sep 2026', score: 84, departments: ['Automotive', 'Plant A'] },
+    { id: 'soc2', name: 'SOC 2 Type II', description: 'Security, Availability & Confidentiality Trust Criteria', status: 'certified', certNo: 'OctaQube-2026-0005', issueDate: '01 Jan 2026', expiryDate: '01 Jan 2027', lastAudit: 'Jun 2026', nextAudit: 'Dec 2026', score: 96, departments: ['IT', 'InfoSec', 'Engineering'] },
     { id: 'iso27001', name: 'ISO 27001:2022', description: 'Information Security Management System', status: 'notconfigured', certNo: 'N/A', issueDate: 'N/A', expiryDate: 'N/A', lastAudit: 'N/A', nextAudit: 'N/A', score: 40, departments: ['InfoSec', 'IT'] }
   ];
 

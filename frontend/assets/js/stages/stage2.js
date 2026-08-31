@@ -893,7 +893,7 @@ const Stage2 = {
             container.innerHTML = '';
             sampleObservations.forEach(o => this.addObservationRow(o));
             this.updateAllVisualizations();
-            QCMS.toast("Sample observations loaded successfully", "success");
+            OctaQube.toast("Sample observations loaded successfully", "success");
         }
     },
 
@@ -1897,7 +1897,7 @@ const Stage2 = {
                 const rows = this.parseCSV(text);
                 
                 if (rows.length <= 1) {
-                    QCMS.toast("Uploaded CSV is empty or invalid.", "error");
+                    OctaQube.toast("Uploaded CSV is empty or invalid.", "error");
                     return;
                 }
 
@@ -1944,13 +1944,13 @@ const Stage2 = {
 
                 if (importedCount > 0) {
                     this.updateAllVisualizations();
-                    QCMS.toast(`Successfully imported ${importedCount} observation rows from CSV/Excel!`, "success");
+                    OctaQube.toast(`Successfully imported ${importedCount} observation rows from CSV/Excel!`, "success");
                 } else {
-                    QCMS.toast("No valid data rows found in uploaded file.", "error");
+                    OctaQube.toast("No valid data rows found in uploaded file.", "error");
                 }
             } catch (err) {
-                console.error("[QCMS] CSV Parse Error:", err);
-                QCMS.toast("Failed to parse file. Please ensure it matches the template.", "error");
+                console.error("[OctaQube] CSV Parse Error:", err);
+                OctaQube.toast("Failed to parse file. Please ensure it matches the template.", "error");
             }
             
             // Reset input so file can be uploaded again
@@ -2012,8 +2012,8 @@ const Stage2 = {
             if (file.size > MAX_SIZE_BYTES) {
                 const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
                 const msg = `File size exceeds 2MB limit (Selected "${file.name}": ${sizeMB} MB). Please upload documents up to 2MB.`;
-                if (window.QCMS && QCMS.toast) {
-                    QCMS.toast(msg, "warning");
+                if (window.OctaQube && OctaQube.toast) {
+                    OctaQube.toast(msg, "warning");
                 } else {
                     alert(msg);
                 }
@@ -2055,7 +2055,7 @@ const Stage2 = {
                     });
                 }
             } catch (err) {
-                QCMS.toast(`Failed to upload ${file.name}: ${err.message}`, 'error');
+                OctaQube.toast(`Failed to upload ${file.name}: ${err.message}`, 'error');
             }
         }
         

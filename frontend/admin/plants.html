@@ -6,16 +6,16 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plant Locations | QCMS Enterprise</title>
+    <title>Plant Locations | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
-    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* Radio-choice card styles for delete modal */
@@ -307,7 +307,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
     const plantManager = {
         allPlants: [],
@@ -318,7 +318,7 @@
 
         async init() {
             try {
-                if (typeof QCMS !== 'undefined') QCMS.init();
+                if (typeof OctaQube !== 'undefined') OctaQube.init();
                 const modalEl = document.getElementById('plantModal');
                 if (modalEl) this.bsModal = new bootstrap.Modal(modalEl);
                 await this.loadPlants();
@@ -339,7 +339,7 @@
                 console.error('Failed to load plants', e);
                 const errMsg = (e && e.message && !e.message.includes('InFailedSqlTransaction')) ? e.message : 'Unable to connect or fetch plant locations. Please try again.';
                 document.getElementById('plantsTableBody').innerHTML = 
-                    `<tr><td colspan="6" class="p-5 text-center text-danger">Failed to load plant locations: ${QCMS.escapeHtml(errMsg)}</td></tr>`;
+                    `<tr><td colspan="6" class="p-5 text-center text-danger">Failed to load plant locations: ${OctaQube.escapeHtml(errMsg)}</td></tr>`;
             }
         },
 
@@ -407,11 +407,11 @@
                     <td class="fw-bold text-main">
                         <div class="d-flex align-items-center gap-2">
                             <i data-lucide="factory" class="text-primary" style="width:16px;height:16px;"></i>
-                            <span>${QCMS.escapeHtml(p.name)}</span>
+                            <span>${OctaQube.escapeHtml(p.name)}</span>
                         </div>
                     </td>
-                    <td><span class="badge bg-secondary-subtle text-secondary font-monospace px-2 py-1">${QCMS.escapeHtml(p.code || 'N/A')}</span></td>
-                    <td class="text-muted text-sm">${QCMS.escapeHtml(p.location || 'N/A')}</td>
+                    <td><span class="badge bg-secondary-subtle text-secondary font-monospace px-2 py-1">${OctaQube.escapeHtml(p.code || 'N/A')}</span></td>
+                    <td class="text-muted text-sm">${OctaQube.escapeHtml(p.location || 'N/A')}</td>
                     <td><span class="badge bg-info-subtle text-info rounded-pill px-2.5 py-1 fw-semibold">${p.department_count || 0} Depts</span></td>
                     <td>
                         <div class="d-flex align-items-center gap-1.5 flex-wrap">
@@ -427,7 +427,7 @@
                         <button class="btn btn-sm btn-ghost text-primary px-2" onclick="plantManager.openEditModal(${p.id})">
                             <i data-lucide="edit-2" style="width:14px;height:14px;"></i> Edit
                         </button>
-                        <button class="btn btn-sm btn-ghost text-danger px-2" onclick="plantManager.deletePlant(${p.id}, '${QCMS.escapeHtml(p.name)}')">
+                        <button class="btn btn-sm btn-ghost text-danger px-2" onclick="plantManager.deletePlant(${p.id}, '${OctaQube.escapeHtml(p.name)}')">
                             <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Delete
                         </button>
                     </td>
@@ -516,7 +516,7 @@
 
             if (!name) {
                 nameInp.style.borderColor = '#ef4444';
-                QCMS.toast('Plant Location Name is required', 'warning');
+                OctaQube.toast('Plant Location Name is required', 'warning');
                 nameInp.focus();
                 return;
             }
@@ -525,10 +525,10 @@
             try {
                 if (id) {
                     await api.updatePlant(id, payload);
-                    QCMS.toast('Plant location updated successfully', 'success');
+                    OctaQube.toast('Plant location updated successfully', 'success');
                 } else {
                     await api.createPlant(payload);
-                    QCMS.toast('Plant location created successfully', 'success');
+                    OctaQube.toast('Plant location created successfully', 'success');
                 }
                 if (this.bsModal) this.bsModal.hide();
                 await this.loadPlants();
@@ -545,7 +545,7 @@
                     nameInp.focus();
                     nameInp.select();
                 } else {
-                    QCMS.toast(e.message || 'Failed to save plant location', 'danger');
+                    OctaQube.toast(e.message || 'Failed to save plant location', 'danger');
                 }
             }
         },
@@ -657,11 +657,11 @@
 
             if (this._delPlantSub === 'move') {
                 const tid = document.getElementById('delPlantTargetId').value;
-                if (!tid) { QCMS.toast('Please select a target plant.', 'warning'); return; }
+                if (!tid) { OctaQube.toast('Please select a target plant.', 'warning'); return; }
                 body = { action: 'move_to_plant', target_plant_id: parseInt(tid) };
             } else if (this._delPlantSub === 'new') {
                 const nn = document.getElementById('delPlantNewName').value.trim();
-                if (!nn) { QCMS.toast('Please enter a plant name.', 'warning'); return; }
+                if (!nn) { OctaQube.toast('Please enter a plant name.', 'warning'); return; }
                 body = {
                     action: 'new_plant',
                     new_plant_name: nn,
@@ -678,10 +678,10 @@
                 const d = await r.json();
                 if (!r.ok) throw new Error(d.message || 'Delete failed');
                 bootstrap.Modal.getInstance(document.getElementById('plantDeleteModal')).hide();
-                QCMS.toast('Plant location deleted successfully.', 'success');
+                OctaQube.toast('Plant location deleted successfully.', 'success');
                 await this.loadPlants();
             } catch (e) {
-                QCMS.toast(e.message || 'Failed to delete plant location', 'error');
+                OctaQube.toast(e.message || 'Failed to delete plant location', 'error');
             }
         }
     };

@@ -6,15 +6,15 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise Activity Audit Logs | QCMS Enterprise</title>
+    <title>Enterprise Activity Audit Logs | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
-    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
@@ -587,7 +587,7 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
         const Audit = {
             currentTab: 'logs',
@@ -600,7 +600,7 @@
             searchTimer: null,
             
             async init() {
-                QCMS.init();
+                OctaQube.init();
                 await Promise.all([this.loadKPIs(), this.loadTab()]);
                 if(window.lucide) lucide.createIcons();
             },
@@ -858,10 +858,10 @@
                 if(!confirm(`Forcefully terminate active session ${sid}?`)) return;
                 try {
                     await api.post(`/admin/audit/sessions/${sid}/terminate`);
-                    QCMS.toast('User session terminated successfully', 'success');
+                    OctaQube.toast('User session terminated successfully', 'success');
                     await this.loadSessions();
                 } catch(e) {
-                    QCMS.toast(e.message || 'Failed to terminate session', 'error');
+                    OctaQube.toast(e.message || 'Failed to terminate session', 'error');
                 }
             },
 
@@ -1045,7 +1045,7 @@
 
                     if(window.lucide) lucide.createIcons();
                 } catch(e) {
-                    QCMS.toast('Error retrieving audit telemetry detail', 'error');
+                    OctaQube.toast('Error retrieving audit telemetry detail', 'error');
                 }
             },
 
@@ -1057,7 +1057,7 @@
             // --- Column Visibility Helper ---
             toggleColumnSelector() {
                 // In vanilla HTML, we can prompt or toggle simple responsive headers
-                QCMS.toast('Dynamic table columns fully optimised for screen bounds', 'info');
+                OctaQube.toast('Dynamic table columns fully optimised for screen bounds', 'info');
             },
 
             // --- Pagination ---
@@ -1291,23 +1291,23 @@
             copyLogId() {
                 if(!this.currentDetailId) return;
                 navigator.clipboard.writeText(this.currentDetailId.toString());
-                QCMS.toast('Audit Log ID copied to clipboard', 'success');
+                OctaQube.toast('Audit Log ID copied to clipboard', 'success');
             },
 
             async generateIncident() {
                 if(!this.currentDetailId) return;
                 try {
                     // Simulates submitting a ticket or alert for SOC evaluation
-                    QCMS.toast(`Incident generated for Log ID ${this.currentDetailId}. Security team has been notified.`, 'success');
+                    OctaQube.toast(`Incident generated for Log ID ${this.currentDetailId}. Security team has been notified.`, 'success');
                     this.closeDrawer();
                 } catch(e) {
-                    QCMS.toast('Error creating security ticket', 'error');
+                    OctaQube.toast('Error creating security ticket', 'error');
                 }
             },
 
             // --- Compliance CSV Downloader ---
             async exportCSV() {
-                QCMS.toast('Compiling audit registry fields...', 'info');
+                OctaQube.toast('Compiling audit registry fields...', 'info');
                 try {
                     const res = await api.get('/admin/audit/export');
                     const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(res.csv);
@@ -1317,9 +1317,9 @@
                     document.body.appendChild(link);
                     link.click();
                     link.remove();
-                    QCMS.toast(`Exported ${res.count} audit trail events.`, 'success');
+                    OctaQube.toast(`Exported ${res.count} audit trail events.`, 'success');
                 } catch(e) {
-                    QCMS.toast('Failed to download compliance report', 'error');
+                    OctaQube.toast('Failed to download compliance report', 'error');
                 }
             },
 
@@ -1371,7 +1371,7 @@
                     this.onRetentionSelectChange(autoSelect ? autoSelect.value : '0');
                     this.updatePurgePreview();
                 } catch(e) {
-                    QCMS.toast('Failed to load storage details', 'error');
+                    OctaQube.toast('Failed to load storage details', 'error');
                 }
             },
 
@@ -1501,12 +1501,12 @@
                 } else if (val === 'custom') {
                     const startDate = document.getElementById('purgeStartDate')?.value;
                     const endDate = document.getElementById('purgeEndDate')?.value;
-                    if (!startDate) { QCMS.toast('Please select a valid date', 'error'); return; }
+                    if (!startDate) { OctaQube.toast('Please select a valid date', 'error'); return; }
                     payload = { mode: 'custom_range', start_date: startDate, end_date: endDate };
                 } else if (val === 'custom_years') {
                     const yrsInput = document.getElementById('purgeCustomYearsInput');
                     const yrs = yrsInput ? parseFloat(yrsInput.value) : 2;
-                    if (isNaN(yrs) || yrs <= 0) { QCMS.toast('Please enter a valid number of years', 'error'); return; }
+                    if (isNaN(yrs) || yrs <= 0) { OctaQube.toast('Please enter a valid number of years', 'error'); return; }
                     if (!confirm(`Are you sure you want to purge audit logs older than ${yrs} year(s)?`)) return;
                     payload = { mode: 'older_than_years', retention_years: yrs };
                 } else {
@@ -1520,7 +1520,7 @@
 
                 try {
                     const res = await api.post('/admin/audit/purge', payload);
-                    QCMS.toast(res.message, 'success');
+                    OctaQube.toast(res.message, 'success');
                     
                     const modalEl = document.getElementById('purgeAuditLogsModal');
                     const modal = bootstrap.Modal.getInstance(modalEl);
@@ -1528,7 +1528,7 @@
 
                     await this.loadLogs();
                 } catch(e) {
-                    QCMS.toast(e.message || 'Error purging audit logs', 'error');
+                    OctaQube.toast(e.message || 'Error purging audit logs', 'error');
                 } finally {
                     if (btnExecute) { btnExecute.disabled = false; btnExecute.textContent = 'Confirm & Purge'; }
                 }
@@ -1543,7 +1543,7 @@
                     const input = document.getElementById('customYearsInput');
                     const years = input ? parseFloat(input.value) : 0;
                     if (isNaN(years) || years <= 0) {
-                        QCMS.toast('Please enter a valid positive number of years', 'error');
+                        OctaQube.toast('Please enter a valid positive number of years', 'error');
                         return;
                     }
                     payload = { retention_years: years };
@@ -1554,9 +1554,9 @@
 
                 try {
                     const res = await api.post('/admin/audit/retention-policy', payload);
-                    QCMS.toast(res.message, 'success');
+                    OctaQube.toast(res.message, 'success');
                 } catch(e) {
-                    QCMS.toast(e.message || 'Error updating retention policy', 'error');
+                    OctaQube.toast(e.message || 'Error updating retention policy', 'error');
                 }
             }
         };

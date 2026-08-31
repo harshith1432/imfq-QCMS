@@ -6,16 +6,16 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Departments | QCMS Enterprise</title>
+    <title>Departments | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
-    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* Radio-choice card styles for delete modal */
@@ -256,7 +256,7 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
     const deptManager = {
         allDepts: [],
@@ -267,7 +267,7 @@
 
         async init() {
             try {
-                if (typeof QCMS !== 'undefined') QCMS.init();
+                if (typeof OctaQube !== 'undefined') OctaQube.init();
                 const searchInput = document.getElementById('globalSearchInput');
                 if (searchInput) {
                     searchInput.placeholder = "Search departments...";
@@ -287,14 +287,14 @@
                 const filterSel = document.getElementById('plantFilter');
                 if (filterSel) {
                     filterSel.innerHTML = '<option value="">All Plant Locations</option>' +
-                        this.allPlants.map(p => `<option value="${p.id}">${QCMS.escapeHtml(p.name)}</option>`).join('');
+                        this.allPlants.map(p => `<option value="${p.id}">${OctaQube.escapeHtml(p.name)}</option>`).join('');
                 }
 
                 // Populate Modal Dropdown
                 const modalSel = document.getElementById('deptPlantId');
                 if (modalSel) {
                     modalSel.innerHTML = '<option value="">Organization-Wide / All Plants</option>' +
-                        this.allPlants.map(p => `<option value="${p.id}">${QCMS.escapeHtml(p.name)}</option>`).join('');
+                        this.allPlants.map(p => `<option value="${p.id}">${OctaQube.escapeHtml(p.name)}</option>`).join('');
                 }
             } catch (e) {
                 console.error('Failed to load plants:', e);
@@ -346,7 +346,7 @@
                         <p class="mb-0">No results found for "${q}"</p>
                     </td></tr>`;
                 } else {
-                    body.innerHTML = `<tr><td colspan="4">${QCMS.emptyState('No Departments Found', 'Start by adding a department or change your plant filter.', 'building-2')}</td></tr>`;
+                    body.innerHTML = `<tr><td colspan="4">${OctaQube.emptyState('No Departments Found', 'Start by adding a department or change your plant filter.', 'building-2')}</td></tr>`;
                 }
                 if (footer) footer.style.display = 'none';
                 if (window.lucide) lucide.createIcons();
@@ -360,10 +360,10 @@
                 const count = d.employee_count ?? d.user_count ?? 0;
                 return `
                 <tr class="fade-in">
-                    <td><div class="fw-semibold text-slate-900">${QCMS.escapeHtml(d.name)}</div></td>
+                    <td><div class="fw-semibold text-slate-900">${OctaQube.escapeHtml(d.name)}</div></td>
                     <td>
                         <span class="badge ${d.plant_id ? 'bg-primary-subtle text-primary' : 'bg-secondary-subtle text-secondary'} rounded-pill px-2.5 py-1">
-                            <i data-lucide="factory" class="me-1" style="width:12px;height:12px;"></i> ${QCMS.escapeHtml(d.plant_name || 'Organization-Wide')}
+                            <i data-lucide="factory" class="me-1" style="width:12px;height:12px;"></i> ${OctaQube.escapeHtml(d.plant_name || 'Organization-Wide')}
                         </span>
                     </td>
                     <td>
@@ -497,10 +497,10 @@
             try {
                 if (id) {
                     await api.put(`/admin/departments/${id}`, payload);
-                    QCMS.toast('Department updated successfully.', 'success');
+                    OctaQube.toast('Department updated successfully.', 'success');
                 } else {
                     await api.post('/admin/departments', payload);
-                    QCMS.toast('Department created successfully.', 'success');
+                    OctaQube.toast('Department created successfully.', 'success');
                 }
                 const modalInst = bootstrap.Modal.getOrCreateInstance(document.getElementById('deptModal'));
                 if (modalInst) modalInst.hide();
@@ -514,9 +514,9 @@
                     nameErrorMsg.textContent = msg;
                     nameError.style.setProperty('display', 'flex', 'important');
                     if (window.lucide) lucide.createIcons();
-                    QCMS.toast('Duplicate department name detected.', 'warning');
+                    OctaQube.toast('Duplicate department name detected.', 'warning');
                 } else {
-                    QCMS.toast(msg, 'error');
+                    OctaQube.toast(msg, 'error');
                 }
             }
         },
@@ -636,11 +636,11 @@
 
             if (this._deleteSubAction === 'move') {
                 const tid = document.getElementById('delDeptTargetId').value;
-                if (!tid) { QCMS.toast('Please select a target department.', 'warning'); return; }
+                if (!tid) { OctaQube.toast('Please select a target department.', 'warning'); return; }
                 body = { action: 'move_to_dept', target_dept_id: parseInt(tid) };
             } else if (this._deleteSubAction === 'new') {
                 const nn = document.getElementById('delDeptNewName').value.trim();
-                if (!nn) { QCMS.toast('Please enter a department name.', 'warning'); return; }
+                if (!nn) { OctaQube.toast('Please enter a department name.', 'warning'); return; }
                 body = { action: 'new_dept', new_dept_name: nn };
             }
 
@@ -655,10 +655,10 @@
                 });
                 const modalInst = bootstrap.Modal.getOrCreateInstance(document.getElementById('deptDeleteModal'));
                 if (modalInst) modalInst.hide();
-                QCMS.toast('Department deleted successfully.', 'success');
+                OctaQube.toast('Department deleted successfully.', 'success');
                 this.loadDepartments();
             } catch (e) {
-                QCMS.toast(e.message, 'error');
+                OctaQube.toast(e.message, 'error');
             }
         }
     };

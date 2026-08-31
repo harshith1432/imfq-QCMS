@@ -3072,14 +3072,18 @@ body.dark-mode #exec-tab-dashboard .border.rounded {
 }
 
 /* Stepper Dark Theme Polish */
+[data-theme="dark"] .octaqube-step .step-badge,
 [data-theme="dark"] .qcms-step .step-badge,
+body.dark-mode .octaqube-step .step-badge,
 body.dark-mode .qcms-step .step-badge {
     background: #0f172a !important;
     border: 1px solid rgba(255, 255, 255, 0.25) !important;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) !important;
 }
 
+[data-theme="dark"] .octaqube-step.locked,
 [data-theme="dark"] .qcms-step.locked,
+body.dark-mode .octaqube-step.locked,
 body.dark-mode .qcms-step.locked {
     opacity: 0.38 !important;
 }

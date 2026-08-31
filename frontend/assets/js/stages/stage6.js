@@ -645,8 +645,8 @@ const Stage6 = {
                 // File size limit: Under 2MB (2 * 1024 * 1024 bytes)
                 if (file.size > 2 * 1024 * 1024) {
                     const errorMsg = `File "${file.name}" exceeds the 2MB size limit (${(file.size / (1024*1024)).toFixed(2)}MB). Please upload a document or photo under 2MB.`;
-                    if (window.QCMS && QCMS.toast) {
-                        QCMS.toast(errorMsg, 'error');
+                    if (window.OctaQube && OctaQube.toast) {
+                        OctaQube.toast(errorMsg, 'error');
                     } else {
                         alert(errorMsg);
                     }
@@ -676,14 +676,14 @@ const Stage6 = {
                             btnView.href = fileUrl;
                             btnView.classList.remove('d-none');
                         }
-                        if (window.QCMS && QCMS.toast) {
-                            QCMS.toast(`File "${file.name}" uploaded successfully!`, 'success');
+                        if (window.OctaQube && OctaQube.toast) {
+                            OctaQube.toast(`File "${file.name}" uploaded successfully!`, 'success');
                         }
                     }
                 } catch (err) {
                     const failMsg = 'Upload failed: ' + (err.message || err);
-                    if (window.QCMS && QCMS.toast) {
-                        QCMS.toast(failMsg, 'error');
+                    if (window.OctaQube && OctaQube.toast) {
+                        OctaQube.toast(failMsg, 'error');
                     } else {
                         alert(failMsg);
                     }
@@ -756,7 +756,7 @@ const Stage6 = {
 
                 if (file.size > 2 * 1024 * 1024) {
                     const errorMsg = `File "${file.name}" exceeds the 2MB size limit (${(file.size / (1024*1024)).toFixed(2)}MB). Please upload a file under 2MB.`;
-                    if (window.QCMS && QCMS.toast) QCMS.toast(errorMsg, 'warning');
+                    if (window.OctaQube && OctaQube.toast) OctaQube.toast(errorMsg, 'warning');
                     else alert(errorMsg);
                     fileInput.value = '';
                     return;
@@ -782,12 +782,12 @@ const Stage6 = {
                             btnView.title = file.name;
                             btnView.classList.remove('d-none');
                         }
-                        if (window.QCMS && QCMS.toast) {
-                            QCMS.toast(`File "${file.name}" attached successfully!`, 'success');
+                        if (window.OctaQube && OctaQube.toast) {
+                            OctaQube.toast(`File "${file.name}" attached successfully!`, 'success');
                         }
                     }
                 } catch (err) {
-                    if (window.QCMS && QCMS.toast) QCMS.toast('Upload failed: ' + (err.message || err), 'error');
+                    if (window.OctaQube && OctaQube.toast) OctaQube.toast('Upload failed: ' + (err.message || err), 'error');
                 } finally {
                     btnUpload.disabled = false;
                     btnUpload.innerHTML = '<i data-lucide="upload-cloud" style="width:14px;height:14px;"></i> <span>Upload (Max 2MB)</span>';

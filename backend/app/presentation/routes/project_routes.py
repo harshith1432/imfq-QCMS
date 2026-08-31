@@ -1607,15 +1607,19 @@ def get_project_details(id_or_uid):
                 return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
         elif role == 'Team Leader':
             is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
-            if project.team_leader_id != user.id and project.creator_id != user.id and not is_member:
+            if project.team_leader_id != user.id and project.creator_id != user.id and not is_member and (user.dept and user.dept.name not in ['All', 'N/A'] and project.department_id != user.department_id):
                 return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
         elif role == 'Facilitator':
-            if project.facilitator_id != user.id and (not fac_user or fac_user.id != user.id):
+            if project.facilitator_id and project.facilitator_id != user.id and (not fac_user or fac_user.id != user.id):
                 return jsonify({"msg": "Unauthorized access. You are not the facilitator for this project."}), 403
         elif role == 'Reviewer':
-            # Reviewers can only view projects they are specifically assigned to
-            if project.reviewer_id != user.id:
-                return jsonify({"msg": "Unauthorized access. You are not the reviewer for this project."}), 403
+            # Reviewers can view projects they are specifically assigned to, or unassigned projects in their department/org
+            if project.reviewer_id:
+                if project.reviewer_id != user.id:
+                    return jsonify({"msg": "Unauthorized access. You are not the reviewer for this project."}), 403
+            else:
+                if user.dept and user.dept.name not in ['All', 'N/A'] and project.department_id and project.department_id != user.department_id:
+                    return jsonify({"msg": "Unauthorized access. You are not the reviewer for this project."}), 403
 
 
     # Fetch all stages for tracker
@@ -1968,14 +1972,14 @@ def get_project_activity(id):
     if role in ('Admin', 'CEO', 'SuperAdmin'):
         authorized = True
     elif role == 'Facilitator':
-        authorized = (project.facilitator_id == user.id)
+        authorized = (project.facilitator_id == user.id or not project.facilitator_id)
     elif role == 'Reviewer':
-        authorized = (project.reviewer_id == user.id)
+        authorized = (project.reviewer_id == user.id or not project.reviewer_id or (project.department_id and project.department_id == user.department_id))
     elif role == 'Team Leader':
-        authorized = (project.department_id == user.department_id)
+        authorized = (project.department_id == user.department_id or project.team_leader_id == user.id or project.creator_id == user.id)
     elif role == 'Team Member':
         is_member = ProjectMember.query.filter_by(project_id=id, user_id=user_id).first()
-        authorized = (is_member is not None)
+        authorized = (is_member is not None or project.creator_id == user.id)
         
     if not authorized:
         return jsonify({"msg": "Project not found"}), 404
@@ -2001,9 +2005,10 @@ def update_project(id):
     if not project or (not user_is_sa and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
         
-    # RBAC: Only Admin, SuperAdmin, Project Creator or TL of same dept
+    # RBAC: Only Admin, SuperAdmin, Project Creator, TL or TL of same dept
     can_edit = ((user.role and user.role.name in ('Admin', 'SuperAdmin')) or 
                 project.creator_id == user.id or 
+                project.team_leader_id == user.id or
                 (user.role and user.role.name == 'Team Leader' and project.department_id == user.department_id))
     
     if not can_edit:

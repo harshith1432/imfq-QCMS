@@ -1,5 +1,5 @@
 /**
- * QCMS Frontend Asset Minification, Bundling & CDN Cache-Busting Engine
+ * OctaQube Frontend Asset Minification, Bundling & CDN Cache-Busting Engine
  * 
  * Usage:
  *   node build.js               -> Minifies, bundles & creates hashed assets in assets/dist/
@@ -88,7 +88,7 @@ function getHtmlFiles(dir, fileList = []) {
 }
 	async function build() {
     console.log('==========================================================');
-    console.log(' QCMS Frontend Asset Minification & Bundling Build Engine');
+    console.log(' OctaQube Frontend Asset Minification & Bundling Build Engine');
     console.log('=========================================================');
 
     const args = process.argv.slice(2);

@@ -7,15 +7,15 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | QCMS Enterprise</title>
+    <title>Login | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body {
@@ -209,7 +209,7 @@
                 <div class="brand-text" id="loginBrandHeader"
                     style="font-size: 1.1rem; opacity: 0.8; font-weight: 700; display:flex; align-items:center; gap:8px;">
                     <span id="loginBrandLogoSlot" style="display:flex;align-items:center;"><i data-lucide="shield-check" style="width:20px; height:20px;"></i></span>
-                    <span id="loginBrandShortName">QCMS</span> <small id="loginBrandTagline" style="font-size: 0.75rem; opacity: 0.6; font-weight: 500;">ENTERPRISE</small>
+                    <span id="loginBrandShortName">OctaQube</span> <small id="loginBrandTagline" style="font-size: 0.75rem; opacity: 0.6; font-weight: 500;">ENTERPRISE</small>
                 </div>
             </div>
             <h1 id="loginPlatformTitle">Quality Management System</h1>
@@ -219,7 +219,7 @@
         <!-- Right: Form -->
         <div class="login-form-section">
             <h2>Welcome back</h2>
-            <p class="subtitle" id="loginFormSubtitle">Sign in to your <span id="loginAccountShortName">QCMS</span> account</p>
+            <p class="subtitle" id="loginFormSubtitle">Sign in to your <span id="loginAccountShortName">OctaQube</span> account</p>
 
             <div id="errorMsg" class="ds-toast error mb-4"
                 style="display:none !important; width: 100%; min-width: auto; animation: none;">
@@ -279,7 +279,7 @@
         </div>
     </div>
 
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script src="/assets/dist/enterprise-validator.min.js"></script>
     <script src="/assets/dist/auth.min.js"></script>
     <script>
@@ -306,22 +306,22 @@
             sessionStorage.removeItem('access_token');
             sessionStorage.removeItem('user');
             sessionStorage.removeItem('role_permissions');
-            sessionStorage.removeItem('qcms_authenticated');
+            sessionStorage.removeItem('octaqube_authenticated');
             localStorage.removeItem('token');
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
             localStorage.removeItem('role_permissions');
-            localStorage.removeItem('qcms_authenticated');
+            localStorage.removeItem('octaqube_authenticated');
 
             // Clear remembered credentials only if explicitly logging out or session was terminated
             if (urlParams.get('logout') === 'true' || urlParams.get('reason') === 'session_terminated') {
                 sessionStorage.clear();
-                localStorage.removeItem('qcms_remember_me');
-                localStorage.removeItem('qcms_remembered_username');
+                localStorage.removeItem('octaqube_remember_me');
+                localStorage.removeItem('octaqube_remembered_username');
             } else {
                 // Pre-fill remembered username/email and checkbox
-                const rememberedUser = localStorage.getItem('qcms_remembered_username');
-                const isRemembered = localStorage.getItem('qcms_remember_me') === 'true';
+                const rememberedUser = localStorage.getItem('octaqube_remembered_username');
+                const isRemembered = localStorage.getItem('octaqube_remember_me') === 'true';
                 const userField = document.getElementById('username');
                 const remCheckbox = document.getElementById('rememberMe');
                 if (rememberedUser && userField && !userField.value) {
@@ -453,14 +453,14 @@
                             if (sub) sub.textContent = 'Enter your email to sign in via SSO';
                         } else {
                             formElements.forEach(el => el.style.display = '');
-                            if (sub) sub.textContent = 'Sign in to your QCMS account';
+                            if (sub) sub.textContent = 'Sign in to your OctaQube account';
                         }
                     }
 
                     // Dynamic Document Identity & Platform Branding
                     const b = data.branding || {};
-                    const shortName = b.software_short_name || 'QCMS';
-                    const softName  = b.software_name || 'QCMS Enterprise';
+                    const shortName = b.software_short_name || 'OctaQube';
+                    const softName  = b.software_name || 'OctaQube Enterprise';
                     const platTitle = b.platform_title || 'Quality Management System';
                     const tagline   = b.platform_subtitle || b.tagline || 'ENTERPRISE';
 

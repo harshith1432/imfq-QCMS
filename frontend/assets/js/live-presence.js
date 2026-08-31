@@ -108,7 +108,7 @@ class LivePresenceManager {
                     this.activeCollaborators = users;
                     this.renderPresence(users);
                 } catch (err) {
-                    console.warn('[QCMS Presence] Failed to parse SSE message:', err);
+                    console.warn('[OctaQube Presence] Failed to parse SSE message:', err);
                 }
             };
 

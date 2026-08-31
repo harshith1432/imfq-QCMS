@@ -1519,9 +1519,9 @@ const Stage3 = {
             const match = facilitators.find(f => (f.full_name || f.username || f.name) === defaultVal);
             if (match) {
                 const subText = match.email || match.department || 'Facilitator';
-                selectedText.innerHTML = `<strong class="text-dark">${QCMS.escapeHtml(match.full_name || match.username || match.name)}</strong> <span class="text-xs text-muted">(${QCMS.escapeHtml(subText)})</span>`;
+                selectedText.innerHTML = `<strong class="text-dark">${OctaQube.escapeHtml(match.full_name || match.username || match.name)}</strong> <span class="text-xs text-muted">(${OctaQube.escapeHtml(subText)})</span>`;
             } else {
-                selectedText.innerHTML = `<strong class="text-dark">${QCMS.escapeHtml(defaultVal)}</strong>`;
+                selectedText.innerHTML = `<strong class="text-dark">${OctaQube.escapeHtml(defaultVal)}</strong>`;
             }
         } else {
             selectedText.innerHTML = '<span class="text-muted text-sm">Select Facilitator...</span>';
@@ -1547,10 +1547,10 @@ const Stage3 = {
                 const subInfo = f.email || f.department || 'Methodological Guide';
                 const isSelected = hiddenInput.value === facName;
                 return `
-                    <button type="button" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-2 px-3 ${isSelected ? 'active' : ''}" data-name="${QCMS.escapeHtml(facName)}" data-sub="${QCMS.escapeHtml(subInfo)}">
+                    <button type="button" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-2 px-3 ${isSelected ? 'active' : ''}" data-name="${OctaQube.escapeHtml(facName)}" data-sub="${OctaQube.escapeHtml(subInfo)}">
                         <div>
-                            <div class="fw-bold text-sm mb-0">${QCMS.escapeHtml(facName)}</div>
-                            <div class="text-xs ${isSelected ? 'text-white-50' : 'text-muted'}">${QCMS.escapeHtml(subInfo)}</div>
+                            <div class="fw-bold text-sm mb-0">${OctaQube.escapeHtml(facName)}</div>
+                            <div class="text-xs ${isSelected ? 'text-white-50' : 'text-muted'}">${OctaQube.escapeHtml(subInfo)}</div>
                         </div>
                         ${isSelected ? '<i data-lucide="check" style="width:14px;height:14px;"></i>' : ''}
                     </button>
@@ -1566,7 +1566,7 @@ const Stage3 = {
                     const chosenName = item.getAttribute('data-name');
                     const chosenSub = item.getAttribute('data-sub');
                     hiddenInput.value = chosenName;
-                    selectedText.innerHTML = `<strong class="text-dark">${QCMS.escapeHtml(chosenName)}</strong> <span class="text-xs text-muted">(${QCMS.escapeHtml(chosenSub)})</span>`;
+                    selectedText.innerHTML = `<strong class="text-dark">${OctaQube.escapeHtml(chosenName)}</strong> <span class="text-xs text-muted">(${OctaQube.escapeHtml(chosenSub)})</span>`;
                     menuEl.style.display = 'none';
                 });
             });
@@ -1606,7 +1606,7 @@ const Stage3 = {
             if (id === 's3_bs_facilitator') {
                 const selEl = document.getElementById('s3_bs_facilitator_selected');
                 if (selEl) {
-                    selEl.innerHTML = el.value ? `<strong class="text-dark">${QCMS.escapeHtml(el.value)}</strong>` : '<span class="text-muted text-sm">Select Facilitator...</span>';
+                    selEl.innerHTML = el.value ? `<strong class="text-dark">${OctaQube.escapeHtml(el.value)}</strong>` : '<span class="text-muted text-sm">Select Facilitator...</span>';
                 }
             }
         }

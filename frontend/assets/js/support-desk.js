@@ -1,5 +1,5 @@
 /**
- * QCMS Advanced Support Tickets Platform Front-End Engine
+ * OctaQube Advanced Support Tickets Platform Front-End Engine
  */
 
 const SupportDesk = {
@@ -441,7 +441,7 @@ const SupportDesk = {
                                 </div>
                                 <div class="mb-3">
                                     <label class="ds-label">EMAIL SUBJECT</label>
-                                    <input type="text" class="ds-input" id="sdComposeSubject" required placeholder="Re: Inquiry Response - QCMS Enterprise">
+                                    <input type="text" class="ds-input" id="sdComposeSubject" required placeholder="Re: Inquiry Response - OctaQube Enterprise">
                                 </div>
                                 <div class="mb-3">
                                     <label class="ds-label">MESSAGE CONTENT</label>
@@ -638,8 +638,8 @@ const SupportDesk = {
             if (window.lucide) lucide.createIcons();
 
             // Initialize Bootstrap Tooltips for KPI cards and elements
-            if (window.QCMS && QCMS.initTooltips) {
-                QCMS.initTooltips(view);
+            if (window.OctaQube && OctaQube.initTooltips) {
+                OctaQube.initTooltips(view);
             }
         } catch (e) {
             console.error('Failed to load trial extensions', e);
@@ -736,8 +736,8 @@ const SupportDesk = {
 
             const requestedDays = pending.days ? `+${pending.days} Days` : '—';
             const reasonText = pending.reason ? pending.reason : (o.total_trial_requests > 0 ? `${o.total_trial_requests} extension(s) granted` : 'No extension requests');
-            const reqDate = pending.requested_at ? QCMS.formatDate(pending.requested_at) : '—';
-            const expiryDate = o.trial_ends_at ? QCMS.formatDate(o.trial_ends_at) : '—';
+            const reqDate = pending.requested_at ? OctaQube.formatDate(pending.requested_at) : '—';
+            const expiryDate = o.trial_ends_at ? OctaQube.formatDate(o.trial_ends_at) : '—';
 
             return `
                 <tr>
@@ -888,7 +888,7 @@ const SupportDesk = {
         if (daysSelect === 'custom') {
             const customVal = parseInt(document.getElementById('sdSuperCustomDaysInput')?.value);
             if (isNaN(customVal) || customVal <= 0) {
-                if (window.QCMS && QCMS.toast) QCMS.toast('Please enter a valid positive number of custom days', 'warning');
+                if (window.OctaQube && OctaQube.toast) OctaQube.toast('Please enter a valid positive number of custom days', 'warning');
                 return;
             }
             days = customVal;
@@ -903,8 +903,8 @@ const SupportDesk = {
 
         try {
             const res = await api.put(`/super-admin/companies/${orgId}/trial`, { days });
-            if (window.QCMS && QCMS.toast) {
-                QCMS.toast(res.message || `Successfully extended trial by +${days} days!`, 'success');
+            if (window.OctaQube && OctaQube.toast) {
+                OctaQube.toast(res.message || `Successfully extended trial by +${days} days!`, 'success');
             }
             const modalEl = document.getElementById('sdSuperExtendTrialModal');
             if (modalEl) {
@@ -918,7 +918,7 @@ const SupportDesk = {
                 window.superAdmin.loadOrganizations();
             }
         } catch (e) {
-            if (window.QCMS && QCMS.toast) QCMS.toast(e.message || 'Failed to extend trial', 'error');
+            if (window.OctaQube && OctaQube.toast) OctaQube.toast(e.message || 'Failed to extend trial', 'error');
         } finally {
             if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check-circle" style="width:14px;height:14px;" class="me-1"></i> Grant Extension'; }
         }
@@ -960,8 +960,8 @@ const SupportDesk = {
                     </div>
                 `;
                 if (window.lucide) lucide.createIcons();
-                if (window.QCMS && QCMS.initTooltips) {
-                    QCMS.initTooltips(view);
+                if (window.OctaQube && OctaQube.initTooltips) {
+                    OctaQube.initTooltips(view);
                 }
             }
         } catch (e) {
@@ -1074,7 +1074,7 @@ const SupportDesk = {
                         </td>
                         <td style="padding:5px 8px;white-space:nowrap;">${t.category}</td>
                         <td style="padding:5px 8px;"><span class="ds-badge ${t.priority === 'Critical' || t.priority === 'High' ? 'red' : 'orange'}" style="font-size:10px;padding:2px 6px;">${t.priority}</span></td>
-                        <td style="padding:5px 8px;">${QCMS.statusBadge(t.status)}</td>
+                        <td style="padding:5px 8px;">${OctaQube.statusBadge(t.status)}</td>
                         <td style="max-width:100px;padding:5px 8px;"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:95px;font-size:11px;" title="${t.assigned_engineer}">${t.assigned_engineer}</span></td>
                         <td style="padding:5px 8px;white-space:nowrap;"><button class="ds-btn ds-btn-primary" style="font-size:10.5px;padding:3px 10px;" onclick="SupportDesk.openTicket(${t.id})">Open</button></td>
                     </tr>
@@ -1518,11 +1518,11 @@ const SupportDesk = {
             // Validation
             const data = this.wizards.data;
             if (this.wizards.step === 1 && (!data.organization_id || !data.requester_email)) {
-                QCMS.toast('Please select an organization and enter requester details', 'warning');
+                OctaQube.toast('Please select an organization and enter requester details', 'warning');
                 return;
             }
             if (this.wizards.step === 2 && (!data.subject || !data.description)) {
-                QCMS.toast('Please fill subject and details', 'warning');
+                OctaQube.toast('Please fill subject and details', 'warning');
                 return;
             }
             
@@ -1545,7 +1545,7 @@ const SupportDesk = {
             file_size: file.size,
             mime_type: file.type
         });
-        QCMS.toast('File attached and virus-scanned successfully', 'success');
+        OctaQube.toast('File attached and virus-scanned successfully', 'success');
         this.loadStepContent();
     },
 
@@ -1558,7 +1558,7 @@ const SupportDesk = {
         try {
             const res = await api.post('/support/tickets', this.wizards.data);
             if (res.status === 'success') {
-                QCMS.toast(`Ticket created successfully: ${res.ticket_number}`, 'success');
+                OctaQube.toast(`Ticket created successfully: ${res.ticket_number}`, 'success');
                 // Reset wizard
                 this.wizards.step = 1;
                 this.wizards.data = {
@@ -1569,7 +1569,7 @@ const SupportDesk = {
                 this.switchTab('tickets');
             }
         } catch (e) {
-            QCMS.toast('Failed to ingest ticket request', 'error');
+            OctaQube.toast('Failed to ingest ticket request', 'error');
         }
     },
 
@@ -1614,7 +1614,7 @@ const SupportDesk = {
                 container.innerHTML = list.map(a => {
                     const authorDisplay = a.author_name || 'Super Admin';
                     const authorInitials = authorDisplay.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'SA';
-                    const dateStr = a.created_at ? (typeof QCMS !== 'undefined' && QCMS.formatDate ? QCMS.formatDate(a.created_at) : new Date(a.created_at).toLocaleDateString()) : '';
+                    const dateStr = a.created_at ? (typeof OctaQube !== 'undefined' && OctaQube.formatDate ? OctaQube.formatDate(a.created_at) : new Date(a.created_at).toLocaleDateString()) : '';
                     
                     const canEdit = a.can_edit !== false;
                     const canDelete = a.can_delete !== false;
@@ -1699,7 +1699,7 @@ const SupportDesk = {
     openEditKbModal(articleId) {
         const article = (this._cachedKbArticles || []).find(a => a.id === articleId);
         if (!article) {
-            QCMS.toast('Article details not found', 'error');
+            OctaQube.toast('Article details not found', 'error');
             return;
         }
 
@@ -1739,7 +1739,7 @@ const SupportDesk = {
         const is_internal = false;
 
         if (!title || !content || !category) {
-            QCMS.toast('Title, category, and content are required.', 'warning');
+            OctaQube.toast('Title, category, and content are required.', 'warning');
             return;
         }
 
@@ -1771,7 +1771,7 @@ const SupportDesk = {
             }
 
             if (res && (res.status === 'success' || res.article_id)) {
-                QCMS.toast(res.message || (articleId ? 'Knowledge article updated successfully!' : 'Knowledge article published successfully!'), 'success');
+                OctaQube.toast(res.message || (articleId ? 'Knowledge article updated successfully!' : 'Knowledge article published successfully!'), 'success');
                 const modalEl = document.getElementById('sdCreateKbModal');
                 if (modalEl) {
                     const modal = bootstrap.Modal.getInstance(modalEl);
@@ -1779,11 +1779,11 @@ const SupportDesk = {
                 }
                 await this.loadKB();
             } else {
-                QCMS.toast(res.message || 'Failed to save article', 'error');
+                OctaQube.toast(res.message || 'Failed to save article', 'error');
             }
         } catch (e) {
             console.error('Error saving KB article:', e);
-            QCMS.toast(e.message || 'Failed to save article', 'error');
+            OctaQube.toast(e.message || 'Failed to save article', 'error');
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -1802,14 +1802,14 @@ const SupportDesk = {
         try {
             const res = await api.delete(`/support/knowledge/${articleId}`);
             if (res && res.status === 'success') {
-                QCMS.toast('Knowledge article deleted successfully.', 'success');
+                OctaQube.toast('Knowledge article deleted successfully.', 'success');
                 await this.loadKB();
             } else {
-                QCMS.toast(res.message || 'Failed to delete article', 'error');
+                OctaQube.toast(res.message || 'Failed to delete article', 'error');
             }
         } catch (e) {
             console.error('Error deleting KB article:', e);
-            QCMS.toast(e.message || 'Failed to delete article', 'error');
+            OctaQube.toast(e.message || 'Failed to delete article', 'error');
         }
     },
 
@@ -1824,7 +1824,7 @@ const SupportDesk = {
                 document.getElementById('sdModalTicketNumber').textContent = t.ticket_number;
                 document.getElementById('sdModalSubject').textContent = t.subject;
                 document.getElementById('sdModalRequester').textContent = `Raised by: ${t.requester.name} (${t.requester.email})`;
-                document.getElementById('sdModalDate').textContent = `Raised: ${QCMS.formatDate(t.created_at)}`;
+                document.getElementById('sdModalDate').textContent = `Raised: ${OctaQube.formatDate(t.created_at)}`;
                 document.getElementById('sdModalDesc').textContent = t.description;
 
                 // Set drop downs
@@ -1865,8 +1865,8 @@ const SupportDesk = {
                 const slaBlock = document.getElementById('sdModalSlaBlock');
                 if (t.sla && t.sla.first_response_due) {
                     slaBlock.innerHTML = `
-                        <div class="text-xs text-white">First Response Due: <span class="fw-bold">${QCMS.formatDate(t.sla.first_response_due)}</span></div>
-                        <div class="text-xs text-secondary mt-1">Resolution Due: <span class="fw-bold">${QCMS.formatDate(t.sla.resolution_due)}</span></div>
+                        <div class="text-xs text-white">First Response Due: <span class="fw-bold">${OctaQube.formatDate(t.sla.first_response_due)}</span></div>
+                        <div class="text-xs text-secondary mt-1">Resolution Due: <span class="fw-bold">${OctaQube.formatDate(t.sla.resolution_due)}</span></div>
                         <div class="text-xxs text-warning fw-bold mt-1.5">Timer Status: ${t.sla.is_paused ? 'PAUSED (Awaiting Customer)' : 'RUNNING'}</div>
                     `;
                 } else {
@@ -1879,7 +1879,7 @@ const SupportDesk = {
                 modal.show();
             }
         } catch (e) {
-            QCMS.toast('Failed to load ticket details', 'error');
+            OctaQube.toast('Failed to load ticket details', 'error');
         }
     },
 
@@ -1926,7 +1926,7 @@ const SupportDesk = {
                                 <span style="font-size:12px;font-weight:700;color:var(--ds-text-main,#f1f5f9);white-space:nowrap;">${c.user}</span>
                                 ${internalBadge}
                             </div>
-                            <span style="font-size:11px;color:var(--ds-text-secondary,#94a3b8);white-space:nowrap;flex-shrink:0;">${QCMS.formatDate(c.created_at)}</span>
+                            <span style="font-size:11px;color:var(--ds-text-secondary,#94a3b8);white-space:nowrap;flex-shrink:0;">${OctaQube.formatDate(c.created_at)}</span>
                         </div>
                         <p style="font-size:13px;color:var(--ds-text-secondary,#cbd5e1);margin:0;white-space:pre-wrap;line-height:1.6;word-break:break-word;">${c.content}</p>
                         ${attHtml}
@@ -1953,7 +1953,7 @@ const SupportDesk = {
         const allowedExts = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp'];
         const ext = file.name.toLowerCase().split('.').pop();
         if (!allowedExts.includes(ext)) {
-            QCMS.toast('Invalid file type. Only PDF and images (PNG, JPG, GIF, WEBP) are allowed.', 'warning');
+            OctaQube.toast('Invalid file type. Only PDF and images (PNG, JPG, GIF, WEBP) are allowed.', 'warning');
             input.value = '';
             if (el) el.innerHTML = '';
             return;
@@ -1982,12 +1982,12 @@ const SupportDesk = {
                     if (window.lucide) lucide.createIcons();
                 }
             } else {
-                QCMS.toast(result.message || result.error || 'Upload failed', 'error');
+                OctaQube.toast(result.message || result.error || 'Upload failed', 'error');
                 input.value = '';
                 if (el) el.innerHTML = '';
             }
         } catch (e) {
-            QCMS.toast('Upload failed: ' + (e.message || 'Server network error'), 'error');
+            OctaQube.toast('Upload failed: ' + (e.message || 'Server network error'), 'error');
             input.value = '';
             if (el) el.innerHTML = '';
         }
@@ -1998,7 +1998,7 @@ const SupportDesk = {
         const isInternal = document.getElementById('cTypeInternal').checked;
 
         if (!content) {
-            QCMS.toast('Please enter response text', 'warning');
+            OctaQube.toast('Please enter response text', 'warning');
             return;
         }
 
@@ -2009,7 +2009,7 @@ const SupportDesk = {
             }
             const res = await api.post(`/support/tickets/${this.currentTicketId}/comments`, payload);
             if (res.status === 'success') {
-                QCMS.toast('Response submitted successfully', 'success');
+                OctaQube.toast('Response submitted successfully', 'success');
                 document.getElementById('sdNewCommentContent').value = '';
                 const fileInput = document.getElementById('sdCommentFile');
                 if (fileInput) fileInput.value = '';
@@ -2019,7 +2019,7 @@ const SupportDesk = {
                 this.openTicket(this.currentTicketId);
             }
         } catch (e) {
-            QCMS.toast('Failed to save comment', 'error');
+            OctaQube.toast('Failed to save comment', 'error');
         }
     },
 
@@ -2029,11 +2029,11 @@ const SupportDesk = {
             body[field] = value;
             const res = await api.put(`/support/tickets/${this.currentTicketId}`, body);
             if (res.status === 'success') {
-                QCMS.toast(`Ticket ${field} updated successfully`, 'success');
+                OctaQube.toast(`Ticket ${field} updated successfully`, 'success');
                 this.loadTickets();
             }
         } catch (e) {
-            QCMS.toast(`Failed to update ${field}`, 'error');
+            OctaQube.toast(`Failed to update ${field}`, 'error');
         }
     },
 
@@ -2045,12 +2045,12 @@ const SupportDesk = {
                 reason: "Manual escalation triggered by Support Center"
             });
             if (res.status === 'success') {
-                QCMS.toast('Ticket escalated successfully', 'success');
+                OctaQube.toast('Ticket escalated successfully', 'success');
                 this.openTicket(this.currentTicketId);
                 this.loadTickets();
             }
         } catch (e) {
-            QCMS.toast('Escalation failed', 'error');
+            OctaQube.toast('Escalation failed', 'error');
         }
     },
 
@@ -2062,10 +2062,10 @@ const SupportDesk = {
                 const ai = res.ai_analysis;
                 // Seed input with suggested response
                 document.getElementById('sdNewCommentContent').value = ai.suggested_response;
-                QCMS.toast(`AI Sentiment: ${ai.sentiment} | Next Best Action populated`, 'info');
+                OctaQube.toast(`AI Sentiment: ${ai.sentiment} | Next Best Action populated`, 'info');
             }
         } catch (e) {
-            QCMS.toast('Failed to query AI assistant service', 'error');
+            OctaQube.toast('Failed to query AI assistant service', 'error');
         }
     },
 
@@ -2088,7 +2088,7 @@ const SupportDesk = {
         const feedback = document.getElementById('sdCSATFeedback').value.trim();
 
         if (!rating) {
-            QCMS.toast('Please select a star rating', 'warning');
+            OctaQube.toast('Please select a star rating', 'warning');
             return;
         }
 
@@ -2098,13 +2098,13 @@ const SupportDesk = {
                 feedback: feedback
             });
             if (res.status === 'success') {
-                QCMS.toast('Thank you for your rating!', 'success');
+                OctaQube.toast('Thank you for your rating!', 'success');
                 bootstrap.Modal.getInstance(document.getElementById('sdCSATModal')).hide();
                 bootstrap.Modal.getInstance(document.getElementById('sdTicketDetailModal')).hide();
                 this.loadTickets();
             }
         } catch (e) {
-            QCMS.toast('Failed to save CSAT review', 'error');
+            OctaQube.toast('Failed to save CSAT review', 'error');
         }
     },
 
@@ -2143,7 +2143,7 @@ const SupportDesk = {
                             <div class="flex-grow-1 min-w-0">
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-1">
                                     <span class="text-xs fw-bold text-main" style="color: var(--ds-text-main);">${a.action}</span>
-                                    <span class="text-xxs text-muted">${QCMS.formatDate(a.created_at)}</span>
+                                    <span class="text-xxs text-muted">${OctaQube.formatDate(a.created_at)}</span>
                                 </div>
                                 <div class="text-xxs text-secondary mt-0.5" style="color: var(--ds-text-secondary);">
                                     By: <span class="fw-semibold text-main" style="color: var(--ds-text-main);">${a.user}</span>
@@ -2159,13 +2159,13 @@ const SupportDesk = {
                 if (window.lucide) lucide.createIcons();
             }
         } catch (e) {
-            QCMS.toast('Could not fetch audit trail', 'error');
+            OctaQube.toast('Could not fetch audit trail', 'error');
         }
     },
 
     async exportCSV() {
         try {
-            QCMS.toast('Preparing CSV file export...', 'info');
+            OctaQube.toast('Preparing CSV file export...', 'info');
             const res = await api.post('/support/tickets/export', {});
             const csvData = (res && res.csv) ? res.csv : (typeof res === 'string' ? res : JSON.stringify(res));
             const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
@@ -2177,10 +2177,10 @@ const SupportDesk = {
             link.click();
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
-            QCMS.toast('Export downloaded successfully', 'success');
+            OctaQube.toast('Export downloaded successfully', 'success');
         } catch (e) {
             console.error('CSV Export Error:', e);
-            QCMS.toast('Failed to generate export file', 'error');
+            OctaQube.toast('Failed to generate export file', 'error');
         }
     },
 
@@ -2308,7 +2308,7 @@ const SupportDesk = {
                                         <h6 class="fw-bold mb-0 text-main fs-6">Sales Leads Email Redirection</h6>
                                         <span id="salesNotificationStatusBadge" class="badge rounded-pill text-xxs px-2.5 py-1 ${isForwardingActive ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle'}">
                                             <i data-lucide="${isForwardingActive ? 'check-circle' : 'slash'}" style="width:10px;height:10px;display:inline;" class="me-1"></i>
-                                            ${isForwardingActive ? `Forwarding to: ${QCMS.escapeHtml(this.salesSettings.sales_notification_email)}` : 'Dashboard Only (Email Off)'}
+                                            ${isForwardingActive ? `Forwarding to: ${OctaQube.escapeHtml(this.salesSettings.sales_notification_email)}` : 'Dashboard Only (Email Off)'}
                                         </span>
                                     </div>
                                     <p class="text-xs text-muted mb-0 mt-1" style="line-height: 1.4;">
@@ -2331,7 +2331,7 @@ const SupportDesk = {
                                 <!-- Email Address Input & Save Button Group -->
                                 <div class="d-flex align-items-center gap-2">
                                     <div style="width: 250px;">
-                                        <input type="email" class="ds-input text-xs" style="padding-left: 12px; padding-right: 12px; height: 36px; border-radius: 8px;" id="salesNotificationEmailInput" placeholder="sales-team@company.com" value="${QCMS.escapeHtml(this.salesSettings.sales_notification_email || '')}" onkeydown="if(event.key==='Enter') SupportDesk.saveSalesNotificationSettings()">
+                                        <input type="email" class="ds-input text-xs" style="padding-left: 12px; padding-right: 12px; height: 36px; border-radius: 8px;" id="salesNotificationEmailInput" placeholder="sales-team@company.com" value="${OctaQube.escapeHtml(this.salesSettings.sales_notification_email || '')}" onkeydown="if(event.key==='Enter') SupportDesk.saveSalesNotificationSettings()">
                                     </div>
                                     <button class="ds-btn ds-btn-primary ds-btn-sm d-flex align-items-center gap-1.5 text-nowrap" id="btnSaveSalesNotificationSettings" onclick="SupportDesk.saveSalesNotificationSettings()" style="height: 36px; background: #6366f1; border-color: #6366f1; border-radius: 8px; font-weight: 600; padding: 0 14px;">
                                         <i data-lucide="save" style="width: 14px; height: 14px;"></i> Save Email
@@ -2506,7 +2506,7 @@ const SupportDesk = {
         const cachedItem = (this.enquiriesList || []).find(x => x.id === id);
         
         const populateAndShow = (item) => {
-            if (!item) return QCMS.toast('Enquiry not found', 'error');
+            if (!item) return OctaQube.toast('Enquiry not found', 'error');
             this.currentEnquiryData = item;
 
             const elId = document.getElementById('sdComposeEnquiryId');
@@ -2518,7 +2518,7 @@ const SupportDesk = {
             if (elId) elId.value = item.id;
             if (elEmail) elEmail.value = item.email || '';
             if (elName) elName.value = `${item.name} (${item.company_name || 'Prospect'})`;
-            if (elSub) elSub.value = `Response regarding your inquiry - ${item.company_name || 'QCMS'}`;
+            if (elSub) elSub.value = `Response regarding your inquiry - ${item.company_name || 'OctaQube'}`;
             if (elMsg) elMsg.value = `Dear ${item.name},\n\nThank you for reaching out to us regarding ${item.company_name}.\n\n`;
 
             const modalEl = this.ensureModalInBody('sdComposeEmailModal');
@@ -2538,7 +2538,7 @@ const SupportDesk = {
                 populateAndShow(item);
             }).catch(err => {
                 console.error('Failed to load enquiry details for compose email:', err);
-                QCMS.toast('Failed to load enquiry details', 'error');
+                OctaQube.toast('Failed to load enquiry details', 'error');
             });
         }
     },
@@ -2560,7 +2560,7 @@ const SupportDesk = {
         const message = document.getElementById('sdComposeMessage').value.trim();
 
         if (!toEmail || !subject || !message) {
-            return QCMS.toast('Please fill in all required fields (Recipient, Subject, Message).', 'warning');
+            return OctaQube.toast('Please fill in all required fields (Recipient, Subject, Message).', 'warning');
         }
 
         const btn = document.getElementById('btnSendComposeEmail');
@@ -2578,7 +2578,7 @@ const SupportDesk = {
             });
 
             if (res && res.status === 'success') {
-                QCMS.toast(res.message || 'Email successfully sent using Support Email!', 'success');
+                OctaQube.toast(res.message || 'Email successfully sent using Support Email!', 'success');
                 const composeModalEl = document.getElementById('sdComposeEmailModal');
                 if (composeModalEl) {
                     const modalInstance = bootstrap.Modal.getInstance(composeModalEl);
@@ -2586,11 +2586,11 @@ const SupportDesk = {
                 }
                 this.loadEnquiriesList();
             } else {
-                QCMS.toast(res?.message || 'Failed to send email.', 'error');
+                OctaQube.toast(res?.message || 'Failed to send email.', 'error');
             }
         } catch (err) {
             console.error('Failed to send enquiry email:', err);
-            QCMS.toast(err.message || 'Failed to send email.', 'error');
+            OctaQube.toast(err.message || 'Failed to send email.', 'error');
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -2630,7 +2630,7 @@ const SupportDesk = {
             const items = res.data || [];
             const item = items.find(x => x.id === id);
             if (!item) {
-                QCMS.toast('Enquiry record not found', 'error');
+                OctaQube.toast('Enquiry record not found', 'error');
                 return;
             }
 
@@ -2649,7 +2649,7 @@ const SupportDesk = {
             document.getElementById('enqModalNotes').value = item.notes || '';
 
             const emailBtn = document.getElementById('enqModalEmailBtn');
-            if (emailBtn) emailBtn.href = `mailto:${item.email}?subject=QCMS%20Enterprise%20Inquiry%20Follow-up`;
+            if (emailBtn) emailBtn.href = `mailto:${item.email}?subject=OctaQube%20Enterprise%20Inquiry%20Follow-up`;
 
             let badgeClass = 'blue';
             if (item.status === 'New') badgeClass = 'red';
@@ -2664,7 +2664,7 @@ const SupportDesk = {
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
         } catch (e) {
-            QCMS.toast('Failed to load enquiry details', 'error');
+            OctaQube.toast('Failed to load enquiry details', 'error');
         }
     },
 
@@ -2673,7 +2673,7 @@ const SupportDesk = {
         const newStatus = document.getElementById('enqModalStatusSelect').value;
         try {
             await api.put(`/support/enquiries/${this.currentEnquiryId}`, { status: newStatus });
-            QCMS.toast('Enquiry status updated successfully', 'success');
+            OctaQube.toast('Enquiry status updated successfully', 'success');
             
             let badgeClass = 'blue';
             if (newStatus === 'New') badgeClass = 'red';
@@ -2685,7 +2685,7 @@ const SupportDesk = {
 
             await this.loadEnquiriesList();
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to update status', 'error');
+            OctaQube.toast(e.message || 'Failed to update status', 'error');
         }
     },
 
@@ -2694,10 +2694,10 @@ const SupportDesk = {
         const notes = document.getElementById('enqModalNotes').value;
         try {
             await api.put(`/support/enquiries/${this.currentEnquiryId}`, { notes });
-            QCMS.toast('Enquiry notes saved successfully', 'success');
+            OctaQube.toast('Enquiry notes saved successfully', 'success');
             await this.loadEnquiriesList();
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to save notes', 'error');
+            OctaQube.toast(e.message || 'Failed to save notes', 'error');
         }
     },
 
@@ -2706,13 +2706,13 @@ const SupportDesk = {
         if (!confirm('Are you sure you want to delete this sales enquiry?')) return;
         try {
             await api.delete(`/support/enquiries/${this.currentEnquiryId}`);
-            QCMS.toast('Enquiry deleted successfully', 'success');
+            OctaQube.toast('Enquiry deleted successfully', 'success');
             const modalEl = document.getElementById('sdEnquiryDetailModal');
             const modal = bootstrap.Modal.getInstance(modalEl);
             if (modal) modal.hide();
             await this.loadEnquiriesList();
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to delete enquiry', 'error');
+            OctaQube.toast(e.message || 'Failed to delete enquiry', 'error');
         }
     },
 
@@ -2720,10 +2720,10 @@ const SupportDesk = {
         if (!confirm('Are you sure you want to delete this sales enquiry?')) return;
         try {
             await api.delete(`/support/enquiries/${id}`);
-            QCMS.toast('Enquiry deleted successfully', 'success');
+            OctaQube.toast('Enquiry deleted successfully', 'success');
             await this.loadEnquiriesList();
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to delete enquiry', 'error');
+            OctaQube.toast(e.message || 'Failed to delete enquiry', 'error');
         }
     },
 
@@ -2732,7 +2732,7 @@ const SupportDesk = {
         const emailVal = (emailInput?.value || '').trim();
         
         if (checked && !emailVal) {
-            QCMS.toast('Please enter a destination sales email address before enabling forwarding.', 'warning');
+            OctaQube.toast('Please enter a destination sales email address before enabling forwarding.', 'warning');
             if (emailInput) emailInput.focus();
             return;
         }
@@ -2751,7 +2751,7 @@ const SupportDesk = {
         // Validate email format if provided
         if (emailVal) {
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-                QCMS.toast('Please enter a valid email address format (e.g. sales@company.com).', 'warning');
+                OctaQube.toast('Please enter a valid email address format (e.g. sales@company.com).', 'warning');
                 if (emailInput) emailInput.focus();
                 return;
             }
@@ -2783,16 +2783,16 @@ const SupportDesk = {
                 if (badge) {
                     const isForwarding = this.salesSettings.sales_notification_enabled && this.salesSettings.sales_notification_email;
                     badge.className = `badge rounded-pill text-xxs px-2.5 py-1 ${isForwarding ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle'}`;
-                    badge.innerHTML = `<i data-lucide="${isForwarding ? 'check-circle' : 'slash'}" style="width:10px;height:10px;display:inline;" class="me-1"></i> ${isForwarding ? `Forwarding to: ${QCMS.escapeHtml(this.salesSettings.sales_notification_email)}` : 'Dashboard Only (Email Off)'}`;
+                    badge.innerHTML = `<i data-lucide="${isForwarding ? 'check-circle' : 'slash'}" style="width:10px;height:10px;display:inline;" class="me-1"></i> ${isForwarding ? `Forwarding to: ${OctaQube.escapeHtml(this.salesSettings.sales_notification_email)}` : 'Dashboard Only (Email Off)'}`;
                 }
 
-                QCMS.toast(res.message || 'Sales lead notification email settings saved!', 'success');
+                OctaQube.toast(res.message || 'Sales lead notification email settings saved!', 'success');
                 if (window.lucide) lucide.createIcons();
             } else {
                 throw new Error((res && res.message) || 'Failed to update settings');
             }
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to save sales notification settings.', 'error');
+            OctaQube.toast(e.message || 'Failed to save sales notification settings.', 'error');
         } finally {
             if (btn) {
                 btn.disabled = false;

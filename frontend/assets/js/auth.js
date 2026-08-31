@@ -99,15 +99,15 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                 localStorage.setItem('token', data.access_token);
                 localStorage.setItem('access_token', data.access_token);
             }
-            sessionStorage.setItem('qcms_authenticated', 'true');
-            localStorage.setItem('qcms_authenticated', 'true');
+            sessionStorage.setItem('octaqube_authenticated', 'true');
+            localStorage.setItem('octaqube_authenticated', 'true');
 
             if (rememberMe) {
-                localStorage.setItem('qcms_remember_me', 'true');
-                localStorage.setItem('qcms_remembered_username', username);
+                localStorage.setItem('octaqube_remember_me', 'true');
+                localStorage.setItem('octaqube_remembered_username', username);
             } else {
-                localStorage.removeItem('qcms_remember_me');
-                localStorage.removeItem('qcms_remembered_username');
+                localStorage.removeItem('octaqube_remember_me');
+                localStorage.removeItem('octaqube_remembered_username');
             }
 
             const userPayload = JSON.stringify({
@@ -149,12 +149,12 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             }
 
             const now = Date.now().toString();
-            sessionStorage.setItem('qcms_last_activity', now);
-            localStorage.setItem('qcms_last_activity', now);
+            sessionStorage.setItem('octaqube_last_activity', now);
+            localStorage.setItem('octaqube_last_activity', now);
             
             // Sync global language
             if (data.language) {
-                localStorage.setItem('qcms-language', data.language);
+                localStorage.setItem('octaqube-language', data.language);
                 if (window.i18n) window.i18n.setLanguage(data.language);
             }
 
@@ -306,7 +306,7 @@ async function logout() {
     } catch (_) {}
     try {
         sessionStorage.clear();
-        localStorage.removeItem('qcms_authenticated');
+        localStorage.removeItem('octaqube_authenticated');
         localStorage.removeItem('token');
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
@@ -317,7 +317,7 @@ async function logout() {
 }
 
 function checkAuth() {
-    const isAuthed = sessionStorage.getItem('qcms_authenticated') === 'true' || localStorage.getItem('qcms_authenticated') === 'true';
+    const isAuthed = sessionStorage.getItem('octaqube_authenticated') === 'true' || localStorage.getItem('octaqube_authenticated') === 'true';
     const path = window.location.pathname;
 
     // Improved detection including extensionless paths
@@ -345,7 +345,7 @@ function checkAuth() {
 
 // Redirect if already logged in on login/register page
 function handleStaticRedirects() {
-    const isAuthed = sessionStorage.getItem('qcms_authenticated') === 'true' || localStorage.getItem('qcms_authenticated') === 'true';
+    const isAuthed = sessionStorage.getItem('octaqube_authenticated') === 'true' || localStorage.getItem('octaqube_authenticated') === 'true';
     const path = window.location.pathname;
     const isLoginPage = path.includes('login.html') || (path.endsWith('/login'));
     const isRegisterPage = path.includes('register.html') || (path.endsWith('/register'));
@@ -363,8 +363,8 @@ function handleStaticRedirects() {
                 else if (role === 'CEO') window.location.href = '/dashboard/dashboard-ceo.html';
                 else window.location.href = '/dashboard/dashboard-team-member.html';
             } else {
-                sessionStorage.removeItem('qcms_authenticated');
-                localStorage.removeItem('qcms_authenticated');
+                sessionStorage.removeItem('octaqube_authenticated');
+                localStorage.removeItem('octaqube_authenticated');
                 sessionStorage.removeItem('user');
                 localStorage.removeItem('user');
             }

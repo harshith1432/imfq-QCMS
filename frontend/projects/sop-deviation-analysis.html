@@ -6,12 +6,12 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOP Deviation Analysis | QCMS Enterprise</title>
+    <title>SOP Deviation Analysis | OctaQube Enterprise</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts Outfit & Inter -->
@@ -19,8 +19,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Custom styling matching premium aesthetics -->
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
-    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -118,7 +118,7 @@
 
     <!-- API and JS logic -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
         let projectId = null;
         let type = 'sop';
@@ -168,7 +168,7 @@
         };
 
         document.addEventListener('DOMContentLoaded', async () => {
-            QCMS.init();
+            OctaQube.init();
             if (window.lucide) lucide.createIcons();
 
             const params = new URLSearchParams(window.location.search);
@@ -176,13 +176,13 @@
             type = params.get('type') || 'sop';
 
             if (!projectId) {
-                QCMS.toast('Project ID is missing', 'error');
+                OctaQube.toast('Project ID is missing', 'error');
                 return;
             }
 
             // Customize UI text based on type
             const config = typeConfig[type] || typeConfig.sop;
-            document.title = `${config.title} | QCMS Enterprise`;
+            document.title = `${config.title} | OctaQube Enterprise`;
             
             const titleEl = document.getElementById('deviationTitle');
             const subEl = document.getElementById('deviationSub');
@@ -215,7 +215,7 @@
                 document.getElementById('formCard').classList.remove('d-none');
             } catch (e) {
                 console.error("Failed to load stage 2 data", e);
-                QCMS.toast('Failed to load deviation log data', 'error');
+                OctaQube.toast('Failed to load deviation log data', 'error');
             }
         }
 
@@ -224,7 +224,7 @@
             const preventive = document.getElementById('preventiveActions').value.trim();
 
             if (!why || !preventive) {
-                QCMS.toast('Please fill in both fields before saving.', 'warning');
+                OctaQube.toast('Please fill in both fields before saving.', 'warning');
                 return;
             }
 
@@ -252,11 +252,11 @@
                 // 2. Save to ProjectWorkflow (for project-details page draft sync)
                 await api.post(`/projects/${projectId}/stage/2/save`, payload);
 
-                QCMS.toast(`${config.title} saved successfully!`, 'success');
+                OctaQube.toast(`${config.title} saved successfully!`, 'success');
                 setTimeout(() => goBack(), 1000);
             } catch (e) {
                 console.error("Failed to save deviation details", e);
-                QCMS.toast('Failed to save deviation analysis details', 'error');
+                OctaQube.toast('Failed to save deviation analysis details', 'error');
             }
         }
 

@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "version": "1.0.0",
-  "description": "The QCMS frontend is a lightweight, responsive Single Page Application (SPA) architecture built with vanilla ES6+ JavaScript, HTML5, and CSS3. It prioritizes performance and maintainability without the overhead of heavy frameworks.",
+  "description": "The OctaQube frontend is a lightweight, responsive Single Page Application (SPA) architecture built with vanilla ES6+ JavaScript, HTML5, and CSS3. It prioritizes performance and maintainability without the overhead of heavy frameworks.",
   "main": "index.js",
   "directories": {
     "doc": "docs"

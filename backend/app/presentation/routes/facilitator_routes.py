@@ -358,10 +358,14 @@ def approve_stage8_submission(project_id):
     if project.current_stage != 8:
         return jsonify({"msg": f"Project is not in Stage 8 (current stage: {project.current_stage})."}), 400
 
-    if project.status != 'Stage 8 Submitted':
-        return jsonify({"msg": f"Project submission not pending approval (current status: '{project.status}')."}), 400
+    if project.status in ('Closed', 'Rejected', 'Stage 1 Rejected'):
+        return jsonify({"msg": f"Project is already {project.status.lower()} and cannot be approved."}), 400
 
-    project.status = 'Stage 8 Approved'
+    if project.status != 'Impact Approved':
+        project.status = 'Stage 8 Approved'
+    tracker = ProjectStageTracker.query.filter_by(project_id=project_id, stage_number=8).first()
+    if tracker:
+        tracker.status = 'Approved'
     log_action(user.org_id, user.id, "Approved Stage 8 Submission", project_id)
     db.session.commit()
     return jsonify({"msg": "Stage 8 submission approved. Proceed to Impact Review."}), 200

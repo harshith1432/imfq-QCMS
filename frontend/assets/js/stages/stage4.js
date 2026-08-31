@@ -900,7 +900,7 @@ const Stage4 = {
         const s3Causes = this.extractStage3Causes();
         if (!s3Causes.length) {
             if (notify) {
-                if (window.QCMS && QCMS.toast) QCMS.toast('No root causes found in Stage 3.5 to fetch.', 'info');
+                if (window.OctaQube && OctaQube.toast) OctaQube.toast('No root causes found in Stage 3.5 to fetch.', 'info');
                 else alert('No root causes found in Stage 3.5 to fetch.');
             }
             return;
@@ -928,8 +928,8 @@ const Stage4 = {
                     status: 'In Progress'
                 });
             });
-            if (notify && window.QCMS && QCMS.toast) {
-                QCMS.toast(`Successfully fetched ${s3Causes.length} root cause(s) from Stage 3.5!`, 'success');
+            if (notify && window.OctaQube && OctaQube.toast) {
+                OctaQube.toast(`Successfully fetched ${s3Causes.length} root cause(s) from Stage 3.5!`, 'success');
             }
         } else {
             let addedCount = 0;
@@ -945,9 +945,9 @@ const Stage4 = {
             });
             if (notify) {
                 if (addedCount > 0) {
-                    if (window.QCMS && QCMS.toast) QCMS.toast(`Fetched ${addedCount} new cause(s) from Stage 3.5.`, 'success');
+                    if (window.OctaQube && OctaQube.toast) OctaQube.toast(`Fetched ${addedCount} new cause(s) from Stage 3.5.`, 'success');
                 } else {
-                    if (window.QCMS && QCMS.toast) QCMS.toast('All root causes from Stage 3.5 are already present in Section 4.1.', 'info');
+                    if (window.OctaQube && OctaQube.toast) OctaQube.toast('All root causes from Stage 3.5 are already present in Section 4.1.', 'info');
                 }
             }
         }
@@ -1155,7 +1155,7 @@ const Stage4 = {
         const conf = cleanVal(d.confidence_level || d.confidence || d.conf_level);
         const conc = cleanVal(d.conclusion || d.result);
         const cleanConf = String(conf).replace('%', '').trim();
-        const esc = (s) => (window.QCMS && QCMS.escapeHtml) ? QCMS.escapeHtml(String(s)) : String(s).replace(/"/g, '&quot;');
+        const esc = (s) => (window.OctaQube && OctaQube.escapeHtml) ? OctaQube.escapeHtml(String(s)) : String(s).replace(/"/g, '&quot;');
 
         this.addRowTemplate('s4_validationContainer', d, `
             <div class="col-3"><input type="text" class="ds-input r-test" placeholder="e.g. Chi-Square Test" value="${esc(testType)}" required></div>

@@ -101,8 +101,8 @@ const api = {
         const isWriteMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
         // Global Feature Engine Module Access Check across all 144 modules
-        if (window.QCMS_MODULE_MAP && window.FeatureEngine && !endpoint.includes('/feature-engine/')) {
-            const moduleCode = window.QCMS_MODULE_MAP.findByRoute(endpoint);
+        if (window.OctaQube_MODULE_MAP && window.FeatureEngine && !endpoint.includes('/feature-engine/')) {
+            const moduleCode = window.OctaQube_MODULE_MAP.findByRoute(endpoint);
             if (moduleCode && FeatureEngine.isEnabled(moduleCode) === false) {
                 console.warn(`[API Guard] Blocking request to disabled module: ${moduleCode}`);
                 FeatureEngine.showDisabledModuleNotice(moduleCode);
@@ -216,8 +216,8 @@ const api = {
                         const errData = await response.clone().json().catch(() => ({}));
                         if (endpoint.includes('/auth/me') || endpoint.includes('/auth/profile') || errData.session_terminated || errData.message?.includes('Signature has expired') || errData.message?.includes('Invalid token')) {
                             console.warn('[API] 401 Unauthorized session for:', endpoint, '— redirecting to login.');
-                            sessionStorage.removeItem('qcms_authenticated');
-                            localStorage.removeItem('qcms_authenticated');
+                            sessionStorage.removeItem('octaqube_authenticated');
+                            localStorage.removeItem('octaqube_authenticated');
                             sessionStorage.removeItem('user');
                             localStorage.removeItem('user');
                             sessionStorage.removeItem('token');
@@ -240,8 +240,8 @@ const api = {
                 }
 
                 if ((response.status === 403 || response.status === 503) && (data.code === 'MODULE_UNDER_MAINTENANCE' || (data.message && data.message.includes('under maintenance')))) {
-                    if (window.QCMS && typeof window.QCMS.toast === 'function') {
-                        window.QCMS.toast('Currently this feature is under maintenance.', 'warning');
+                    if (window.OctaQube && typeof window.OctaQube.toast === 'function') {
+                        window.OctaQube.toast('Currently this feature is under maintenance.', 'warning');
                     } else if (typeof window.api?.showNotification === 'function') {
                         window.api.showNotification('Currently this feature is under maintenance.', 'warning');
                     }
@@ -417,8 +417,8 @@ const api = {
     deletePlant: function(id) { return this.delete(`/admin/plants/${id}`); },
 
     showNotification: function(message, type = 'info') {
-        if (window.QCMS && QCMS.toast) {
-            QCMS.toast(message, type);
+        if (window.OctaQube && OctaQube.toast) {
+            OctaQube.toast(message, type);
         } else {
             console.log(`[Notification] ${type}: ${message}`);
             // Fallback for pages without components.js
@@ -519,7 +519,7 @@ window.printElementContent = function(elementId, title = 'Document') {
 };
 
 /**
- * Universal QCMS Pagination Component
+ * Universal OctaQube Pagination Component
  */
 if (typeof window !== 'undefined') {
     window.createStandardPagination = function({
@@ -543,7 +543,7 @@ if (typeof window !== 'undefined') {
 
         const elementId = (typeof containerId === 'string' && containerId)
             ? containerId
-            : (container.id || `qcms_pag_${Math.random().toString(36).slice(2, 9)}`);
+            : (container.id || `octaqube_pag_${Math.random().toString(36).slice(2, 9)}`);
         container.innerHTML = `
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-3 pb-2 px-3 border-top mt-2 w-100" style="font-size: 13px; color: var(--ds-text-secondary, #64748b); width: 100%;">
                 <!-- Left: Showing Info & Page Size -->

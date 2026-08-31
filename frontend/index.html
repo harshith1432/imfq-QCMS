@@ -7,16 +7,16 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QCMS Enterprise | Quality Management Reimagined</title>
+    <title>OctaQube Enterprise | Quality Management Reimagined</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
-    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
@@ -197,7 +197,7 @@
                     <i data-lucide="shield-check" style="width:20px; height:20px; color:#002347;"></i>
                 </div>
                 <span class="fw-extrabold fs-4 tracking-tight" id="lp-navbar-brand-name"
-                    style="color:#FFFFFF !important;">QCMS <span
+                    style="color:#FFFFFF !important;">OctaQube <span
                         style="color:#C4A25A; font-weight:400;">Enterprise</span></span>
             </div>
             <div class="d-flex gap-2 gap-md-3 align-items-center">
@@ -597,7 +597,7 @@
                 <div class="col-lg-4">
                     <div class="ds-badge gold mb-3">Support</div>
                     <h2 class="fw-extrabold fs-1 mb-3" style="color:#002347;" id="lp-faq-title">Frequently Asked Questions</h2>
-                    <p class="fs-5" style="color:#476585;" id="lp-faq-subtitle">Everything you need to know about QCMS Enterprise.</p>
+                    <p class="fs-5" style="color:#476585;" id="lp-faq-subtitle">Everything you need to know about OctaQube Enterprise.</p>
                 </div>
                 <div class="col-lg-8">
                     <div class="accordion accordion-flush ds-card p-4" id="faqAccordion">
@@ -714,7 +714,7 @@
                             style="width:40px; height:40px; border-radius:10px; background:#C4A25A; color:#002347; display:flex; align-items:center; justify-content:center;">
                             <i data-lucide="shield-check" style="width:24px; height:24px;"></i>
                         </div>
-                        <span class="fw-extrabold fs-4 text-white" id="lp-footer-brand-name">QCMS <span
+                        <span class="fw-extrabold fs-4 text-white" id="lp-footer-brand-name">OctaQube <span
                                 style="color:#C4A25A; font-weight:400;">Enterprise</span></span>
                     </div>
                     <p class="mb-4" id="lp-footer-desc" style="max-width: 320px; color:#DAE0E7; line-height: 1.6;">The world's most advanced quality management system for modern manufacturing and enterprise excellence. Built for scale, security, and precision.</p>
@@ -771,7 +771,7 @@
             </div>
             <div
                 class="mt-5 pt-5 d-flex flex-column flex-md-row justify-content-between align-items-center gap-4 small" style="border-top: 1px solid rgba(255,255,255,0.08); color:#DAE0E7;">
-                <p class="mb-0" id="lp-footer-copy">&copy; 2026 QCMS Precision Core. Engineered for Enterprise Excellence.</p>
+                <p class="mb-0" id="lp-footer-copy">&copy; 2026 OctaQube Precision Core. Engineered for Enterprise Excellence.</p>
                 <div class="d-flex gap-4">
                     <span class="d-flex align-items-center gap-2"><i data-lucide="globe" style="width:14px; color:#C4A25A;"></i>
                         <span data-i18n-lang-name id="lp-footer-lang">English (US)</span></span>
@@ -784,11 +784,11 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             // Clean up any stray authenticated shell elements on public landing page
-            ['qcms-mobile-bottom-nav', 'sidebar-backdrop', 'ai-chat-widget', 'helpdesk-widget', 'app-sidebar', 'app-navbar'].forEach(id => {
+            ['octaqube-mobile-bottom-nav', 'sidebar-backdrop', 'ai-chat-widget', 'helpdesk-widget', 'app-sidebar', 'app-navbar'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.remove();
             });
@@ -853,8 +853,8 @@
                         branding = branding || {};
 
                         // Apply Dynamic Document Identity & Platform Branding
-                        const brandShort = (branding.software_short_name || branding.software_name || 'QCMS').trim();
-                        const appSoftName = (branding.software_display_name || branding.software_name || 'QCMS Enterprise').trim();
+                        const brandShort = (branding.software_short_name || branding.software_name || 'OctaQube').trim();
+                        const appSoftName = (branding.software_display_name || branding.software_name || 'OctaQube Enterprise').trim();
                         document.title = `${appSoftName} | Quality Management Reimagined`;
 
                         const _txt = (id, val) => {
@@ -1173,22 +1173,22 @@
                     { id: 'free-trial', title: 'Free Trial', link: '/auth/register-org.html', content: '<h1>14-Day Full Access Free Trial</h1><p>Start your 14-day free trial today with no credit card required. Experience complete access to all Enterprise features and multi-user collaboration tools.</p>' }
                 ],
                 resources: [
-                    { id: 'documentation', title: 'Documentation', link: 'page.html?id=documentation', content: '<h1>Enterprise Documentation</h1><p>Welcome to the official QCMS Enterprise documentation portal. Discover detailed guides on workflow setup, quality circle management, 8-stage problem solving, user roles, permission matrices, and audit logging.</p><h3>Getting Started</h3><p>Follow our step-by-step onboarding walkthroughs to register your organization, configure custom subdomains, define departments, and invite team members.</p>' },
-                    { id: 'api-reference', title: 'API Reference', link: 'page.html?id=api-reference', content: '<h1>API Reference & Integration Guide</h1><p>The QCMS Enterprise REST API allows programmatic integration with ERP systems, SAP S/4HANA, Salesforce, MES (Manufacturing Execution Systems), and custom internal dashboards.</p><h3>Authentication</h3><p>All API endpoints require JSON Web Tokens (JWT) passed in the HTTP Authorization: Bearer header or an Organization API Key.</p>' },
+                    { id: 'documentation', title: 'Documentation', link: 'page.html?id=documentation', content: '<h1>Enterprise Documentation</h1><p>Welcome to the official OctaQube Enterprise documentation portal. Discover detailed guides on workflow setup, quality circle management, 8-stage problem solving, user roles, permission matrices, and audit logging.</p><h3>Getting Started</h3><p>Follow our step-by-step onboarding walkthroughs to register your organization, configure custom subdomains, define departments, and invite team members.</p>' },
+                    { id: 'api-reference', title: 'API Reference', link: 'page.html?id=api-reference', content: '<h1>API Reference & Integration Guide</h1><p>The OctaQube Enterprise REST API allows programmatic integration with ERP systems, SAP S/4HANA, Salesforce, MES (Manufacturing Execution Systems), and custom internal dashboards.</p><h3>Authentication</h3><p>All API endpoints require JSON Web Tokens (JWT) passed in the HTTP Authorization: Bearer header or an Organization API Key.</p>' },
                     { id: 'support-center', title: 'Support Center', link: 'page.html?id=support-center', content: '<h1>24/7 Enterprise Support Center</h1><p>Our dedicated customer success and technical engineering teams are available round-the-clock to assist with your deployment, billing, custom integration, or system inquiries.</p>' },
-                    { id: 'community', title: 'Community', link: 'page.html?id=community', content: '<h1>QCMS Global Community & Developer Hub</h1><p>Connect with quality managers, industrial engineers, lead auditors, and system administrators worldwide. Share best practices, custom workflow templates, and automation plugins.</p>' }
+                    { id: 'community', title: 'Community', link: 'page.html?id=community', content: '<h1>OctaQube Global Community & Developer Hub</h1><p>Connect with quality managers, industrial engineers, lead auditors, and system administrators worldwide. Share best practices, custom workflow templates, and automation plugins.</p>' }
                 ],
                 company: [
-                    { id: 'about-us', title: 'About Us', link: 'page.html?id=about-us', content: '<h1>About QCMS Enterprise OS</h1><p>QCMS is the world’s leading Quality & Compliance Management System, engineered specifically for modern manufacturing, aerospace, automotive, healthcare, and enterprise industries.</p><h3>Our Mission</h3><p>To empower organizations globally with intelligent, data-driven 8-stage quality workflows, real-time analytics, and seamless compliance automation.</p>' },
-                    { id: 'careers', title: 'Careers', link: 'page.html?id=careers', content: '<h1>Careers at QCMS Solutions</h1><p>Join a fast-growing, mission-driven team of engineers, software architects, product designers, and enterprise quality experts. We are building the future of industrial quality automation.</p>' },
+                    { id: 'about-us', title: 'About Us', link: 'page.html?id=about-us', content: '<h1>About OctaQube Enterprise OS</h1><p>OctaQube is the world’s leading Quality & Compliance Management System, engineered specifically for modern manufacturing, aerospace, automotive, healthcare, and enterprise industries.</p><h3>Our Mission</h3><p>To empower organizations globally with intelligent, data-driven 8-stage quality workflows, real-time analytics, and seamless compliance automation.</p>' },
+                    { id: 'careers', title: 'Careers', link: 'page.html?id=careers', content: '<h1>Careers at OctaQube Solutions</h1><p>Join a fast-growing, mission-driven team of engineers, software architects, product designers, and enterprise quality experts. We are building the future of industrial quality automation.</p>' },
                     { id: 'contact-sales', title: 'Contact Sales', link: 'page.html?id=contact-sales', content: '<h1>Contact Enterprise Sales</h1><p>Ready to transform your organization’s quality management? Contact our sales team for custom enterprise licensing, multi-site deployments, dedicated SLA guarantees, and SOC2 compliance packages.</p>' },
                     { id: 'global-partners', title: 'Global Partners', link: 'page.html?id=global-partners', content: '<h1>Global Partner Network</h1><p>Collaborate with certified implementation partners, ISO consulting firms, and systems integrators across North America, Europe, Asia-Pacific, and Latin America.</p>' }
                 ],
                 legal: [
-                    { id: 'privacy-policy', title: 'Privacy Policy', link: 'page.html?id=privacy-policy', content: '<h1>Privacy Policy</h1><p>Your privacy and data security are our highest priorities. This Privacy Policy details how QCMS collects, uses, encrypts, and protects your personal and organizational information.</p>' },
-                    { id: 'terms-of-service', title: 'Terms of Service', link: 'page.html?id=terms-of-service', content: '<h1>Terms of Service</h1><p>These Terms of Service govern your access to and use of the QCMS Enterprise platform, web applications, mobile tools, and associated services.</p>' },
-                    { id: 'security', title: 'Security', link: 'page.html?id=security', content: '<h1>Enterprise Security Architecture</h1><p>QCMS is built with defense-in-depth security standards to protect mission-critical manufacturing and enterprise data.</p><h3>Security Specifications</h3><ul><li>AES-256 Data Encryption at Rest & TLS 1.3 in Transit</li><li>SOC2 Type II & ISO 27001 Certified Infrastructure</li><li>Multi-Factor Authentication (MFA) & Single Sign-On (SSO)</li><li>Granular Role-Based Access Control (RBAC) & Audit Trails</li></ul>' },
-                    { id: 'gdpr', title: 'GDPR', link: 'page.html?id=gdpr', content: '<h1>GDPR & EU Data Protection Compliance</h1><p>QCMS complies strictly with the European Union General Data Protection Regulation (GDPR), ensuring robust privacy protection for all EU data subjects.</p>' }
+                    { id: 'privacy-policy', title: 'Privacy Policy', link: 'page.html?id=privacy-policy', content: '<h1>Privacy Policy</h1><p>Your privacy and data security are our highest priorities. This Privacy Policy details how OctaQube collects, uses, encrypts, and protects your personal and organizational information.</p>' },
+                    { id: 'terms-of-service', title: 'Terms of Service', link: 'page.html?id=terms-of-service', content: '<h1>Terms of Service</h1><p>These Terms of Service govern your access to and use of the OctaQube Enterprise platform, web applications, mobile tools, and associated services.</p>' },
+                    { id: 'security', title: 'Security', link: 'page.html?id=security', content: '<h1>Enterprise Security Architecture</h1><p>OctaQube is built with defense-in-depth security standards to protect mission-critical manufacturing and enterprise data.</p><h3>Security Specifications</h3><ul><li>AES-256 Data Encryption at Rest & TLS 1.3 in Transit</li><li>SOC2 Type II & ISO 27001 Certified Infrastructure</li><li>Multi-Factor Authentication (MFA) & Single Sign-On (SSO)</li><li>Granular Role-Based Access Control (RBAC) & Audit Trails</li></ul>' },
+                    { id: 'gdpr', title: 'GDPR', link: 'page.html?id=gdpr', content: '<h1>GDPR & EU Data Protection Compliance</h1><p>OctaQube complies strictly with the European Union General Data Protection Regulation (GDPR), ensuring robust privacy protection for all EU data subjects.</p>' }
                 ]
             };
 

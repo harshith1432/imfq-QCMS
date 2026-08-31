@@ -1,5 +1,5 @@
 /**
- * QCMS Enterprise OS - Announcements Module
+ * OctaQube Enterprise OS - Announcements Module
  * Reusable component for platform-wide and org-scoped communication governance.
  */
 
@@ -761,8 +761,8 @@ const AnnouncementsModule = {
                 }
             } else {
                 this.emailIntegrations = [
-                    { provider_id: 'resend', provider_name: 'Resend Mail', status: 'Connected', sender_email: 'notifications@qcms.io', sender_name: 'QCMS Cloud' },
-                    { provider_id: 'zeptomail', provider_name: 'ZeptoMail (Zoho)', status: 'Connected', sender_email: 'otp@qcms.io', sender_name: 'QCMS OTP Service' }
+                    { provider_id: 'resend', provider_name: 'Resend Mail', status: 'Connected', sender_email: 'notifications@octaqube.io', sender_name: 'OctaQube Cloud' },
+                    { provider_id: 'zeptomail', provider_name: 'ZeptoMail (Zoho)', status: 'Connected', sender_email: 'otp@octaqube.io', sender_name: 'OctaQube OTP Service' }
                 ];
                 if (!this.wizardData.channels.email_provider) {
                     this.wizardData.channels.email_provider = 'resend';
@@ -770,8 +770,8 @@ const AnnouncementsModule = {
             }
         } catch (e) {
             this.emailIntegrations = [
-                { provider_id: 'resend', provider_name: 'Resend Mail', status: 'Connected', sender_email: 'notifications@qcms.io', sender_name: 'QCMS Cloud' },
-                { provider_id: 'zeptomail', provider_name: 'ZeptoMail (Zoho)', status: 'Connected', sender_email: 'otp@qcms.io', sender_name: 'QCMS OTP Service' }
+                { provider_id: 'resend', provider_name: 'Resend Mail', status: 'Connected', sender_email: 'notifications@octaqube.io', sender_name: 'OctaQube Cloud' },
+                { provider_id: 'zeptomail', provider_name: 'ZeptoMail (Zoho)', status: 'Connected', sender_email: 'otp@octaqube.io', sender_name: 'OctaQube OTP Service' }
             ];
             if (!this.wizardData.channels.email_provider) {
                 this.wizardData.channels.email_provider = 'resend';
@@ -933,7 +933,7 @@ const AnnouncementsModule = {
                         <input type="checkbox" style="width:18px;height:18px;" ${this.wizardData.channels.in_app ? 'checked' : ''} onchange="AnnouncementsModule.wizardData.channels.in_app=this.checked">
                         <div>
                             <span class="text-xs fw-bold text-main d-block">In-App Notification Center</span>
-                            <span class="text-xxs text-secondary">Deliver instant alerts inside the QCMS notification panel.</span>
+                            <span class="text-xxs text-secondary">Deliver instant alerts inside the OctaQube notification panel.</span>
                         </div>
                     </label>
 
@@ -1000,21 +1000,21 @@ const AnnouncementsModule = {
                     <!-- Broadcast Summary Card -->
                     <div class="p-3 border rounded-3" style="background: var(--ds-surface, #ffffff); border-color: var(--ds-border-color) !important;">
                         <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h6 class="fw-bold text-main mb-0 text-sm">${QCMS.escapeHtml(this.wizardData.title || '[Untitled Announcement]')}</h6>
+                            <h6 class="fw-bold text-main mb-0 text-sm">${OctaQube.escapeHtml(this.wizardData.title || '[Untitled Announcement]')}</h6>
                             <div class="d-flex align-items-center gap-1.5">
                                 <span class="badge rounded-pill px-2 py-0.5 text-xxs fw-semibold" style="background: rgba(99, 102, 241, 0.12); color: #6366f1; border: 1px solid rgba(99, 102, 241, 0.25);">
-                                    <i data-lucide="tag" style="width:10px;height:10px;" class="me-1"></i>${QCMS.escapeHtml(cat)}
+                                    <i data-lucide="tag" style="width:10px;height:10px;" class="me-1"></i>${OctaQube.escapeHtml(cat)}
                                 </span>
                                 <span class="badge rounded-pill px-2 py-0.5 text-xxs fw-semibold" style="${pConf.style}">
-                                    <i data-lucide="${pConf.icon}" style="width:10px;height:10px;" class="me-1"></i>${QCMS.escapeHtml(prio)}
+                                    <i data-lucide="${pConf.icon}" style="width:10px;height:10px;" class="me-1"></i>${OctaQube.escapeHtml(prio)}
                                 </span>
                             </div>
                         </div>
 
-                        ${this.wizardData.summary ? `<p class="text-xs text-secondary mb-2">${QCMS.escapeHtml(this.wizardData.summary)}</p>` : ''}
+                        ${this.wizardData.summary ? `<p class="text-xs text-secondary mb-2">${OctaQube.escapeHtml(this.wizardData.summary)}</p>` : ''}
                         
                         <div class="p-2.5 rounded-2 text-xs text-muted mb-2.5" style="background: rgba(0,0,0,0.03); border: 1px solid var(--ds-border-color); line-height: 1.5; max-height: 90px; overflow-y: auto;">
-                            ${this.wizardData.body ? QCMS.escapeHtml(this.wizardData.body).replace(/\n/g, '<br>') : '<em>No message content configured.</em>'}
+                            ${this.wizardData.body ? OctaQube.escapeHtml(this.wizardData.body).replace(/\n/g, '<br>') : '<em>No message content configured.</em>'}
                         </div>
 
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 text-xxs text-secondary pt-2 border-top" style="border-color: var(--ds-border-color) !important;">
@@ -1147,9 +1147,9 @@ const AnnouncementsModule = {
                     isActive 
                         ? 'btn-primary text-white shadow-sm font-semibold' 
                         : 'btn-outline-secondary text-main border'
-                }" onclick="AnnouncementsModule.filterByRole('${QCMS.escapeHtml(r.role).replace(/'/g, "\\'")}')" style="font-size: 12px; height: 30px; ${isActive ? '' : 'background: var(--ds-surface, #fff); border-color: var(--ds-border-color);'}">
+                }" onclick="AnnouncementsModule.filterByRole('${OctaQube.escapeHtml(r.role).replace(/'/g, "\\'")}')" style="font-size: 12px; height: 30px; ${isActive ? '' : 'background: var(--ds-surface, #fff); border-color: var(--ds-border-color);'}">
                     <span class="d-inline-block rounded-circle flex-shrink-0" style="width: 8px; height: 8px; background: ${r.color || '#6366f1'};"></span>
-                    <span>${QCMS.escapeHtml(r.role)}</span>
+                    <span>${OctaQube.escapeHtml(r.role)}</span>
                     <span class="badge ${isActive ? 'bg-white text-primary' : 'bg-secondary-subtle text-secondary'} rounded-pill px-2 py-0.5 font-bold" style="font-size: 11px;">${r.email_count}</span>
                 </button>
             `;
@@ -1196,20 +1196,20 @@ const AnnouncementsModule = {
                     </span>
                     <div class="min-w-0">
                         <div class="fw-bold text-main text-truncate" style="font-size: 13px; line-height: 1.3;">
-                            ${QCMS.escapeHtml(r.name)}
+                            ${OctaQube.escapeHtml(r.name)}
                         </div>
                         <div class="d-flex align-items-center gap-2 mt-1">
                             ${r.has_valid_email 
-                                ? `<span class="text-primary font-monospace fw-medium text-truncate" style="font-size: 12px;">${QCMS.escapeHtml(r.email)}</span>
-                                   <button type="button" class="btn btn-link p-0 text-muted hover-text-primary" onclick="navigator.clipboard.writeText('${QCMS.escapeHtml(r.email).replace(/'/g, "\\'")}');QCMS.toast('Copied email: ${QCMS.escapeHtml(r.email)}', 'info');" title="Copy Email ID" style="font-size:11px;"><i data-lucide="copy" style="width:12px;height:12px;"></i></button>`
+                                ? `<span class="text-primary font-monospace fw-medium text-truncate" style="font-size: 12px;">${OctaQube.escapeHtml(r.email)}</span>
+                                   <button type="button" class="btn btn-link p-0 text-muted hover-text-primary" onclick="navigator.clipboard.writeText('${OctaQube.escapeHtml(r.email).replace(/'/g, "\\'")}');OctaQube.toast('Copied email: ${OctaQube.escapeHtml(r.email)}', 'info');" title="Copy Email ID" style="font-size:11px;"><i data-lucide="copy" style="width:12px;height:12px;"></i></button>`
                                 : `<span class="text-danger text-xxs fw-semibold"><i data-lucide="alert-circle" style="width:12px;height:12px;" class="me-1"></i>No email address configured</span>`
                             }
                         </div>
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                    <span class="badge bg-purple-subtle text-purple border border-purple-subtle text-xxs px-2.5 py-1 rounded-pill font-semibold" style="font-size:11px;">${QCMS.escapeHtml(r.role)}</span>
-                    <span class="badge bg-secondary-subtle text-secondary border text-xxs px-2.5 py-1 rounded-pill" title="Organization" style="font-size:11px;">${QCMS.escapeHtml(r.org_name)}</span>
+                    <span class="badge bg-purple-subtle text-purple border border-purple-subtle text-xxs px-2.5 py-1 rounded-pill font-semibold" style="font-size:11px;">${OctaQube.escapeHtml(r.role)}</span>
+                    <span class="badge bg-secondary-subtle text-secondary border text-xxs px-2.5 py-1 rounded-pill" title="Organization" style="font-size:11px;">${OctaQube.escapeHtml(r.org_name)}</span>
                 </div>
             </div>
         `).join('');
@@ -1275,14 +1275,14 @@ const AnnouncementsModule = {
             <span class="text-xxs fw-semibold text-secondary mb-1">Select Connected Email Service (from Integration Hub):</span>
             ${providers.map(p => `
                 <label class="d-flex align-items-center gap-3 p-3 rounded-3 cursor-pointer" style="border: 1.5px solid ${this.wizardData.channels.email_provider === p.provider_id ? 'var(--ds-primary, #2563eb)' : 'var(--ds-border-color)'}; background: ${this.wizardData.channels.email_provider === p.provider_id ? 'rgba(37,99,235,0.06)' : 'rgba(255,255,255,0.01)'}; transition:all 0.15s ease;">
-                    <input type="radio" name="emailProviderRadio" style="width:16px;height:16px;" value="${QCMS.escapeHtml(p.provider_id)}" ${this.wizardData.channels.email_provider === p.provider_id ? 'checked' : ''} onchange="AnnouncementsModule.selectEmailProvider('${QCMS.escapeHtml(p.provider_id)}')">
+                    <input type="radio" name="emailProviderRadio" style="width:16px;height:16px;" value="${OctaQube.escapeHtml(p.provider_id)}" ${this.wizardData.channels.email_provider === p.provider_id ? 'checked' : ''} onchange="AnnouncementsModule.selectEmailProvider('${OctaQube.escapeHtml(p.provider_id)}')">
                     <div class="p-2 rounded-2 bg-primary-subtle text-primary" style="flex-shrink:0;"><i data-lucide="${providerIcon[p.provider_id] || 'mail'}" style="width:16px;height:16px;"></i></div>
                     <div style="flex:1;">
                         <div class="d-flex align-items-center gap-2">
-                            <span class="text-xs fw-bold text-main">${QCMS.escapeHtml(p.provider_name)}</span>
+                            <span class="text-xs fw-bold text-main">${OctaQube.escapeHtml(p.provider_name)}</span>
                             <span class="badge bg-success-subtle text-success text-xxs px-2 py-0.5">CONNECTED</span>
                         </div>
-                        <span class="text-xxs text-secondary d-block mt-0.5">${p.sender_email ? 'Sender Email: <strong>' + QCMS.escapeHtml(p.sender_email) + '</strong>' : 'Ready for email broadcast dispatch'}</span>
+                        <span class="text-xxs text-secondary d-block mt-0.5">${p.sender_email ? 'Sender Email: <strong>' + OctaQube.escapeHtml(p.sender_email) + '</strong>' : 'Ready for email broadcast dispatch'}</span>
                     </div>
                 </label>
             `).join('')}
@@ -1326,19 +1326,19 @@ const AnnouncementsModule = {
         const btns = [];
         if (this.liveCritSuggestions.plan && this.liveCritSuggestions.plan.length > 0) {
             const p = this.liveCritSuggestions.plan[0];
-            btns.push(`<button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('plan', '${QCMS.escapeHtml(p.value)}')">+ ${QCMS.escapeHtml(p.value)} Plan</button>`);
+            btns.push(`<button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('plan', '${OctaQube.escapeHtml(p.value)}')">+ ${OctaQube.escapeHtml(p.value)} Plan</button>`);
         }
         if (this.liveCritSuggestions.role && this.liveCritSuggestions.role.length > 0) {
             const r = this.liveCritSuggestions.role[0];
-            btns.push(`<button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('role', '${QCMS.escapeHtml(r.value)}')">+ ${QCMS.escapeHtml(r.value)}s</button>`);
+            btns.push(`<button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('role', '${OctaQube.escapeHtml(r.value)}')">+ ${OctaQube.escapeHtml(r.value)}s</button>`);
         }
         if (this.liveCritSuggestions.org && this.liveCritSuggestions.org.length > 0) {
             const o = this.liveCritSuggestions.org[0];
-            btns.push(`<button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('org', '${QCMS.escapeHtml(o.value)}')">+ Org #${QCMS.escapeHtml(o.value)}</button>`);
+            btns.push(`<button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('org', '${OctaQube.escapeHtml(o.value)}')">+ Org #${OctaQube.escapeHtml(o.value)}</button>`);
         }
         if (this.liveCritSuggestions.country && this.liveCritSuggestions.country.length > 0) {
             const c = this.liveCritSuggestions.country[0];
-            btns.push(`<button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('country', '${QCMS.escapeHtml(c.value)}')">+ ${QCMS.escapeHtml(c.value)} Region</button>`);
+            btns.push(`<button class="ds-btn ds-btn-xs ds-btn-outline py-0.5 px-2 text-xxs" onclick="AnnouncementsModule.addQuickRule('country', '${OctaQube.escapeHtml(c.value)}')">+ ${OctaQube.escapeHtml(c.value)} Region</button>`);
         }
 
         if (btns.length === 0) {
@@ -1362,20 +1362,20 @@ const AnnouncementsModule = {
 
         if (items.length === 0) {
             if (q) {
-                drop.innerHTML = `<div class="p-3 text-xxs text-muted text-center">No created <strong>${QCMS.escapeHtml(type)}</strong> items found in system database.<br>Use custom typed value: "<strong>${QCMS.escapeHtml(query)}</strong>"</div>`;
+                drop.innerHTML = `<div class="p-3 text-xxs text-muted text-center">No created <strong>${OctaQube.escapeHtml(type)}</strong> items found in system database.<br>Use custom typed value: "<strong>${OctaQube.escapeHtml(query)}</strong>"</div>`;
             } else {
-                drop.innerHTML = `<div class="p-3 text-xxs text-muted text-center">No <strong>${QCMS.escapeHtml(type)}</strong> items created in system database yet.<br>Type to set a custom target value.</div>`;
+                drop.innerHTML = `<div class="p-3 text-xxs text-muted text-center">No <strong>${OctaQube.escapeHtml(type)}</strong> items created in system database yet.<br>Type to set a custom target value.</div>`;
             }
         } else if (filtered.length === 0) {
-            drop.innerHTML = `<div class="p-2 text-xxs text-muted text-center">No matching system ${QCMS.escapeHtml(type)}s.<br>Use custom typed value: "<strong>${QCMS.escapeHtml(query)}</strong>"</div>`;
+            drop.innerHTML = `<div class="p-2 text-xxs text-muted text-center">No matching system ${OctaQube.escapeHtml(type)}s.<br>Use custom typed value: "<strong>${OctaQube.escapeHtml(query)}</strong>"</div>`;
         } else {
             drop.innerHTML = filtered.map(it => `
-                <div class="p-2 rounded-2 cursor-pointer hover-bg-primary-subtle d-flex align-items-center justify-content-between text-xs my-0.5" style="transition: background 0.15s;" onmousedown="AnnouncementsModule.selectCritSuggestion('${QCMS.escapeHtml(it.value)}')">
+                <div class="p-2 rounded-2 cursor-pointer hover-bg-primary-subtle d-flex align-items-center justify-content-between text-xs my-0.5" style="transition: background 0.15s;" onmousedown="AnnouncementsModule.selectCritSuggestion('${OctaQube.escapeHtml(it.value)}')">
                     <div>
-                        <div class="fw-bold text-main" style="font-size: 12px;">${QCMS.escapeHtml(it.label)}</div>
-                        <div class="text-xxs text-secondary" style="font-size: 10px;">${QCMS.escapeHtml(it.desc || '')}</div>
+                        <div class="fw-bold text-main" style="font-size: 12px;">${OctaQube.escapeHtml(it.label)}</div>
+                        <div class="text-xxs text-secondary" style="font-size: 10px;">${OctaQube.escapeHtml(it.desc || '')}</div>
                     </div>
-                    <span class="badge bg-primary-subtle text-primary text-xxs font-monospace">${QCMS.escapeHtml(it.value)}</span>
+                    <span class="badge bg-primary-subtle text-primary text-xxs font-monospace">${OctaQube.escapeHtml(it.value)}</span>
                 </div>
             `).join('');
         }
@@ -1406,13 +1406,13 @@ const AnnouncementsModule = {
         const type = typeSelect.value;
         const value = valueInput.value.trim();
         if (!value) {
-            QCMS.toast('Please enter or select a target value.', 'warning');
+            OctaQube.toast('Please enter or select a target value.', 'warning');
             return;
         }
 
         const exists = this.wizardData.audience.some(c => c.type === type && c.value.toLowerCase() === value.toLowerCase());
         if (exists) {
-            QCMS.toast('Target rule already exists.', 'info');
+            OctaQube.toast('Target rule already exists.', 'info');
             return;
         }
 
@@ -1453,7 +1453,7 @@ const AnnouncementsModule = {
             return `
                 <span class="badge bg-${meta.color}-subtle text-${meta.color} border border-${meta.color}-subtle d-inline-flex align-items-center gap-1.5 px-2.5 py-1.5 rounded-pill text-xs shadow-sm">
                     <i data-lucide="${meta.icon}" style="width:12px;height:12px;"></i>
-                    <strong>${meta.label}:</strong> ${QCMS.escapeHtml(crit.value)}
+                    <strong>${meta.label}:</strong> ${OctaQube.escapeHtml(crit.value)}
                     <a href="javascript:void(0)" class="text-danger fw-bold ms-1 text-decoration-none" onclick="AnnouncementsModule.removeCriterion(${idx})" title="Remove Rule">&times;</a>
                 </span>
             `;
@@ -1495,11 +1495,11 @@ const AnnouncementsModule = {
         if (this.wizardStep < 5) {
             if (this.wizardStep === 1) {
                 if (!this.wizardData.title.trim()) {
-                    QCMS.toast('Title is required.', 'error');
+                    OctaQube.toast('Title is required.', 'error');
                     return;
                 }
                 if (!this.wizardData.body.trim()) {
-                    QCMS.toast('Message details are required.', 'error');
+                    OctaQube.toast('Message details are required.', 'error');
                     return;
                 }
             }
@@ -1539,10 +1539,10 @@ const AnnouncementsModule = {
 
             const res = await api.post('/announcements/', payload);
             if (res && res.status === 'success') {
-                QCMS.toast('Announcement successfully broadcasted and published!', 'success');
-                window.dispatchEvent(new CustomEvent('qcms:announcement-published'));
-                if (window.QCMS && typeof QCMS.loadNotifications === 'function') {
-                    QCMS.loadNotifications();
+                OctaQube.toast('Announcement successfully broadcasted and published!', 'success');
+                window.dispatchEvent(new CustomEvent('octaqube:announcement-published'));
+                if (window.OctaQube && typeof OctaQube.loadNotifications === 'function') {
+                    OctaQube.loadNotifications();
                 }
                 
                 const modalEl = document.getElementById('annWizardModal');
@@ -1557,7 +1557,7 @@ const AnnouncementsModule = {
                     this.loadDashboardData();
                 }
             } else {
-                QCMS.toast(res?.message || 'Failure creating broadcast.', 'error');
+                OctaQube.toast(res?.message || 'Failure creating broadcast.', 'error');
                 if (nextBtn) {
                     nextBtn.disabled = false;
                     nextBtn.innerHTML = '<i data-lucide="send" style="width:14px;height:14px;" class="me-1"></i> Submit Announcement';
@@ -1566,7 +1566,7 @@ const AnnouncementsModule = {
                 if (window.lucide) lucide.createIcons();
             }
         } catch (e) {
-            QCMS.toast('Failed to save announcement: ' + (e.message || e), 'error');
+            OctaQube.toast('Failed to save announcement: ' + (e.message || e), 'error');
             if (nextBtn) {
                 nextBtn.disabled = false;
                 nextBtn.innerHTML = '<i data-lucide="send" style="width:14px;height:14px;" class="me-1"></i> Submit Announcement';
@@ -1585,15 +1585,15 @@ const AnnouncementsModule = {
         try {
             const res = await api.post(`/announcements/${id}/publish`);
             if (res.status === 'success') {
-                QCMS.toast('Broadcast went live successfully!', 'success');
-                window.dispatchEvent(new CustomEvent('qcms:announcement-published'));
+                OctaQube.toast('Broadcast went live successfully!', 'success');
+                window.dispatchEvent(new CustomEvent('octaqube:announcement-published'));
                 if (window.GlobalAnnouncementBanner) {
                     window.GlobalAnnouncementBanner.fetchActiveAnnouncements();
                 }
                 this.loadRegistry();
             }
         } catch (e) {
-            QCMS.toast('Error publishing announcement.', 'error');
+            OctaQube.toast('Error publishing announcement.', 'error');
         }
     },
 
@@ -1601,11 +1601,11 @@ const AnnouncementsModule = {
         try {
             const res = await api.post(`/announcements/${id}/duplicate`);
             if (res.status === 'success') {
-                QCMS.toast('Draft announcement duplicated.', 'success');
+                OctaQube.toast('Draft announcement duplicated.', 'success');
                 this.loadRegistry();
             }
         } catch (e) {
-            QCMS.toast('Failed to duplicate.', 'error');
+            OctaQube.toast('Failed to duplicate.', 'error');
         }
     },
 
@@ -1614,11 +1614,11 @@ const AnnouncementsModule = {
         try {
             const res = await api.post(`/announcements/${id}/archive`);
             if (res.status === 'success') {
-                QCMS.toast('Announcement archived.', 'success');
+                OctaQube.toast('Announcement archived.', 'success');
                 this.loadRegistry();
             }
         } catch (e) {
-            QCMS.toast('Failed to archive.', 'error');
+            OctaQube.toast('Failed to archive.', 'error');
         }
     },
 
@@ -1627,11 +1627,11 @@ const AnnouncementsModule = {
         try {
             const res = await api.post(`/announcements/${id}/unarchive`);
             if (res.status === 'success') {
-                QCMS.toast('Announcement unarchived and restored.', 'success');
+                OctaQube.toast('Announcement unarchived and restored.', 'success');
                 this.loadRegistry();
             }
         } catch (e) {
-            QCMS.toast('Failed to unarchive.', 'error');
+            OctaQube.toast('Failed to unarchive.', 'error');
         }
     },
 
@@ -1640,11 +1640,11 @@ const AnnouncementsModule = {
         try {
             const res = await api.delete(`/announcements/${id}`);
             if (res.status === 'success') {
-                QCMS.toast('Announcement deleted and audit log stored.', 'success');
+                OctaQube.toast('Announcement deleted and audit log stored.', 'success');
                 this.loadRegistry();
             }
         } catch (e) {
-            QCMS.toast('Failed to delete.', 'error');
+            OctaQube.toast('Failed to delete.', 'error');
         }
     },
 
@@ -1817,10 +1817,10 @@ const AnnouncementsModule = {
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                QCMS.toast('Export downloaded successfully.', 'success');
+                OctaQube.toast('Export downloaded successfully.', 'success');
             }
         } catch (e) {
-            QCMS.toast('Export failed.', 'error');
+            OctaQube.toast('Export failed.', 'error');
         }
     },
 
@@ -1919,17 +1919,17 @@ const AnnouncementsModule = {
                                 </div>
                             </div>
 
-                            <h6 class="fw-bold text-main mb-1 text-truncate" title="${QCMS.escapeHtml(rule.name)}">${QCMS.escapeHtml(rule.name)}</h6>
-                            <p class="text-xs text-secondary mb-2.5" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 32px;">${QCMS.escapeHtml(rule.description || 'Configured email notification template with automated dispatching rules.')}</p>
+                            <h6 class="fw-bold text-main mb-1 text-truncate" title="${OctaQube.escapeHtml(rule.name)}">${OctaQube.escapeHtml(rule.name)}</h6>
+                            <p class="text-xs text-secondary mb-2.5" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 32px;">${OctaQube.escapeHtml(rule.description || 'Configured email notification template with automated dispatching rules.')}</p>
 
                             <div class="p-2 rounded bg-light-subtle border text-xs mb-3" style="background: rgba(0,0,0,0.02);">
                                 <div class="d-flex align-items-center gap-1.5 text-truncate mb-1">
                                     <span class="text-muted text-xxs text-uppercase fw-bold">Subject:</span>
-                                    <span class="text-main font-monospace text-truncate" style="font-size:11.5px;">${QCMS.escapeHtml(rule.subject)}</span>
+                                    <span class="text-main font-monospace text-truncate" style="font-size:11.5px;">${OctaQube.escapeHtml(rule.subject)}</span>
                                 </div>
                                 <div class="d-flex align-items-center justify-content-between text-xxs text-muted">
-                                    <span>From: <strong>${QCMS.escapeHtml(rule.sender_email)}</strong></span>
-                                    <span>Audience: <strong>${QCMS.escapeHtml(audienceSummary)}</strong></span>
+                                    <span>From: <strong>${OctaQube.escapeHtml(rule.sender_email)}</strong></span>
+                                    <span>Audience: <strong>${OctaQube.escapeHtml(audienceSummary)}</strong></span>
                                 </div>
                             </div>
                         </div>
@@ -2092,7 +2092,7 @@ const AnnouncementsModule = {
         try {
             const res = await api.post(`/email-notifications/rules/${ruleId}/toggle`, {});
             if (res && res.status === 'success') {
-                QCMS.toast(res.message, 'success');
+                OctaQube.toast(res.message, 'success');
                 if (switchEl) {
                     const card = switchEl.closest('.email-rule-card-wrapper');
                     if (card) card.setAttribute('data-status', res.is_active ? 'active' : 'paused');
@@ -2100,7 +2100,7 @@ const AnnouncementsModule = {
             }
         } catch (e) {
             if (switchEl) switchEl.checked = !switchEl.checked;
-            QCMS.toast(e.message || 'Failed to toggle rule status', 'error');
+            OctaQube.toast(e.message || 'Failed to toggle rule status', 'error');
         }
     },
 
@@ -2109,14 +2109,14 @@ const AnnouncementsModule = {
         try {
             const res = await api.delete(`/email-notifications/rules/${ruleId}`);
             if (res && res.status === 'success') {
-                QCMS.toast('Email notification rule deleted.', 'success');
+                OctaQube.toast('Email notification rule deleted.', 'success');
                 const contentArea = document.getElementById('announcementContentArea');
                 if (contentArea && this.currentTab === 'email-notifications') {
                     this.renderEmailNotificationsHub(contentArea);
                 }
             }
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to delete rule', 'error');
+            OctaQube.toast(e.message || 'Failed to delete rule', 'error');
         }
     },
 
@@ -2201,7 +2201,7 @@ const AnnouncementsModule = {
             cta_text: 'Renew / Upgrade Subscription',
             cta_url: '{{app_url}}',
             sender_email: (meta.branding && meta.branding.billing_email) || (meta.branding && meta.branding.general_email) || 'billing@ifqm.org.in',
-            sender_name: (meta.branding && meta.branding.billing_sender_name) || 'QCMS Billing',
+            sender_name: (meta.branding && meta.branding.billing_sender_name) || 'OctaQube Billing',
             reply_to: (meta.branding && meta.branding.support_email) || 'support@ifqm.org.in',
             trigger_type: 'event',
             event_trigger: defaultEvent,
@@ -2222,7 +2222,7 @@ const AnnouncementsModule = {
                     ruleData = res.data;
                 }
             } catch (e) {
-                QCMS.toast('Failed to load rule details', 'error');
+                OctaQube.toast('Failed to load rule details', 'error');
                 return;
             }
         }
@@ -2240,7 +2240,7 @@ const AnnouncementsModule = {
             <div class="col-6 col-md-4 mb-1">
                 <div class="form-check text-xs">
                     <input class="form-check-input en-org-checkbox" type="checkbox" value="${o.id}" id="enOrg_${o.id}" ${isChecked}>
-                    <label class="form-check-label text-truncate" for="enOrg_${o.id}" title="${QCMS.escapeHtml(o.name)}">${QCMS.escapeHtml(o.name)}</label>
+                    <label class="form-check-label text-truncate" for="enOrg_${o.id}" title="${OctaQube.escapeHtml(o.name)}">${OctaQube.escapeHtml(o.name)}</label>
                 </div>
             </div>`;
         }).join('');
@@ -2344,7 +2344,7 @@ const AnnouncementsModule = {
         const contactChannels = meta.contact_directory_channels || [];
         const contactChannelsOptionsHtml = contactChannels.map(c => {
             const isSelected = (currentChannelKey === c.key) ? 'selected' : '';
-            return `<option value="${c.key}" data-email="${QCMS.escapeHtml(c.email)}" data-name="${QCMS.escapeHtml(c.name)}" ${isSelected}>${c.label} (${c.email} &bull; ${c.name})</option>`;
+            return `<option value="${c.key}" data-email="${OctaQube.escapeHtml(c.email)}" data-name="${OctaQube.escapeHtml(c.name)}" ${isSelected}>${c.label} (${c.email} &bull; ${c.name})</option>`;
         }).join('');
 
         const containerEl = document.getElementById('emailNotificationModalContainer') || document.body;
@@ -2381,7 +2381,7 @@ const AnnouncementsModule = {
                                     <div class="row g-3">
                                         <div class="col-md-7">
                                             <label class="ds-label text-xs fw-semibold">Campaign / Rule Name <span class="text-danger">*</span></label>
-                                            <input type="text" class="ds-input text-sm" id="enRuleName" required placeholder="e.g. Subscription Expiry Reminder (7 Days)" value="${QCMS.escapeHtml(ruleData.name)}">
+                                            <input type="text" class="ds-input text-sm" id="enRuleName" required placeholder="e.g. Subscription Expiry Reminder (7 Days)" value="${OctaQube.escapeHtml(ruleData.name)}">
                                         </div>
                                         <div class="col-md-5">
                                             <label class="ds-label text-xs fw-semibold">Category <span class="text-danger">*</span></label>
@@ -2425,18 +2425,18 @@ const AnnouncementsModule = {
                                         <div class="row g-2">
                                             <div class="col-md-6">
                                                 <label class="ds-label text-xxs">From Email Address <span class="text-danger">*</span></label>
-                                                <input type="email" class="ds-input text-xs" id="enSenderEmail" list="senderEmailList" required placeholder="e.g. alerts@ifqm.org.in" value="${QCMS.escapeHtml(ruleData.sender_email)}">
+                                                <input type="email" class="ds-input text-xs" id="enSenderEmail" list="senderEmailList" required placeholder="e.g. alerts@ifqm.org.in" value="${OctaQube.escapeHtml(ruleData.sender_email)}">
                                                 <datalist id="senderEmailList">
                                                     ${senderSuggestionsHtml}
                                                 </datalist>
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="ds-label text-xxs">Sender Display Name <span class="text-danger">*</span></label>
-                                                <input type="text" class="ds-input text-xs" id="enSenderName" required placeholder="e.g. Emergency alert" value="${QCMS.escapeHtml(ruleData.sender_name)}">
+                                                <input type="text" class="ds-input text-xs" id="enSenderName" required placeholder="e.g. Emergency alert" value="${OctaQube.escapeHtml(ruleData.sender_name)}">
                                             </div>
                                             <div class="col-12">
                                                 <label class="ds-label text-xxs">Reply-To Address (Optional)</label>
-                                                <input type="email" class="ds-input text-xs" id="enReplyTo" placeholder="e.g. support@ifqm.org.in" value="${QCMS.escapeHtml(ruleData.reply_to || (meta.branding && meta.branding.support_email) || '')}">
+                                                <input type="email" class="ds-input text-xs" id="enReplyTo" placeholder="e.g. support@ifqm.org.in" value="${OctaQube.escapeHtml(ruleData.reply_to || (meta.branding && meta.branding.support_email) || '')}">
                                             </div>
                                         </div>
                                     </div>
@@ -2445,11 +2445,11 @@ const AnnouncementsModule = {
                                     <div class="row g-2">
                                         <div class="col-12">
                                             <label class="ds-label text-xs fw-semibold">Email Subject Line <span class="text-danger">*</span></label>
-                                            <input type="text" class="ds-input text-sm font-monospace" id="enSubject" required placeholder="e.g. Action Required: Your {{plan_name}} subscription expires in {{days_left}} days" value="${QCMS.escapeHtml(ruleData.subject)}">
+                                            <input type="text" class="ds-input text-sm font-monospace" id="enSubject" required placeholder="e.g. Action Required: Your {{plan_name}} subscription expires in {{days_left}} days" value="${OctaQube.escapeHtml(ruleData.subject)}">
                                         </div>
                                         <div class="col-md-8">
                                             <label class="ds-label text-xxs">Inbox Preview Text (Preheader)</label>
-                                            <input type="text" class="ds-input text-xs" id="enPreheader" placeholder="Brief snippet visible in email inbox preview..." value="${QCMS.escapeHtml(ruleData.preheader || '')}">
+                                            <input type="text" class="ds-input text-xs" id="enPreheader" placeholder="Brief snippet visible in email inbox preview..." value="${OctaQube.escapeHtml(ruleData.preheader || '')}">
                                         </div>
                                         <div class="col-md-4">
                                             <label class="ds-label text-xxs">Header Accent Color</label>
@@ -2469,7 +2469,7 @@ const AnnouncementsModule = {
                                         <div class="d-flex flex-wrap gap-1.5 mb-2 p-2 rounded bg-light-subtle border">
                                             ${variableChipsHtml}
                                         </div>
-                                        <textarea class="ds-input text-xs font-monospace" id="enBodyHtml" rows="8" required placeholder="Type your email body HTML content with {{variables}}...">${QCMS.escapeHtml(ruleData.body_html)}</textarea>
+                                        <textarea class="ds-input text-xs font-monospace" id="enBodyHtml" rows="8" required placeholder="Type your email body HTML content with {{variables}}...">${OctaQube.escapeHtml(ruleData.body_html)}</textarea>
                                     </div>
 
                                     <!-- Call To Action Button -->
@@ -2480,11 +2480,11 @@ const AnnouncementsModule = {
                                         <div class="row g-2">
                                             <div class="col-md-5">
                                                 <label class="ds-label text-xxs">Button Label</label>
-                                                <input type="text" class="ds-input text-xs" id="enCtaText" placeholder="e.g. Renew Plan Now" value="${QCMS.escapeHtml(ruleData.cta_text || '')}">
+                                                <input type="text" class="ds-input text-xs" id="enCtaText" placeholder="e.g. Renew Plan Now" value="${OctaQube.escapeHtml(ruleData.cta_text || '')}">
                                             </div>
                                             <div class="col-md-7">
                                                 <label class="ds-label text-xxs">Button Target Link (URL)</label>
-                                                <input type="text" class="ds-input text-xs" id="enCtaUrl" placeholder="e.g. {{app_url}}/admin/settings.html?tab=billing" value="${QCMS.escapeHtml(ruleData.cta_url || '')}">
+                                                <input type="text" class="ds-input text-xs" id="enCtaUrl" placeholder="e.g. {{app_url}}/admin/settings.html?tab=billing" value="${OctaQube.escapeHtml(ruleData.cta_url || '')}">
                                             </div>
                                         </div>
                                     </div>
@@ -2611,17 +2611,17 @@ const AnnouncementsModule = {
                                     <div class="row g-3">
                                         <div class="col-md-4">
                                             <label class="ds-label text-xxs fw-semibold">DLT Entity ID (PE ID) <span class="text-danger">*</span></label>
-                                            <input type="text" class="ds-input text-xs font-monospace" id="enSmsEntityId" placeholder="e.g. 1301XXXXXXXXX" value="${QCMS.escapeHtml(ruleData.sms_entity_id || '')}">
+                                            <input type="text" class="ds-input text-xs font-monospace" id="enSmsEntityId" placeholder="e.g. 1301XXXXXXXXX" value="${OctaQube.escapeHtml(ruleData.sms_entity_id || '')}">
                                             <div class="text-xxs text-muted mt-0.5">Your Gio DLT Principal Entity ID</div>
                                         </div>
                                         <div class="col-md-4">
                                             <label class="ds-label text-xxs fw-semibold">DLT Template ID <span class="text-danger">*</span></label>
-                                            <input type="text" class="ds-input text-xs font-monospace" id="enSmsTemplateId" placeholder="e.g. 1307XXXXXXXXX" value="${QCMS.escapeHtml(ruleData.sms_template_id || '')}">
+                                            <input type="text" class="ds-input text-xs font-monospace" id="enSmsTemplateId" placeholder="e.g. 1307XXXXXXXXX" value="${OctaQube.escapeHtml(ruleData.sms_template_id || '')}">
                                             <div class="text-xxs text-muted mt-0.5">Gio DLT approved Template ID</div>
                                         </div>
                                         <div class="col-md-4">
                                             <label class="ds-label text-xxs fw-semibold">Sender ID (Header) <span class="text-danger">*</span></label>
-                                            <input type="text" class="ds-input text-xs font-monospace text-uppercase" id="enSmsSenderId" placeholder="e.g. IFQMSK" maxlength="6" value="${QCMS.escapeHtml(ruleData.sms_sender_id || '')}" oninput="this.value=this.value.toUpperCase()">
+                                            <input type="text" class="ds-input text-xs font-monospace text-uppercase" id="enSmsSenderId" placeholder="e.g. IFQMSK" maxlength="6" value="${OctaQube.escapeHtml(ruleData.sms_sender_id || '')}" oninput="this.value=this.value.toUpperCase()">
                                             <div class="text-xxs text-muted mt-0.5">6-char DLT-approved sender header</div>
                                         </div>
                                         <div class="col-12">
@@ -2635,7 +2635,7 @@ const AnnouncementsModule = {
                                                     `<button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-1.5 text-xxs font-monospace rounded" onclick="AnnouncementsModule.insertSmsVariableChip('${v}')">${v}</button>`
                                                 ).join('')}
                                             </div>
-                                            <textarea class="ds-input text-xs font-monospace" id="enSmsBody" rows="3" placeholder="e.g. Dear {{org_name}}, your {{plan_name}} subscription expires on {{expiry_date}}. Renew at {{app_url}}. -IFQMSK">${QCMS.escapeHtml(ruleData.sms_body || '')}</textarea>
+                                            <textarea class="ds-input text-xs font-monospace" id="enSmsBody" rows="3" placeholder="e.g. Dear {{org_name}}, your {{plan_name}} subscription expires on {{expiry_date}}. Renew at {{app_url}}. -IFQMSK">${OctaQube.escapeHtml(ruleData.sms_body || '')}</textarea>
                                             <div class="d-flex justify-content-between mt-1">
                                                 <div class="text-xxs text-muted">Character count: <span id="enSmsBodyCount" class="fw-semibold">${(ruleData.sms_body || '').length}</span>/160</div>
                                                 <div class="text-xxs text-warning">⚠️ SMS body must be DLT-registered. Do NOT change approved wording.</div>
@@ -2838,21 +2838,21 @@ const AnnouncementsModule = {
                                 </div>
                             </div>
 
-                            <h6 class="fw-bold text-main mb-1 text-truncate" title="${QCMS.escapeHtml(tmpl.display_name)}">${QCMS.escapeHtml(tmpl.display_name)}</h6>
-                            <p class="text-xs text-secondary mb-2.5" style="min-height: 28px; line-height: 1.4;">${QCMS.escapeHtml(tmpl.description || '')}</p>
+                            <h6 class="fw-bold text-main mb-1 text-truncate" title="${OctaQube.escapeHtml(tmpl.display_name)}">${OctaQube.escapeHtml(tmpl.display_name)}</h6>
+                            <p class="text-xs text-secondary mb-2.5" style="min-height: 28px; line-height: 1.4;">${OctaQube.escapeHtml(tmpl.description || '')}</p>
 
                             <div class="row g-2 mb-2">
                                 <div class="col-md-4">
                                     <label class="ds-label text-xxs fw-semibold mb-1">DLT Entity ID (PE ID)</label>
-                                    <input type="text" class="ds-input text-xs font-monospace py-1" id="smsHub_EI_${tmpl.template_key}" placeholder="e.g. 1301XXXXXXXXX" value="${QCMS.escapeHtml(tmpl.entity_id || '')}">
+                                    <input type="text" class="ds-input text-xs font-monospace py-1" id="smsHub_EI_${tmpl.template_key}" placeholder="e.g. 1301XXXXXXXXX" value="${OctaQube.escapeHtml(tmpl.entity_id || '')}">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="ds-label text-xxs fw-semibold mb-1">DLT Template ID</label>
-                                    <input type="text" class="ds-input text-xs font-monospace py-1" id="smsHub_TI_${tmpl.template_key}" placeholder="e.g. 1307XXXXXXXXX" value="${QCMS.escapeHtml(tmpl.template_id || '')}">
+                                    <input type="text" class="ds-input text-xs font-monospace py-1" id="smsHub_TI_${tmpl.template_key}" placeholder="e.g. 1307XXXXXXXXX" value="${OctaQube.escapeHtml(tmpl.template_id || '')}">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="ds-label text-xxs fw-semibold mb-1">Sender ID (6-char)</label>
-                                    <input type="text" class="ds-input text-xs font-monospace text-uppercase py-1" id="smsHub_SI_${tmpl.template_key}" placeholder="e.g. IFQMSK" maxlength="6" value="${QCMS.escapeHtml(tmpl.sender_id || '')}" oninput="this.value=this.value.toUpperCase()">
+                                    <input type="text" class="ds-input text-xs font-monospace text-uppercase py-1" id="smsHub_SI_${tmpl.template_key}" placeholder="e.g. IFQMSK" maxlength="6" value="${OctaQube.escapeHtml(tmpl.sender_id || '')}" oninput="this.value=this.value.toUpperCase()">
                                 </div>
                             </div>
 
@@ -2861,7 +2861,7 @@ const AnnouncementsModule = {
                                     <label class="ds-label text-xxs fw-semibold mb-0">SMS Body Text <span class="text-muted fw-normal">(Variables supported)</span></label>
                                     <span class="text-xxs text-muted" id="smsHub_Len_${tmpl.template_key}">${bodyLen} chars • ${segments} segment${segments > 1 ? 's' : ''}</span>
                                 </div>
-                                <textarea class="ds-input text-xs font-monospace" id="smsHub_BD_${tmpl.template_key}" rows="3" oninput="AnnouncementsModule.updateSmsCharCount('${tmpl.template_key}', this)">${QCMS.escapeHtml(tmpl.body || '')}</textarea>
+                                <textarea class="ds-input text-xs font-monospace" id="smsHub_BD_${tmpl.template_key}" rows="3" oninput="AnnouncementsModule.updateSmsCharCount('${tmpl.template_key}', this)">${OctaQube.escapeHtml(tmpl.body || '')}</textarea>
                             </div>
                         </div>
 
@@ -3043,10 +3043,10 @@ const AnnouncementsModule = {
         try {
             const res = await api.put(`/email-notifications/sms-templates/${templateKey}`, payload);
             if (res && res.status === 'success') {
-                QCMS.toast(res.message || `SMS template '${templateKey}' saved successfully!`, 'success');
+                OctaQube.toast(res.message || `SMS template '${templateKey}' saved successfully!`, 'success');
             }
         } catch(e) {
-            QCMS.toast('Failed to save SMS template: ' + (e.message || e.msg), 'error');
+            OctaQube.toast('Failed to save SMS template: ' + (e.message || e.msg), 'error');
         }
     },
 
@@ -3057,11 +3057,11 @@ const AnnouncementsModule = {
             if (res && res.status === 'success') {
                 const card = checkboxEl.closest('.sms-tmpl-card-wrapper');
                 if (card) card.setAttribute('data-status', isActive ? 'active' : 'paused');
-                QCMS.toast(`SMS template is now ${isActive ? 'Active' : 'Paused'}.`, 'success');
+                OctaQube.toast(`SMS template is now ${isActive ? 'Active' : 'Paused'}.`, 'success');
             }
         } catch (e) {
             checkboxEl.checked = !isActive;
-            QCMS.toast('Failed to update status: ' + (e.message || e.msg), 'error');
+            OctaQube.toast('Failed to update status: ' + (e.message || e.msg), 'error');
         }
     },
 
@@ -3070,13 +3070,13 @@ const AnnouncementsModule = {
         if (!phone || !phone.trim()) return;
 
         try {
-            QCMS.toast("Dispatching test SMS...", "info");
+            OctaQube.toast("Dispatching test SMS...", "info");
             const res = await api.post(`/email-notifications/sms-templates/${templateKey}/send-test`, { phone: phone.trim() });
             if (res && res.status === 'success') {
-                QCMS.toast(res.message || "Test SMS sent successfully!", "success");
+                OctaQube.toast(res.message || "Test SMS sent successfully!", "success");
             }
         } catch (e) {
-            QCMS.toast("Failed to send test SMS: " + (e.message || e.msg), "error");
+            OctaQube.toast("Failed to send test SMS: " + (e.message || e.msg), "error");
         }
     },
 
@@ -3154,7 +3154,7 @@ const AnnouncementsModule = {
                     tmplData = { ...tmplData, ...res.data };
                 }
             } catch (e) {
-                QCMS.toast('Failed to load SMS template details: ' + (e.message || e.msg), 'error');
+                OctaQube.toast('Failed to load SMS template details: ' + (e.message || e.msg), 'error');
                 return;
             }
         }
@@ -3172,7 +3172,7 @@ const AnnouncementsModule = {
             <div class="col-6 col-md-4 mb-1">
                 <div class="form-check text-xs">
                     <input class="form-check-input sms-org-checkbox" type="checkbox" value="${o.id}" id="smsOrg_${o.id}" ${isChecked}>
-                    <label class="form-check-label text-truncate" for="smsOrg_${o.id}" title="${QCMS.escapeHtml(o.name)}">${QCMS.escapeHtml(o.name)}</label>
+                    <label class="form-check-label text-truncate" for="smsOrg_${o.id}" title="${OctaQube.escapeHtml(o.name)}">${OctaQube.escapeHtml(o.name)}</label>
                 </div>
             </div>`;
         }).join('');
@@ -3216,7 +3216,7 @@ const AnnouncementsModule = {
 
         const presetOptionsHtml = (this._smsTemplates || []).map(t => {
             const isSel = (t.template_key === tmplData.template_key) ? 'selected' : '';
-            return `<option value="${t.template_key}" ${isSel}>${QCMS.escapeHtml(t.display_name)} (${t.template_key})</option>`;
+            return `<option value="${t.template_key}" ${isSel}>${OctaQube.escapeHtml(t.display_name)} (${t.template_key})</option>`;
         }).join('');
 
         const bodyLen = (tmplData.body || '').length;
@@ -3260,7 +3260,7 @@ const AnnouncementsModule = {
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-7">
                                         <label class="ds-label text-xs fw-semibold mb-1">Campaign / Rule Name <span class="text-danger">*</span></label>
-                                        <input type="text" class="ds-input text-xs" id="smsRule_Name" value="${QCMS.escapeHtml(tmplData.display_name || '')}" placeholder="e.g. Project Review Required: Stage Review Request">
+                                        <input type="text" class="ds-input text-xs" id="smsRule_Name" value="${OctaQube.escapeHtml(tmplData.display_name || '')}" placeholder="e.g. Project Review Required: Stage Review Request">
                                     </div>
                                     <div class="col-md-5">
                                         <label class="ds-label text-xs fw-semibold mb-1">Category <span class="text-danger">*</span></label>
@@ -3298,15 +3298,15 @@ const AnnouncementsModule = {
                                     <div class="row g-2">
                                         <div class="col-md-4">
                                             <label class="ds-label text-xxs fw-semibold mb-1">DLT Entity ID (PE ID)</label>
-                                            <input type="text" class="ds-input text-xs font-monospace py-1" id="smsModal_EntityId" value="${QCMS.escapeHtml(tmplData.entity_id || '')}" placeholder="e.g. 1301XXXXXXXXX">
+                                            <input type="text" class="ds-input text-xs font-monospace py-1" id="smsModal_EntityId" value="${OctaQube.escapeHtml(tmplData.entity_id || '')}" placeholder="e.g. 1301XXXXXXXXX">
                                         </div>
                                         <div class="col-md-4">
                                             <label class="ds-label text-xxs fw-semibold mb-1">DLT Template ID</label>
-                                            <input type="text" class="ds-input text-xs font-monospace py-1" id="smsModal_TemplateId" value="${QCMS.escapeHtml(tmplData.template_id || '')}" placeholder="e.g. 1307XXXXXXXXX">
+                                            <input type="text" class="ds-input text-xs font-monospace py-1" id="smsModal_TemplateId" value="${OctaQube.escapeHtml(tmplData.template_id || '')}" placeholder="e.g. 1307XXXXXXXXX">
                                         </div>
                                         <div class="col-md-4">
                                             <label class="ds-label text-xxs fw-semibold mb-1">Sender ID (6-char)</label>
-                                            <input type="text" class="ds-input text-xs font-monospace text-uppercase py-1" id="smsModal_SenderId" value="${QCMS.escapeHtml(tmplData.sender_id || '')}" placeholder="e.g. IFQMSK" maxlength="6" oninput="this.value=this.value.toUpperCase()">
+                                            <input type="text" class="ds-input text-xs font-monospace text-uppercase py-1" id="smsModal_SenderId" value="${OctaQube.escapeHtml(tmplData.sender_id || '')}" placeholder="e.g. IFQMSK" maxlength="6" oninput="this.value=this.value.toUpperCase()">
                                         </div>
                                     </div>
                                 </div>
@@ -3321,7 +3321,7 @@ const AnnouncementsModule = {
                                         <span class="text-xxs text-muted fw-semibold me-1">Insert Dynamic Tags:</span>
                                         ${variableChipsHtml}
                                     </div>
-                                    <textarea class="ds-input text-xs font-monospace" id="smsModal_Body" rows="5" placeholder="Enter TRAI approved SMS message text..." oninput="AnnouncementsModule.onSmsModalBodyInput(this)">${QCMS.escapeHtml(tmplData.body || '')}</textarea>
+                                    <textarea class="ds-input text-xs font-monospace" id="smsModal_Body" rows="5" placeholder="Enter TRAI approved SMS message text..." oninput="AnnouncementsModule.onSmsModalBodyInput(this)">${OctaQube.escapeHtml(tmplData.body || '')}</textarea>
                                 </div>
 
                                 <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
@@ -3524,11 +3524,11 @@ const AnnouncementsModule = {
         const body = (document.getElementById('smsModal_Body')?.value || '').trim();
 
         if (!displayName) {
-            QCMS.toast('Rule name is required', 'warning');
+            OctaQube.toast('Rule name is required', 'warning');
             return;
         }
         if (!body) {
-            QCMS.toast('SMS body text is required', 'warning');
+            OctaQube.toast('SMS body text is required', 'warning');
             return;
         }
 
@@ -3581,7 +3581,7 @@ const AnnouncementsModule = {
         try {
             const res = await api.put(`/email-notifications/sms-templates/${templateKey}`, payload);
             if (res && res.status === 'success') {
-                QCMS.toast(`SMS Notification Rule '${displayName}' saved successfully!`, 'success');
+                OctaQube.toast(`SMS Notification Rule '${displayName}' saved successfully!`, 'success');
                 const modalInner = document.getElementById('smsRuleModalInner');
                 if (modalInner) {
                     const bsModal = bootstrap.Modal.getInstance(modalInner);
@@ -3593,7 +3593,7 @@ const AnnouncementsModule = {
                 }
             }
         } catch (e) {
-            QCMS.toast('Failed to save SMS rule: ' + (e.message || e.msg), 'error');
+            OctaQube.toast('Failed to save SMS rule: ' + (e.message || e.msg), 'error');
         }
     },
 
@@ -3602,13 +3602,13 @@ const AnnouncementsModule = {
         if (!phone || !phone.trim()) return;
 
         try {
-            QCMS.toast("Dispatching test SMS...", "info");
+            OctaQube.toast("Dispatching test SMS...", "info");
             const res = await api.post(`/email-notifications/sms-templates/${templateKey}/send-test`, { phone: phone.trim() });
             if (res && res.status === 'success') {
-                QCMS.toast(res.message || "Test SMS sent successfully!", "success");
+                OctaQube.toast(res.message || "Test SMS sent successfully!", "success");
             }
         } catch (e) {
-            QCMS.toast("Failed to send test SMS: " + (e.message || e.msg), "error");
+            OctaQube.toast("Failed to send test SMS: " + (e.message || e.msg), "error");
         }
     },
 
@@ -3720,7 +3720,7 @@ const AnnouncementsModule = {
                 name: "Subscription Expiry Reminder (7 Days)",
                 category: "subscription_reminder",
                 subject: "Action Required: Your {{plan_name}} subscription expires in 7 days",
-                preheader: "Renew now to ensure uninterrupted team access to QCMS Enterprise OS.",
+                preheader: "Renew now to ensure uninterrupted team access to OctaQube Enterprise OS.",
                 heading: "Your Subscription is Expiring Soon",
                 banner_color: "#2563eb",
                 body_html: "<p>Dear <strong>{{user_name}}</strong>,</p>\n<p>This is a courtesy reminder that your organization's <strong>{{plan_name}}</strong> subscription for <strong>{{org_name}}</strong> will expire in <strong>{{days_left}} days</strong> on <strong>{{expiry_date}}</strong>.</p>\n<p>To avoid any disruption to your team's quality workflows and audit logs, please renew or upgrade your subscription plan today.</p>",
@@ -3753,7 +3753,7 @@ const AnnouncementsModule = {
                 preheader: "Keep your quality data, audits, and projects active with an enterprise plan.",
                 heading: "Your Free Trial is Ending Soon",
                 banner_color: "#d97706",
-                body_html: "<p>Hello <strong>{{user_name}}</strong>,</p>\n<p>We hope your team is enjoying exploring <strong>QCMS Enterprise OS</strong>! Your free onboarding trial for <strong>{{org_name}}</strong> will conclude in <strong>{{days_left}} days</strong> on <strong>{{expiry_date}}</strong>.</p>\n<p>Upgrade to a commercial plan today to unlock unlimited projects, increased storage capacity, and full team collaboration.</p>",
+                body_html: "<p>Hello <strong>{{user_name}}</strong>,</p>\n<p>We hope your team is enjoying exploring <strong>OctaQube Enterprise OS</strong>! Your free onboarding trial for <strong>{{org_name}}</strong> will conclude in <strong>{{days_left}} days</strong> on <strong>{{expiry_date}}</strong>.</p>\n<p>Upgrade to a commercial plan today to unlock unlimited projects, increased storage capacity, and full team collaboration.</p>",
                 cta_text: "Explore Plans & Upgrade",
                 cta_url: "{{app_url}}/admin/settings.html?tab=billing",
                 channel_key: "billing",
@@ -3764,7 +3764,7 @@ const AnnouncementsModule = {
             'maintenance': {
                 name: "Scheduled Software Maintenance & Downtime Notice",
                 category: "maintenance",
-                subject: "Scheduled Platform Maintenance Notice: QCMS Enterprise OS",
+                subject: "Scheduled Platform Maintenance Notice: OctaQube Enterprise OS",
                 preheader: "Notice of scheduled maintenance to enhance performance and security.",
                 heading: "Scheduled System Maintenance",
                 banner_color: "#4f46e5",
@@ -3777,11 +3777,11 @@ const AnnouncementsModule = {
             'welcome': {
                 name: "Welcome & New Organization Registration Guide",
                 category: "welcome",
-                subject: "Welcome to QCMS Enterprise OS – Essential Onboarding & Setup Guide for {{org_name}}",
+                subject: "Welcome to OctaQube Enterprise OS – Essential Onboarding & Setup Guide for {{org_name}}",
                 preheader: "Welcome aboard {{org_name}}! Here is your complete administrator quickstart guide, trial details, and role manual.",
-                heading: "Welcome to QCMS Enterprise Quality Management OS",
+                heading: "Welcome to OctaQube Enterprise Quality Management OS",
                 banner_color: "#16a34a",
-                body_html: "<p>Dear <strong>{{user_name}}</strong>,</p>\n<p>Congratulations and welcome to <strong>QCMS Enterprise OS</strong>! Your organization workspace for <strong>{{org_name}}</strong> has been successfully provisioned and is active.</p>\n<div style=\"background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px 20px; margin: 20px 0;\">\n    <div style=\"font-size: 15px; font-weight: bold; color: #166534; margin-bottom: 8px;\">🎯 Your Active Workspace &amp; Trial Plan Summary</div>\n    <table style=\"width: 100%; border-collapse: collapse; font-size: 13px; color: #1e293b;\">\n        <tr><td style=\"padding: 4px 0; width: 45%; color: #64748b;\">• <strong>Organization Name:</strong></td><td style=\"padding: 4px 0; font-weight: 600;\">{{org_name}}</td></tr>\n        <tr><td style=\"padding: 4px 0; color: #64748b;\">• <strong>Assigned Plan:</strong></td><td style=\"padding: 4px 0; font-weight: 600; color: #16a34a;\">{{plan_name}} (Free Trial)</td></tr>\n        <tr><td style=\"padding: 4px 0; color: #64748b;\">• <strong>Trial Period &amp; Validity:</strong></td><td style=\"padding: 4px 0; font-weight: 600;\">{{trial_days}} Days (Valid until {{trial_end_date}})</td></tr>\n        <tr><td style=\"padding: 4px 0; color: #64748b;\">• <strong>Team Capacity:</strong></td><td style=\"padding: 4px 0; font-weight: 600;\">Up to {{max_users}} User Accounts</td></tr>\n    </table>\n</div>\n<p>Log in to your admin portal and start building your 8-stage quality projects today!</p>",
+                body_html: "<p>Dear <strong>{{user_name}}</strong>,</p>\n<p>Congratulations and welcome to <strong>OctaQube Enterprise OS</strong>! Your organization workspace for <strong>{{org_name}}</strong> has been successfully provisioned and is active.</p>\n<div style=\"background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px 20px; margin: 20px 0;\">\n    <div style=\"font-size: 15px; font-weight: bold; color: #166534; margin-bottom: 8px;\">🎯 Your Active Workspace &amp; Trial Plan Summary</div>\n    <table style=\"width: 100%; border-collapse: collapse; font-size: 13px; color: #1e293b;\">\n        <tr><td style=\"padding: 4px 0; width: 45%; color: #64748b;\">• <strong>Organization Name:</strong></td><td style=\"padding: 4px 0; font-weight: 600;\">{{org_name}}</td></tr>\n        <tr><td style=\"padding: 4px 0; color: #64748b;\">• <strong>Assigned Plan:</strong></td><td style=\"padding: 4px 0; font-weight: 600; color: #16a34a;\">{{plan_name}} (Free Trial)</td></tr>\n        <tr><td style=\"padding: 4px 0; color: #64748b;\">• <strong>Trial Period &amp; Validity:</strong></td><td style=\"padding: 4px 0; font-weight: 600;\">{{trial_days}} Days (Valid until {{trial_end_date}})</td></tr>\n        <tr><td style=\"padding: 4px 0; color: #64748b;\">• <strong>Team Capacity:</strong></td><td style=\"padding: 4px 0; font-weight: 600;\">Up to {{max_users}} User Accounts</td></tr>\n    </table>\n</div>\n<p>Log in to your admin portal and start building your 8-stage quality projects today!</p>",
                 cta_text: "Access Administrator Dashboard",
                 cta_url: "{{app_url}}/auth/login.html",
                 channel_key: "onboarding",
@@ -3803,13 +3803,13 @@ const AnnouncementsModule = {
                 event_trigger: "new_user_welcome"
             },
             'usage_guide': {
-                name: "How to Use QCMS: 8-Stage Quality Workflow Guide",
+                name: "How to Use OctaQube: 8-Stage Quality Workflow Guide",
                 category: "usage_guide",
-                subject: "Mastering the 8-Stage Problem Solving Workflow in QCMS",
+                subject: "Mastering the 8-Stage Problem Solving Workflow in OctaQube",
                 preheader: "Tips & best practices to accelerate quality improvement projects with your team.",
                 heading: "Software Guide: 8-Stage Quality Methodology",
                 banner_color: "#0284c7",
-                body_html: "<p>Hello <strong>{{user_name}}</strong>,</p>\n<p>Discover how to leverage QCMS's built-in 8-Stage workflow for root cause analysis (Ishikawa & 5-Why) and corrective actions.</p>",
+                body_html: "<p>Hello <strong>{{user_name}}</strong>,</p>\n<p>Discover how to leverage OctaQube's built-in 8-Stage workflow for root cause analysis (Ishikawa & 5-Why) and corrective actions.</p>",
                 cta_text: "Open Knowledge Base",
                 cta_url: "{{app_url}}/projects/repository.html",
                 channel_key: "general",
@@ -3818,7 +3818,7 @@ const AnnouncementsModule = {
             'new_feature': {
                 name: "New Features & Release Notes Announcement",
                 category: "new_feature",
-                subject: "What's New in QCMS: New Features & Performance Enhancements",
+                subject: "What's New in OctaQube: New Features & Performance Enhancements",
                 preheader: "Check out the latest updates, customizable permissions, and reporting tools.",
                 heading: "New Platform Features & Updates",
                 banner_color: "#8b5cf6",
@@ -3831,7 +3831,7 @@ const AnnouncementsModule = {
             'support': {
                 name: "Customer Support & Success Check-in",
                 category: "support",
-                subject: "How is your experience with QCMS? We're here to help!",
+                subject: "How is your experience with OctaQube? We're here to help!",
                 preheader: "Connect with our dedicated support engineers for assistance or custom workflow setup.",
                 heading: "Dedicated Support & Customer Success",
                 banner_color: "#0d9488",
@@ -3848,7 +3848,7 @@ const AnnouncementsModule = {
                 preheader: "You have been assigned to project {{project_title}} in {{org_name}}.",
                 heading: "New Project Assignment & Kickoff",
                 banner_color: "#2563eb",
-                body_html: "<p>Dear <strong>{{user_name}}</strong>,</p>\n<p>You have been assigned as <strong>{{assigned_role}}</strong> for the quality project <strong>{{project_title}}</strong> in <strong>{{org_name}}</strong>.</p>\n<div style=\"background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 18px 0;\">\n    <strong>Project Overview:</strong><br>\n    • <strong>Project Code:</strong> {{project_code}}<br>\n    • <strong>Project Title:</strong> {{project_title}}<br>\n    • <strong>Category:</strong> {{project_category}}<br>\n    • <strong>Created By:</strong> {{created_by_name}}<br>\n    • <strong>Your Assigned Role:</strong> {{assigned_role}}<br>\n    • <strong>Problem Statement:</strong> {{problem_statement}}\n</div>\n<p>Please log in to your QCMS workspace to begin collaborating on Stage 1 (Problem Definition) and progress through the 8-Stage Problem Solving Workflow.</p>",
+                body_html: "<p>Dear <strong>{{user_name}}</strong>,</p>\n<p>You have been assigned as <strong>{{assigned_role}}</strong> for the quality project <strong>{{project_title}}</strong> in <strong>{{org_name}}</strong>.</p>\n<div style=\"background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 18px 0;\">\n    <strong>Project Overview:</strong><br>\n    • <strong>Project Code:</strong> {{project_code}}<br>\n    • <strong>Project Title:</strong> {{project_title}}<br>\n    • <strong>Category:</strong> {{project_category}}<br>\n    • <strong>Created By:</strong> {{created_by_name}}<br>\n    • <strong>Your Assigned Role:</strong> {{assigned_role}}<br>\n    • <strong>Problem Statement:</strong> {{problem_statement}}\n</div>\n<p>Please log in to your OctaQube workspace to begin collaborating on Stage 1 (Problem Definition) and progress through the 8-Stage Problem Solving Workflow.</p>",
                 cta_text: "Open Project & Start Stage 1",
                 cta_url: "{{app_url}}/auth/login.html?redirect=/projects/workspace.html?id={{project_id}}",
                 channel_key: "general",
@@ -3920,7 +3920,7 @@ const AnnouncementsModule = {
         if (document.getElementById('enPresetTemplateSelect')) document.getElementById('enPresetTemplateSelect').value = presetKey;
 
         this.updateLiveFormPreview();
-        QCMS.toast(`Preset "${p.name}" loaded with Contact Directory sender identity.`, 'info');
+        OctaQube.toast(`Preset "${p.name}" loaded with Contact Directory sender identity.`, 'info');
     },
 
     async updateLiveFormPreview() {
@@ -3937,14 +3937,14 @@ const AnnouncementsModule = {
             banner_color: document.getElementById('enBannerColor')?.value || '#2563eb',
             cta_text: document.getElementById('enCtaText')?.value || '',
             cta_url: document.getElementById('enCtaUrl')?.value || '',
-            sender_email: document.getElementById('enSenderEmail')?.value || 'notifications@qcms.com',
-            sender_name: document.getElementById('enSenderName')?.value || 'QCMS Enterprise Notifications'
+            sender_email: document.getElementById('enSenderEmail')?.value || 'notifications@octaqube.com',
+            sender_name: document.getElementById('enSenderName')?.value || 'OctaQube Enterprise Notifications'
         };
 
         try {
             const res = await api.post('/email-notifications/preview', payload);
             if (res && res.html) {
-                frame.innerHTML = `<iframe srcdoc="${QCMS.escapeHtml(res.html)}" style="width:100%; height:220px; border:none; border-radius:6px;"></iframe>`;
+                frame.innerHTML = `<iframe srcdoc="${OctaQube.escapeHtml(res.html)}" style="width:100%; height:220px; border:none; border-radius:6px;"></iframe>`;
             }
         } catch (e) {
             frame.innerHTML = `<div class="text-danger text-center py-3 text-xs">Preview render error: ${e.message}</div>`;
@@ -3987,16 +3987,16 @@ const AnnouncementsModule = {
         };
 
         if (!payload.name || !payload.subject || !payload.body_html) {
-            QCMS.toast('Please fill in Rule Name, Subject, and Body HTML.', 'warning');
+            OctaQube.toast('Please fill in Rule Name, Subject, and Body HTML.', 'warning');
             return;
         }
 
         // Validate SMS fields when SMS is enabled
         if (payload.sms_enabled) {
-            if (!payload.sms_template_id) { QCMS.toast('DLT Template ID is required when SMS is enabled.', 'warning'); return; }
-            if (!payload.sms_entity_id) { QCMS.toast('DLT Entity ID (PE ID) is required when SMS is enabled.', 'warning'); return; }
-            if (!payload.sms_sender_id) { QCMS.toast('Sender ID (Header) is required when SMS is enabled.', 'warning'); return; }
-            if (!payload.sms_body) { QCMS.toast('SMS Body text is required when SMS is enabled.', 'warning'); return; }
+            if (!payload.sms_template_id) { OctaQube.toast('DLT Template ID is required when SMS is enabled.', 'warning'); return; }
+            if (!payload.sms_entity_id) { OctaQube.toast('DLT Entity ID (PE ID) is required when SMS is enabled.', 'warning'); return; }
+            if (!payload.sms_sender_id) { OctaQube.toast('Sender ID (Header) is required when SMS is enabled.', 'warning'); return; }
+            if (!payload.sms_body) { OctaQube.toast('SMS Body text is required when SMS is enabled.', 'warning'); return; }
         }
 
         try {
@@ -4008,7 +4008,7 @@ const AnnouncementsModule = {
             }
 
             if (res && res.status === 'success') {
-                QCMS.toast(res.message || 'Notification rule saved successfully!', 'success');
+                OctaQube.toast(res.message || 'Notification rule saved successfully!', 'success');
                 const modalEl = document.getElementById('emailNotificationModal');
                 if (modalEl) {
                     const bsModal = bootstrap.Modal.getInstance(modalEl);
@@ -4020,7 +4020,7 @@ const AnnouncementsModule = {
                 }
             }
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to save notification rule', 'error');
+            OctaQube.toast(e.message || 'Failed to save notification rule', 'error');
         }
     },
 
@@ -4031,8 +4031,8 @@ const AnnouncementsModule = {
         const payload = {
             name: document.getElementById('enRuleName')?.value || 'Test',
             category: document.getElementById('enCategory')?.value || 'custom',
-            sender_email: document.getElementById('enSenderEmail')?.value || 'notifications@qcms.com',
-            sender_name: document.getElementById('enSenderName')?.value || 'QCMS Notifications',
+            sender_email: document.getElementById('enSenderEmail')?.value || 'notifications@octaqube.com',
+            sender_name: document.getElementById('enSenderName')?.value || 'OctaQube Notifications',
             reply_to: document.getElementById('enReplyTo')?.value || null,
             subject: document.getElementById('enSubject')?.value || 'Test Subject',
             preheader: document.getElementById('enPreheader')?.value || '',
@@ -4046,11 +4046,11 @@ const AnnouncementsModule = {
         try {
             // First save or preview
             const previewRes = await api.post('/email-notifications/preview', payload);
-            QCMS.toast(`Dispatching test preview to ${testEmail.trim()}...`, 'info');
+            OctaQube.toast(`Dispatching test preview to ${testEmail.trim()}...`, 'info');
             // If rule has an ID we can use send-test endpoint
             alert(`Test email preview rendered successfully for: ${testEmail.trim()}`);
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to dispatch test email', 'error');
+            OctaQube.toast(e.message || 'Failed to dispatch test email', 'error');
         }
     },
 
@@ -4062,25 +4062,25 @@ const AnnouncementsModule = {
         const testEmail = prompt('Send Test Email – Enter your destination email address:', defaultEmail);
         if (!testEmail || !testEmail.trim()) return;
 
-        QCMS.toast(`Sending test email to ${testEmail.trim()}...`, 'info');
+        OctaQube.toast(`Sending test email to ${testEmail.trim()}...`, 'info');
         try {
             const res = await api.post(`/email-notifications/rules/${ruleId}/send-test`, { email: testEmail.trim() });
             if (res && res.status === 'success') {
-                QCMS.toast(res.message, 'success');
+                OctaQube.toast(res.message, 'success');
             } else {
-                QCMS.toast(res.message || 'Test email failed', 'error');
+                OctaQube.toast(res.message || 'Test email failed', 'error');
             }
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to send test email', 'error');
+            OctaQube.toast(e.message || 'Failed to send test email', 'error');
         }
     },
 
     async triggerEmailRuleNow(ruleId) {
         try {
-            QCMS.toast('Loading audience recipients...', 'info');
+            OctaQube.toast('Loading audience recipients...', 'info');
             const res = await api.get(`/email-notifications/rules/${ruleId}/recipients`);
             if (!res || res.status !== 'success') {
-                QCMS.toast('Failed to load recipient details', 'error');
+                OctaQube.toast('Failed to load recipient details', 'error');
                 return;
             }
 
@@ -4106,10 +4106,10 @@ const AnnouncementsModule = {
                         <tbody>
                             ${data.recipients.map(r => `
                                 <tr>
-                                    <td class="py-2 px-3 fw-semibold text-main">${QCMS.escapeHtml(r.name || 'User')}</td>
-                                    <td class="py-2 px-3 font-monospace text-primary">${QCMS.escapeHtml(r.email)}</td>
-                                    <td class="py-2 px-3"><span class="badge bg-secondary-subtle text-secondary font-normal">${QCMS.escapeHtml(r.role)}</span></td>
-                                    <td class="py-2 px-3 text-secondary">${QCMS.escapeHtml(r.org_name || 'System')}</td>
+                                    <td class="py-2 px-3 fw-semibold text-main">${OctaQube.escapeHtml(r.name || 'User')}</td>
+                                    <td class="py-2 px-3 font-monospace text-primary">${OctaQube.escapeHtml(r.email)}</td>
+                                    <td class="py-2 px-3"><span class="badge bg-secondary-subtle text-secondary font-normal">${OctaQube.escapeHtml(r.role)}</span></td>
+                                    <td class="py-2 px-3 text-secondary">${OctaQube.escapeHtml(r.org_name || 'System')}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -4147,15 +4147,15 @@ const AnnouncementsModule = {
                                 <div class="row g-2 text-xs">
                                     <div class="col-md-7">
                                         <div class="text-secondary text-xxs font-semibold text-uppercase">Campaign Name</div>
-                                        <div class="fw-bold text-main">${QCMS.escapeHtml(data.rule_name)}</div>
+                                        <div class="fw-bold text-main">${OctaQube.escapeHtml(data.rule_name)}</div>
                                     </div>
                                     <div class="col-md-5">
                                         <div class="text-secondary text-xxs font-semibold text-uppercase">Sender Identity</div>
-                                        <div class="fw-semibold text-main">${QCMS.escapeHtml(data.sender_name)} &lt;${QCMS.escapeHtml(data.sender_email)}&gt;</div>
+                                        <div class="fw-semibold text-main">${OctaQube.escapeHtml(data.sender_name)} &lt;${OctaQube.escapeHtml(data.sender_email)}&gt;</div>
                                     </div>
                                     <div class="col-12 mt-2 pt-2 border-top">
                                         <div class="text-secondary text-xxs font-semibold text-uppercase">Subject Line</div>
-                                        <div class="font-monospace text-primary text-xs">${QCMS.escapeHtml(data.subject)}</div>
+                                        <div class="font-monospace text-primary text-xs">${OctaQube.escapeHtml(data.subject)}</div>
                                     </div>
                                 </div>
                             </div>
@@ -4173,7 +4173,7 @@ const AnnouncementsModule = {
                                 <div class="form-check text-xs">
                                     <input class="form-check-input" type="checkbox" id="enCcSuperAdminCheckbox" checked>
                                     <label class="form-check-label fw-semibold text-main" for="enCcSuperAdminCheckbox">
-                                        Also send a live copy to my administrator email (${QCMS.escapeHtml(data.admin_email || 'harshithkd6@gmail.com')})
+                                        Also send a live copy to my administrator email (${OctaQube.escapeHtml(data.admin_email || 'harshithkd6@gmail.com')})
                                     </label>
                                     <div class="text-xxs text-secondary mt-0.5">Recommended: Ensures you receive a live copy of the broadcast in your active inbox.</div>
                                 </div>
@@ -4194,7 +4194,7 @@ const AnnouncementsModule = {
             modalInstance.show();
             if (window.lucide) lucide.createIcons();
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to open broadcast confirmation', 'error');
+            OctaQube.toast(e.message || 'Failed to open broadcast confirmation', 'error');
         }
     },
 
@@ -4219,18 +4219,18 @@ const AnnouncementsModule = {
             }
 
             if (res && res.status === 'success') {
-                QCMS.toast(res.message || 'Notification broadcast successfully dispatched!', 'success');
+                OctaQube.toast(res.message || 'Notification broadcast successfully dispatched!', 'success');
                 const contentArea = document.getElementById('announcementContentArea');
                 if (contentArea && this.currentTab === 'email-notifications') {
                     this.renderEmailNotificationsHub(contentArea);
                 }
             } else if (res && res.status === 'warning') {
-                QCMS.toast(res.message, 'warning');
+                OctaQube.toast(res.message, 'warning');
             } else {
-                QCMS.toast(res.message || 'Broadcast completed with notice', 'info');
+                OctaQube.toast(res.message || 'Broadcast completed with notice', 'info');
             }
         } catch (e) {
-            QCMS.toast(e.message || 'Failed to trigger notification broadcast', 'error');
+            OctaQube.toast(e.message || 'Failed to trigger notification broadcast', 'error');
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -4263,7 +4263,7 @@ const AnnouncementsModule = {
                         <div class="modal-header border-bottom d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center gap-2">
                                 <i data-lucide="mail-check" class="text-primary" style="width:20px;height:20px;"></i>
-                                <h5 class="modal-title fw-bold mb-0">Email Preview: ${QCMS.escapeHtml(rule.name)}</h5>
+                                <h5 class="modal-title fw-bold mb-0">Email Preview: ${OctaQube.escapeHtml(rule.name)}</h5>
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <div class="btn-group btn-group-sm" role="group">
@@ -4277,19 +4277,19 @@ const AnnouncementsModule = {
                             <div class="p-2.5 rounded border bg-white text-start text-xs mb-3 shadow-sm mx-auto" style="max-width: 600px;">
                                 <div class="d-flex align-items-center gap-2 mb-1">
                                     <span class="text-muted text-xxs text-uppercase fw-bold" style="width:60px;">From:</span>
-                                    <span class="fw-semibold text-main">${QCMS.escapeHtml(rule.sender_name)} &lt;${QCMS.escapeHtml(rule.sender_email)}&gt;</span>
+                                    <span class="fw-semibold text-main">${OctaQube.escapeHtml(rule.sender_name)} &lt;${OctaQube.escapeHtml(rule.sender_email)}&gt;</span>
                                 </div>
                                 <div class="d-flex align-items-center gap-2 mb-1">
                                     <span class="text-muted text-xxs text-uppercase fw-bold" style="width:60px;">Subject:</span>
-                                    <span class="fw-bold text-main font-monospace">${QCMS.escapeHtml(rule.subject)}</span>
+                                    <span class="fw-bold text-main font-monospace">${OctaQube.escapeHtml(rule.subject)}</span>
                                 </div>
                                 ${rule.preheader ? `
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="text-muted text-xxs text-uppercase fw-bold" style="width:60px;">Preheader:</span>
-                                    <span class="text-secondary">${QCMS.escapeHtml(rule.preheader)}</span>
+                                    <span class="text-secondary">${OctaQube.escapeHtml(rule.preheader)}</span>
                                 </div>` : ''}
                             </div>
-                            <iframe id="previewIframe" srcdoc="${QCMS.escapeHtml(htmlContent)}" style="width:100%; max-width:100%; height:520px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; transition: max-width 0.25s ease;" class="shadow-sm mx-auto"></iframe>
+                            <iframe id="previewIframe" srcdoc="${OctaQube.escapeHtml(htmlContent)}" style="width:100%; max-width:100%; height:520px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; transition: max-width 0.25s ease;" class="shadow-sm mx-auto"></iframe>
                         </div>
                         <div class="modal-footer border-top d-flex justify-content-between">
                             <button class="ds-btn ds-btn-outline ds-btn-sm" onclick="AnnouncementsModule.openTestEmailModal(${rule.id})">
@@ -4305,7 +4305,7 @@ const AnnouncementsModule = {
             modal.show();
             if (window.lucide) lucide.createIcons();
         } catch (e) {
-            QCMS.toast('Failed to load email preview', 'error');
+            OctaQube.toast('Failed to load email preview', 'error');
         }
     },
 
@@ -4367,14 +4367,14 @@ const AnnouncementsModule = {
 
                 <div class="row g-2 align-items-center">
                     <div class="col-md-7">
-                        <h6 class="fw-bold text-main mb-1 text-truncate">${QCMS.escapeHtml(rule.name)}</h6>
-                        <div class="text-xs text-secondary font-monospace text-truncate" title="${QCMS.escapeHtml(rule.subject)}">
-                            <span class="text-muted text-xxs text-uppercase fw-semibold">Subject:</span> ${QCMS.escapeHtml(rule.subject)}
+                        <h6 class="fw-bold text-main mb-1 text-truncate">${OctaQube.escapeHtml(rule.name)}</h6>
+                        <div class="text-xs text-secondary font-monospace text-truncate" title="${OctaQube.escapeHtml(rule.subject)}">
+                            <span class="text-muted text-xxs text-uppercase fw-semibold">Subject:</span> ${OctaQube.escapeHtml(rule.subject)}
                         </div>
                     </div>
                     <div class="col-md-5 text-md-end text-xxs text-muted">
-                        <div>Sender: <strong>${QCMS.escapeHtml(rule.sender_email)}</strong></div>
-                        <div>Audience: <strong>${QCMS.escapeHtml((rule.target_roles || []).join(', ') || 'All Roles')}</strong></div>
+                        <div>Sender: <strong>${OctaQube.escapeHtml(rule.sender_email)}</strong></div>
+                        <div>Audience: <strong>${OctaQube.escapeHtml((rule.target_roles || []).join(', ') || 'All Roles')}</strong></div>
                     </div>
                 </div>
 
@@ -4567,7 +4567,7 @@ const AnnouncementsModule = {
             const unifiedSearchBoxHtml = `
                 <div class="position-relative" style="min-width: 260px; max-width: 380px; width: 100%;">
                     <i data-lucide="search" class="position-absolute text-muted" style="width: 14px; height: 14px; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none;"></i>
-                    <input type="text" class="form-control text-xs w-100" id="logsSearchInput" placeholder="Search by campaign, subject, sender..." value="${QCMS.escapeHtml(this._logSearch)}" oninput="AnnouncementsModule.onLogsSearchInput(this.value)" style="padding-left: 34px; padding-top: 6px; padding-bottom: 6px; border-radius: 8px; border: 1px solid var(--ds-border-color); background: #ffffff;">
+                    <input type="text" class="form-control text-xs w-100" id="logsSearchInput" placeholder="Search by campaign, subject, sender..." value="${OctaQube.escapeHtml(this._logSearch)}" oninput="AnnouncementsModule.onLogsSearchInput(this.value)" style="padding-left: 34px; padding-top: 6px; padding-bottom: 6px; border-radius: 8px; border: 1px solid var(--ds-border-color); background: #ffffff;">
                 </div>
             `;
 
@@ -4589,24 +4589,24 @@ const AnnouncementsModule = {
                             ? `<span class="badge bg-warning-subtle text-warning font-semibold px-2 py-1"><i data-lucide="alert-circle" style="width:10px;height:10px;" class="me-1"></i>Partial (${l.recipient_count})</span>`
                             : `<span class="badge bg-danger-subtle text-danger font-semibold px-2 py-1"><i data-lucide="x-circle" style="width:10px;height:10px;" class="me-1"></i>Failed</span>`);
 
-                    const categoryBadge = `<span class="badge bg-secondary-subtle text-secondary font-normal text-xxs text-uppercase">${QCMS.escapeHtml((l.category || 'CUSTOM').replace('_', ' '))}</span>`;
+                    const categoryBadge = `<span class="badge bg-secondary-subtle text-secondary font-normal text-xxs text-uppercase">${OctaQube.escapeHtml((l.category || 'CUSTOM').replace('_', ' '))}</span>`;
 
                     return `
                     <tr style="cursor: pointer; transition: background 0.15s ease;" class="log-row-hover" onclick="AnnouncementsModule.openLogDetail(${l.id})" title="Click to view detailed recipients and organization breakdown">
                         <td class="py-3 px-3">
                             <div class="d-flex align-items-center gap-2">
                                 <div>
-                                    <div class="fw-bold text-main text-xs">${QCMS.escapeHtml(l.rule_name)}</div>
+                                    <div class="fw-bold text-main text-xs">${OctaQube.escapeHtml(l.rule_name)}</div>
                                     <div class="mt-0.5">${categoryBadge}</div>
                                 </div>
                             </div>
                         </td>
                         <td class="py-3 px-3">
-                            <div class="text-xs text-primary font-monospace text-truncate" style="max-width:260px;" title="${QCMS.escapeHtml(l.subject)}">${QCMS.escapeHtml(l.subject)}</div>
+                            <div class="text-xs text-primary font-monospace text-truncate" style="max-width:260px;" title="${OctaQube.escapeHtml(l.subject)}">${OctaQube.escapeHtml(l.subject)}</div>
                         </td>
                         <td class="py-3 px-3">
-                            <div class="text-xs fw-semibold text-main">${QCMS.escapeHtml(l.sender_name || 'QCMS Engine')}</div>
-                            <div class="text-xxs text-muted font-monospace">${QCMS.escapeHtml(l.sender_email)}</div>
+                            <div class="text-xs fw-semibold text-main">${OctaQube.escapeHtml(l.sender_name || 'OctaQube Engine')}</div>
+                            <div class="text-xxs text-muted font-monospace">${OctaQube.escapeHtml(l.sender_email)}</div>
                         </td>
                         <td class="py-3 px-3 text-center">
                             <span class="badge bg-primary-subtle text-primary font-semibold px-2.5 py-1 text-xs">
@@ -4616,7 +4616,7 @@ const AnnouncementsModule = {
                         <td class="py-3 px-3 text-center">${statusBadge}</td>
                         <td class="py-3 px-3">
                             <div class="text-xs text-secondary">${new Date(l.sent_at).toLocaleString()}</div>
-                            <div class="text-xxs text-muted"><i data-lucide="user-check" style="width:10px;height:10px;" class="me-1"></i>${QCMS.escapeHtml(l.sent_by)}</div>
+                            <div class="text-xxs text-muted"><i data-lucide="user-check" style="width:10px;height:10px;" class="me-1"></i>${OctaQube.escapeHtml(l.sent_by)}</div>
                         </td>
                         <td class="py-3 px-3 text-end">
                             <button type="button" class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2 text-xxs" onclick="event.stopPropagation(); AnnouncementsModule.openLogDetail(${l.id})">
@@ -4695,13 +4695,13 @@ const AnnouncementsModule = {
 
             return `
             <tr>
-                <td class="py-2.5 px-3 fw-semibold text-main text-xs">${QCMS.escapeHtml(r.name || 'User')}</td>
-                <td class="py-2.5 px-3 font-monospace text-primary text-xs">${QCMS.escapeHtml(r.email)}</td>
+                <td class="py-2.5 px-3 fw-semibold text-main text-xs">${OctaQube.escapeHtml(r.name || 'User')}</td>
+                <td class="py-2.5 px-3 font-monospace text-primary text-xs">${OctaQube.escapeHtml(r.email)}</td>
                 <td class="py-2.5 px-3 text-xs">
-                    <span class="badge bg-secondary-subtle text-secondary font-normal">${QCMS.escapeHtml(r.role || 'User')}</span>
+                    <span class="badge bg-secondary-subtle text-secondary font-normal">${OctaQube.escapeHtml(r.role || 'User')}</span>
                 </td>
                 <td class="py-2.5 px-3 text-xs text-secondary fw-semibold">
-                    <i data-lucide="building-2" style="width:12px;height:12px;" class="me-1 text-primary"></i>${QCMS.escapeHtml(r.org || 'Platform Administration')}
+                    <i data-lucide="building-2" style="width:12px;height:12px;" class="me-1 text-primary"></i>${OctaQube.escapeHtml(r.org || 'Platform Administration')}
                 </td>
                 <td class="py-2.5 px-3 text-center">${statusBadge}</td>
             </tr>`;
@@ -4728,17 +4728,17 @@ const AnnouncementsModule = {
                 <div class="row g-3 text-xs">
                     <div class="col-md-6">
                         <div class="text-secondary text-xxs font-semibold text-uppercase">Campaign / Rule Name</div>
-                        <div class="fw-bold text-main fs-6">${QCMS.escapeHtml(log.rule_name)}</div>
-                        <div class="text-xxs text-muted mt-0.5">Category: <span class="badge bg-secondary-subtle text-secondary text-xxs">${QCMS.escapeHtml(log.category || 'custom')}</span></div>
+                        <div class="fw-bold text-main fs-6">${OctaQube.escapeHtml(log.rule_name)}</div>
+                        <div class="text-xxs text-muted mt-0.5">Category: <span class="badge bg-secondary-subtle text-secondary text-xxs">${OctaQube.escapeHtml(log.category || 'custom')}</span></div>
                     </div>
                     <div class="col-md-6">
                         <div class="text-secondary text-xxs font-semibold text-uppercase">Sender Identity</div>
-                        <div class="fw-bold text-main">${QCMS.escapeHtml(log.sender_name || 'QCMS Engine')} &lt;${QCMS.escapeHtml(log.sender_email)}&gt;</div>
-                        <div class="text-xxs text-muted mt-0.5">Dispatched at: <b>${new Date(log.sent_at).toLocaleString()}</b> by <b>${QCMS.escapeHtml(log.sent_by)}</b></div>
+                        <div class="fw-bold text-main">${OctaQube.escapeHtml(log.sender_name || 'OctaQube Engine')} &lt;${OctaQube.escapeHtml(log.sender_email)}&gt;</div>
+                        <div class="text-xxs text-muted mt-0.5">Dispatched at: <b>${new Date(log.sent_at).toLocaleString()}</b> by <b>${OctaQube.escapeHtml(log.sent_by)}</b></div>
                     </div>
                     <div class="col-12 pt-2 border-top">
                         <div class="text-secondary text-xxs font-semibold text-uppercase">Subject Line</div>
-                        <div class="font-monospace text-primary text-xs fw-semibold">${QCMS.escapeHtml(log.subject)}</div>
+                        <div class="font-monospace text-primary text-xs fw-semibold">${OctaQube.escapeHtml(log.subject)}</div>
                     </div>
                 </div>
             </div>
@@ -4878,7 +4878,7 @@ const AnnouncementsModule = {
             const unifiedSearchBoxHtml = `
                 <div class="position-relative" style="min-width: 260px; max-width: 380px; width: 100%;">
                     <i data-lucide="search" class="position-absolute text-muted" style="width: 14px; height: 14px; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none;"></i>
-                    <input type="text" class="form-control text-xs w-100" id="smsLogsSearchInput" placeholder="Search by recipient, phone, template, body..." value="${QCMS.escapeHtml(this._smsLogSearch)}" oninput="AnnouncementsModule.onSmsLogsSearchInput(this.value)" style="padding-left: 34px; padding-top: 6px; padding-bottom: 6px; border-radius: 8px; border: 1px solid var(--ds-border-color); background: #ffffff;">
+                    <input type="text" class="form-control text-xs w-100" id="smsLogsSearchInput" placeholder="Search by recipient, phone, template, body..." value="${OctaQube.escapeHtml(this._smsLogSearch)}" oninput="AnnouncementsModule.onSmsLogsSearchInput(this.value)" style="padding-left: 34px; padding-top: 6px; padding-bottom: 6px; border-radius: 8px; border: 1px solid var(--ds-border-color); background: #ffffff;">
                 </div>
             `;
 
@@ -4900,32 +4900,32 @@ const AnnouncementsModule = {
                             ? `<span class="badge bg-primary-subtle text-primary font-semibold px-2 py-1"><i data-lucide="send" style="width:10px;height:10px;" class="me-1"></i>Sent</span>`
                             : `<span class="badge bg-danger-subtle text-danger font-semibold px-2 py-1"><i data-lucide="x-circle" style="width:10px;height:10px;" class="me-1"></i>Failed</span>`);
 
-                    const categoryBadge = `<span class="badge bg-secondary-subtle text-secondary font-normal text-xxs text-uppercase">${QCMS.escapeHtml((l.category || 'CUSTOM').replace('_', ' '))}</span>`;
+                    const categoryBadge = `<span class="badge bg-secondary-subtle text-secondary font-normal text-xxs text-uppercase">${OctaQube.escapeHtml((l.category || 'CUSTOM').replace('_', ' '))}</span>`;
 
                     return `
                     <tr style="cursor: pointer; transition: background 0.15s ease;" class="log-row-hover" onclick="AnnouncementsModule.openSmsLogDetail(${l.id})" title="Click to view detailed SMS dispatch parameters and message content">
                         <td class="py-3 px-3">
                             <div>
-                                <div class="fw-bold text-main text-xs">${QCMS.escapeHtml(l.template_name)}</div>
+                                <div class="fw-bold text-main text-xs">${OctaQube.escapeHtml(l.template_name)}</div>
                                 <div class="mt-0.5 d-flex align-items-center gap-1.5 flex-wrap">
                                     ${categoryBadge}
-                                    <span class="badge bg-light text-dark border px-1.5 py-0.5 text-xxs font-monospace">${QCMS.escapeHtml(l.template_key)}</span>
+                                    <span class="badge bg-light text-dark border px-1.5 py-0.5 text-xxs font-monospace">${OctaQube.escapeHtml(l.template_key)}</span>
                                 </div>
                             </div>
                         </td>
                         <td class="py-3 px-3">
-                            <div class="text-xs fw-semibold text-main">${QCMS.escapeHtml(l.recipient_name || 'User')}</div>
-                            <div class="text-xxs text-primary font-monospace mt-0.5"><i data-lucide="phone" style="width:10px;height:10px;" class="me-1"></i>${QCMS.escapeHtml(l.phone_number)}</div>
-                            <div class="text-xxs text-muted">${QCMS.escapeHtml(l.org_name || 'Organization')}</div>
+                            <div class="text-xs fw-semibold text-main">${OctaQube.escapeHtml(l.recipient_name || 'User')}</div>
+                            <div class="text-xxs text-primary font-monospace mt-0.5"><i data-lucide="phone" style="width:10px;height:10px;" class="me-1"></i>${OctaQube.escapeHtml(l.phone_number)}</div>
+                            <div class="text-xxs text-muted">${OctaQube.escapeHtml(l.org_name || 'Organization')}</div>
                         </td>
                         <td class="py-3 px-3" style="max-width:280px;">
-                            <div class="text-xs text-secondary font-monospace text-truncate" title="${QCMS.escapeHtml(l.message_body)}">${QCMS.escapeHtml(l.message_body)}</div>
-                            <div class="text-xxs text-muted mt-0.5">Sender: <b>${QCMS.escapeHtml(l.sender_id || 'IFQMSK')}</b> &bull; ${l.message_body.length} chars</div>
+                            <div class="text-xs text-secondary font-monospace text-truncate" title="${OctaQube.escapeHtml(l.message_body)}">${OctaQube.escapeHtml(l.message_body)}</div>
+                            <div class="text-xxs text-muted mt-0.5">Sender: <b>${OctaQube.escapeHtml(l.sender_id || 'IFQMSK')}</b> &bull; ${l.message_body.length} chars</div>
                         </td>
                         <td class="py-3 px-3 text-center">${statusBadge}</td>
                         <td class="py-3 px-3">
                             <div class="text-xs text-secondary">${new Date(l.sent_at).toLocaleString()}</div>
-                            <div class="text-xxs text-muted"><i data-lucide="user-check" style="width:10px;height:10px;" class="me-1"></i>${QCMS.escapeHtml(l.sent_by)}</div>
+                            <div class="text-xxs text-muted"><i data-lucide="user-check" style="width:10px;height:10px;" class="me-1"></i>${OctaQube.escapeHtml(l.sent_by)}</div>
                         </td>
                         <td class="py-3 px-3 text-end">
                             <button type="button" class="ds-btn ds-btn-outline ds-btn-sm py-1 px-2 text-xxs" onclick="event.stopPropagation(); AnnouncementsModule.openSmsLogDetail(${l.id})">
@@ -4978,7 +4978,7 @@ const AnnouncementsModule = {
             body.innerHTML = `
             <div class="alert alert-danger p-4 text-center">
                 <i data-lucide="alert-circle" style="width:24px;height:24px;" class="mb-2"></i>
-                <p class="mb-0 text-xs">Failed to load SMS delivery logs: ${QCMS.escapeHtml(e.message)}</p>
+                <p class="mb-0 text-xs">Failed to load SMS delivery logs: ${OctaQube.escapeHtml(e.message)}</p>
                 <button class="ds-btn ds-btn-outline ds-btn-sm mt-3" onclick="AnnouncementsModule.loadSmsLogsPage(1)">Retry</button>
             </div>`;
             if (window.lucide) lucide.createIcons();
@@ -5018,7 +5018,7 @@ const AnnouncementsModule = {
                 </button>
                 <div class="d-flex align-items-center gap-2">
                     <span class="badge bg-success-subtle text-success text-xs px-2.5 py-1">
-                        <i data-lucide="check-circle-2" style="width:11px;height:11px;" class="me-1"></i>${QCMS.escapeHtml(log.status)}
+                        <i data-lucide="check-circle-2" style="width:11px;height:11px;" class="me-1"></i>${OctaQube.escapeHtml(log.status)}
                     </span>
                     <span class="badge bg-light text-dark border text-xs px-2.5 py-1 font-monospace">
                         ID #${log.id}
@@ -5031,27 +5031,27 @@ const AnnouncementsModule = {
                 <div class="row g-3 text-xs">
                     <div class="col-md-6">
                         <div class="text-secondary text-xxs font-semibold text-uppercase">Template / Campaign</div>
-                        <div class="fw-bold text-main fs-6">${QCMS.escapeHtml(log.template_name)}</div>
-                        <div class="text-xxs text-muted mt-0.5">Key: <span class="font-monospace">${QCMS.escapeHtml(log.template_key)}</span> &bull; Category: <span class="text-uppercase">${QCMS.escapeHtml(log.category)}</span></div>
+                        <div class="fw-bold text-main fs-6">${OctaQube.escapeHtml(log.template_name)}</div>
+                        <div class="text-xxs text-muted mt-0.5">Key: <span class="font-monospace">${OctaQube.escapeHtml(log.template_key)}</span> &bull; Category: <span class="text-uppercase">${OctaQube.escapeHtml(log.category)}</span></div>
                     </div>
                     <div class="col-md-6">
                         <div class="text-secondary text-xxs font-semibold text-uppercase">Target Recipient &amp; Mobile</div>
-                        <div class="fw-bold text-primary">${QCMS.escapeHtml(log.recipient_name)} &bull; ${QCMS.escapeHtml(log.phone_number)}</div>
-                        <div class="text-xxs text-muted mt-0.5">Organization: <b>${QCMS.escapeHtml(log.org_name)}</b></div>
+                        <div class="fw-bold text-primary">${OctaQube.escapeHtml(log.recipient_name)} &bull; ${OctaQube.escapeHtml(log.phone_number)}</div>
+                        <div class="text-xxs text-muted mt-0.5">Organization: <b>${OctaQube.escapeHtml(log.org_name)}</b></div>
                     </div>
                     <div class="col-12 pt-2 border-top">
                         <div class="row g-2">
                             <div class="col-md-4">
                                 <div class="text-secondary text-xxs font-semibold text-uppercase">Sender ID</div>
-                                <div class="font-monospace fw-bold text-main">${QCMS.escapeHtml(log.sender_id || 'IFQMSK')}</div>
+                                <div class="font-monospace fw-bold text-main">${OctaQube.escapeHtml(log.sender_id || 'IFQMSK')}</div>
                             </div>
                             <div class="col-md-4">
                                 <div class="text-secondary text-xxs font-semibold text-uppercase">DLT Template ID</div>
-                                <div class="font-monospace text-muted text-xxs">${QCMS.escapeHtml(log.dlt_template_id || '1307XXXXXXXXX')}</div>
+                                <div class="font-monospace text-muted text-xxs">${OctaQube.escapeHtml(log.dlt_template_id || '1307XXXXXXXXX')}</div>
                             </div>
                             <div class="col-md-4">
                                 <div class="text-secondary text-xxs font-semibold text-uppercase">DLT Entity ID</div>
-                                <div class="font-monospace text-muted text-xxs">${QCMS.escapeHtml(log.dlt_entity_id || '1301XXXXXXXXX')}</div>
+                                <div class="font-monospace text-muted text-xxs">${OctaQube.escapeHtml(log.dlt_entity_id || '1301XXXXXXXXX')}</div>
                             </div>
                         </div>
                     </div>
@@ -5069,14 +5069,14 @@ const AnnouncementsModule = {
                     </span>
                 </div>
                 <div class="p-3 rounded border bg-white font-monospace text-xs text-dark" style="line-height: 1.6; white-space: pre-wrap; word-break: break-word;">
-                    ${QCMS.escapeHtml(log.message_body)}
+                    ${OctaQube.escapeHtml(log.message_body)}
                 </div>
             </div>
 
             <!-- Metadata Footer -->
             <div class="d-flex align-items-center justify-content-between text-xxs text-muted px-1">
-                <div>SMS Gateway Router: <b>${QCMS.escapeHtml(log.gateway || 'Fast2SMS / Resend')}</b></div>
-                <div>Dispatched at: <b>${new Date(log.sent_at).toLocaleString()}</b> by <b>${QCMS.escapeHtml(log.sent_by)}</b></div>
+                <div>SMS Gateway Router: <b>${OctaQube.escapeHtml(log.gateway || 'Fast2SMS / Resend')}</b></div>
+                <div>Dispatched at: <b>${new Date(log.sent_at).toLocaleString()}</b> by <b>${OctaQube.escapeHtml(log.sent_by)}</b></div>
             </div>
         </div>`;
 

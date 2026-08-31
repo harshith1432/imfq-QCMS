@@ -6,16 +6,16 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.1ba483b5.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.4f95cd84.min.js" as="script">
-    <script src="/assets/dist/auth-guard.4f95cd84.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Member Directory | QCMS Enterprise</title>
+    <title>Member Directory | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.1ba483b5.min.css">
-    <script src="/assets/dist/breadcrumbs.139931d5.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -453,7 +453,7 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.e1792a2c.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
         const Users = {
             currentFilter: 'all',
@@ -521,8 +521,8 @@
             async bulkAction(actionType) {
                 const ids = Array.from(this.selectedUserIds);
                 if (ids.length === 0) {
-                    if (typeof QCMS !== 'undefined' && QCMS.toast) {
-                        QCMS.toast('No users selected.', 'warning');
+                    if (typeof OctaQube !== 'undefined' && OctaQube.toast) {
+                        OctaQube.toast('No users selected.', 'warning');
                     } else {
                         alert('No users selected.');
                     }
@@ -547,23 +547,23 @@
                     });
 
                     if (res && (res.status === 'success' || res.message)) {
-                        if (typeof QCMS !== 'undefined' && QCMS.toast) {
-                            QCMS.toast(res.message || 'Bulk operation completed successfully.', 'success');
+                        if (typeof OctaQube !== 'undefined' && OctaQube.toast) {
+                            OctaQube.toast(res.message || 'Bulk operation completed successfully.', 'success');
                         } else {
                             alert(res.message || 'Bulk operation completed.');
                         }
                         this.clearSelection();
                         this.loadUsers(this.currentPage);
                     } else {
-                        if (typeof QCMS !== 'undefined' && QCMS.toast) {
-                            QCMS.toast(res?.message || 'Bulk operation failed.', 'error');
+                        if (typeof OctaQube !== 'undefined' && OctaQube.toast) {
+                            OctaQube.toast(res?.message || 'Bulk operation failed.', 'error');
                         } else {
                             alert(res?.message || 'Bulk operation failed.');
                         }
                     }
                 } catch (err) {
-                    if (typeof QCMS !== 'undefined' && QCMS.toast) {
-                        QCMS.toast(err.message || 'Failed to execute bulk action.', 'error');
+                    if (typeof OctaQube !== 'undefined' && OctaQube.toast) {
+                        OctaQube.toast(err.message || 'Failed to execute bulk action.', 'error');
                     } else {
                         alert(err.message || 'Failed to execute bulk action.');
                     }
@@ -620,7 +620,7 @@
 
                     const blob = await res.blob();
                     const disposition = res.headers.get('Content-Disposition') || '';
-                    let filename = 'QCMS_Users_Directory.csv';
+                    let filename = 'OctaQube_Users_Directory.csv';
                     const match = disposition.match(/filename=([^;]+)/);
                     if (match && match[1]) {
                         filename = match[1].trim().replace(/^["']|["']$/g, '');
@@ -638,13 +638,13 @@
                     const countText = (payload.user_ids && payload.user_ids.length > 0) 
                         ? `${payload.user_ids.length} selected member(s)` 
                         : 'member directory';
-                    if (typeof QCMS !== 'undefined' && QCMS.toast) {
-                        QCMS.toast(`Successfully exported ${countText} to CSV!`, 'success');
+                    if (typeof OctaQube !== 'undefined' && OctaQube.toast) {
+                        OctaQube.toast(`Successfully exported ${countText} to CSV!`, 'success');
                     }
                 } catch (e) {
                     console.error('Export CSV error:', e);
-                    if (typeof QCMS !== 'undefined' && QCMS.toast) {
-                        QCMS.toast(e.message || 'Failed to export users CSV', 'error');
+                    if (typeof OctaQube !== 'undefined' && OctaQube.toast) {
+                        OctaQube.toast(e.message || 'Failed to export users CSV', 'error');
                     } else {
                         alert(e.message || 'Failed to export users CSV');
                     }
@@ -704,7 +704,7 @@
 
             async init() {
                 try {
-                    if (typeof QCMS !== 'undefined') QCMS.init();
+                    if (typeof OctaQube !== 'undefined') OctaQube.init();
                     
                     const searchInput = document.getElementById('globalSearchInput');
                     if (searchInput) {
@@ -756,7 +756,7 @@
                             : r === 'Facilitator' ? 'amber'
                             : r === 'Reviewer' ? 'indigo'
                             : 'blue';
-                return QCMS.badge(r, color);
+                return OctaQube.badge(r, color);
             },
 
             customFields: [],
@@ -897,11 +897,11 @@
 
                 try {
                     await api.put('/admin/login-options', { login_options: selected });
-                    QCMS.toast(`Login options saved! Users can log in with: ${selected.join(', ')}`, 'success');
+                    OctaQube.toast(`Login options saved! Users can log in with: ${selected.join(', ')}`, 'success');
                     this.loginOptionsData.login_options = selected;
                     this.renderLoginOptions(this.loginOptionsData);
                 } catch (e) {
-                    QCMS.toast(e.message || 'Failed to save login options', 'error');
+                    OctaQube.toast(e.message || 'Failed to save login options', 'error');
                 } finally {
                     if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="save" style="width:14px;height:14px;"></i> Save Login Options'; if (window.lucide) lucide.createIcons(); }
                 }
@@ -914,29 +914,29 @@
                 const is_required = document.getElementById('newFieldRequired').checked;
                 const data_type = document.getElementById('newFieldDataType').value;
                 
-                if (!name) return QCMS.toast('Please enter a display name', 'warning');
+                if (!name) return OctaQube.toast('Please enter a display name', 'warning');
                 
                 try {
-                    QCMS.toast('Adding custom field...', 'info');
+                    OctaQube.toast('Adding custom field...', 'info');
                     await api.post('/admin/users/custom-fields', { display_name: name, is_required, data_type });
-                    QCMS.toast('Custom field added successfully!', 'success');
+                    OctaQube.toast('Custom field added successfully!', 'success');
                     await this.openFieldsModal();
                     this.loadUsers();
                 } catch (e) {
-                    QCMS.toast(e.message || 'Failed to add custom field', 'error');
+                    OctaQube.toast(e.message || 'Failed to add custom field', 'error');
                 }
             },
 
             async deleteCustomField(id) {
                 if (!confirm('Are you sure you want to delete this custom field? This will drop the column from the database and delete all stored values for this field.')) return;
                 try {
-                    QCMS.toast('Deleting custom field...', 'info');
+                    OctaQube.toast('Deleting custom field...', 'info');
                     await api.delete(`/admin/users/custom-fields/${id}`);
-                    QCMS.toast('Custom field deleted successfully!', 'success');
+                    OctaQube.toast('Custom field deleted successfully!', 'success');
                     await this.openFieldsModal();
                     this.loadUsers();
                 } catch (e) {
-                    QCMS.toast(e.message || 'Failed to delete custom field', 'error');
+                    OctaQube.toast(e.message || 'Failed to delete custom field', 'error');
                 }
             },
 
@@ -993,7 +993,7 @@
                     if (filterSel) {
                         const curVal = filterSel.value;
                         filterSel.innerHTML = '<option value="">All Plant Locations</option>' +
-                            this.allPlants.map(p => `<option value="${p.id}">${QCMS.escapeHtml(p.name)}</option>`).join('');
+                            this.allPlants.map(p => `<option value="${p.id}">${OctaQube.escapeHtml(p.name)}</option>`).join('');
                         if (curVal) filterSel.value = curVal;
                         this.updateDepartmentFilter(filterSel.value);
                     }
@@ -1001,7 +1001,7 @@
                     const modalSel = document.getElementById('userPlantSelect');
                     if (modalSel) {
                         modalSel.innerHTML = '<option value="">All / Unassigned Plant</option>' +
-                            this.allPlants.map(p => `<option value="${p.id}">${QCMS.escapeHtml(p.name)}</option>`).join('');
+                            this.allPlants.map(p => `<option value="${p.id}">${OctaQube.escapeHtml(p.name)}</option>`).join('');
                     }
                 } catch (e) {
                     console.error('Failed to load plants:', e);
@@ -1040,7 +1040,7 @@
                 let selectHtml = `<option value="N/A">N/A</option>`;
                 selectHtml += filteredDepts.map(d => {
                     const tag = (d.plant_name && d.plant_name !== 'All Plants / Unassigned') ? ` (${d.plant_name})` : ` (All Plants)`;
-                    return `<option value="${QCMS.escapeHtml(d.name)}">${QCMS.escapeHtml(d.name)}${tag}</option>`;
+                    return `<option value="${OctaQube.escapeHtml(d.name)}">${OctaQube.escapeHtml(d.name)}${tag}</option>`;
                 }).join('');
                 deptSelect.innerHTML = selectHtml;
 
@@ -1071,8 +1071,8 @@
 
                 let html = `<option value="">All Departments${plantLabel}</option>`;
                 html += availableDepts.map(d => {
-                    const tag = (!plantId && d.plant_name && d.plant_name !== 'All Plants / Unassigned') ? ` (${QCMS.escapeHtml(d.plant_name)})` : '';
-                    return `<option value="${d.id}">${QCMS.escapeHtml(d.name)}${tag}</option>`;
+                    const tag = (!plantId && d.plant_name && d.plant_name !== 'All Plants / Unassigned') ? ` (${OctaQube.escapeHtml(d.plant_name)})` : '';
+                    return `<option value="${d.id}">${OctaQube.escapeHtml(d.name)}${tag}</option>`;
                 }).join('');
 
                 deptFilter.innerHTML = html;
@@ -1147,7 +1147,7 @@
                             <th data-i18n="dashboards.admin.corporate_role">Corporate Role</th>
                             <th>Plant Location</th>
                             <th data-i18n="dashboards.common.department">Department</th>
-                            ${extraCustomFields.map(f => `<th>${QCMS.escapeHtml(f.display_name)}</th>`).join('')}
+                            ${extraCustomFields.map(f => `<th>${OctaQube.escapeHtml(f.display_name)}</th>`).join('')}
                             <th data-i18n="dashboards.admin.last_active">Last Active</th>
                             <th class="text-end" data-i18n="common.actions">Actions</th>
                         `;
@@ -1156,7 +1156,7 @@
                     const totalCols = 6 + extraCustomFields.length;
                     if (!users || users.length === 0) {
                         tbody.innerHTML = `<tr><td colspan="${totalCols}" class="py-5">
-                            ${QCMS.emptyState('No Members Found', `We couldn't find any stakeholders matching "${query}".`, 'search-x')}
+                            ${OctaQube.emptyState('No Members Found', `We couldn't find any stakeholders matching "${query}".`, 'search-x')}
                         </td></tr>`;
                         if (pagContainer) pagContainer.innerHTML = '';
                         if (window.lucide) lucide.createIcons();
@@ -1167,10 +1167,10 @@
                         <tr class="fade-in">
                             <td>
                                 <div class="d-flex align-items-center gap-3">
-                                    ${QCMS.renderAvatar(u, 36)}
+                                    ${OctaQube.renderAvatar(u, 36)}
                                     <div>
-                                        <div class="fw-bold text-sm text-main">${QCMS.escapeHtml(u.full_name || u.username)}</div>
-                                        <div class="text-xs text-muted font-mono">${QCMS.escapeHtml(u.email || (u.username ? '@' + u.username : ''))}</div>
+                                        <div class="fw-bold text-sm text-main">${OctaQube.escapeHtml(u.full_name || u.username)}</div>
+                                        <div class="text-xs text-muted font-mono">${OctaQube.escapeHtml(u.email || (u.username ? '@' + u.username : ''))}</div>
                                     </div>
                                 </div>
                             </td>
@@ -1178,18 +1178,18 @@
                             <td>
                                 <span class="text-xs font-medium text-main d-inline-flex align-items-center gap-1">
                                     <i data-lucide="building-2" style="width:13px;height:13px;" class="text-primary"></i>
-                                    ${QCMS.escapeHtml(u.plant_name || u.plant_location || 'All Plants')}
+                                    ${OctaQube.escapeHtml(u.plant_name || u.plant_location || 'All Plants')}
                                 </span>
                             </td>
-                            <td><span class="text-xs font-medium">${QCMS.escapeHtml(u.department || 'General')}</span></td>
+                            <td><span class="text-xs font-medium">${OctaQube.escapeHtml(u.department || 'General')}</span></td>
 
                             ${extraCustomFields.map(f => {
                                 const val = (u.custom_fields || {})[f.field_key] || '-';
-                                return `<td><span class="text-xs">${QCMS.escapeHtml(String(val))}</span></td>`;
+                                return `<td><span class="text-xs">${OctaQube.escapeHtml(String(val))}</span></td>`;
                             }).join('')}
 
                             <td>
-                                <span class="text-xs text-muted">${u.last_login ? QCMS.formatRelative(u.last_login) : (u.last_active ? QCMS.formatRelative(u.last_active) : '-')}</span>
+                                <span class="text-xs text-muted">${u.last_login ? OctaQube.formatRelative(u.last_login) : (u.last_active ? OctaQube.formatRelative(u.last_active) : '-')}</span>
                             </td>
                             <td class="text-end">
                                 <div class="dropdown">
@@ -1251,12 +1251,12 @@
                     if (window.lucide) lucide.createIcons();
                 } catch (e) {
                     console.error('Failed to load users:', e);
-                    QCMS.toast('Failed to synchronize member directory.', 'error');
+                    OctaQube.toast('Failed to synchronize member directory.', 'error');
                     const tbody = document.getElementById('usersBody');
                     if (tbody) {
                         const colspanErr = 7 + ((this.customFields || []).filter(f => !f.is_system).length);
                         tbody.innerHTML = `<tr><td colspan="${colspanErr}" class="py-5">
-                            ${QCMS.emptyState('Connection Error', 'Unable to reach the server. Please check your network connection.', 'wifi-off')}
+                            ${OctaQube.emptyState('Connection Error', 'Unable to reach the server. Please check your network connection.', 'wifi-off')}
                         </td></tr>`;
                         if (window.lucide) lucide.createIcons();
                     }
@@ -1400,7 +1400,7 @@
                 const modalSel = document.getElementById('userPlantSelect');
                 if (modalSel) {
                     modalSel.innerHTML = '<option value="">Select Plant Location</option>' +
-                        this.allPlants.map(p => `<option value="${p.id}">${QCMS.escapeHtml(p.name)}</option>`).join('');
+                        this.allPlants.map(p => `<option value="${p.id}">${OctaQube.escapeHtml(p.name)}</option>`).join('');
                 }
 
                 const plantFilterVal = document.getElementById('userPlantFilter')?.value || '';
@@ -1418,14 +1418,14 @@
 
             generatePassword() {
                 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-                let retVal = "QCMS@";
+                let retVal = "OctaQube@";
                 for (let i = 0, n = charset.length; i < 8; ++i) {
                     retVal += charset.charAt(Math.floor(Math.random() * n));
                 }
                 const passField = document.getElementById('password');
                 if (passField) {
                     passField.value = retVal;
-                    QCMS.toast('Temporary password regenerated.', 'info');
+                    OctaQube.toast('Temporary password regenerated.', 'info');
                 }
             },
 
@@ -1441,7 +1441,7 @@
                 try {
                     this.editingUserId = id;
                     this.modalMode = 'EDIT';
-                    QCMS.toast('Fetching stakeholder details...', 'info');
+                    OctaQube.toast('Fetching stakeholder details...', 'info');
 
                     // Restore modal body/footer in case they were replaced
                     const modalFooter = document.querySelector('#userModal .modal-footer');
@@ -1522,7 +1522,7 @@
                     const plantSel = document.getElementById('userPlantSelect');
                     if (plantSel) {
                         plantSel.innerHTML = '<option value="">All / Unassigned Plant</option>' +
-                            this.allPlants.map(p => `<option value="${p.id}">${QCMS.escapeHtml(p.name)}</option>`).join('');
+                            this.allPlants.map(p => `<option value="${p.id}">${OctaQube.escapeHtml(p.name)}</option>`).join('');
                         plantSel.value = userPlantVal;
                     }
                     this.onPlantChange(userPlantVal, user.department);
@@ -1542,7 +1542,7 @@
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('userModal')).show();
                 } catch (e) {
                     console.error('Failed to load user details:', e);
-                    QCMS.toast('Failed to load user details', 'error');
+                    OctaQube.toast('Failed to load user details', 'error');
                 }
             },
 
@@ -1550,7 +1550,7 @@
                 try {
                     this.editingUserId = id;
                     this.modalMode = 'REASSIGN';
-                    QCMS.toast('Opening reassignment workflow...', 'info');
+                    OctaQube.toast('Opening reassignment workflow...', 'info');
                     
                     const user = await api.get(`/admin/users/${id}`);
                     
@@ -1570,7 +1570,7 @@
                     const plantSel = document.getElementById('userPlantSelect');
                     if (plantSel) {
                         plantSel.innerHTML = '<option value="">All / Unassigned Plant</option>' +
-                            this.allPlants.map(p => `<option value="${p.id}">${QCMS.escapeHtml(p.name)}</option>`).join('');
+                            this.allPlants.map(p => `<option value="${p.id}">${OctaQube.escapeHtml(p.name)}</option>`).join('');
                         plantSel.value = userPlantVal;
                     }
                     this.onPlantChange(userPlantVal, user.department);
@@ -1584,7 +1584,7 @@
                     setTimeout(() => document.getElementById('department').focus(), 500);
                 } catch (e) {
                     console.error('Failed to load user details:', e);
-                    QCMS.toast('Failed to load user details', 'error');
+                    OctaQube.toast('Failed to load user details', 'error');
                 }
             },
 
@@ -1598,20 +1598,20 @@
                 const password = document.getElementById('password')?.value || '';
                 
                 if (!username) {
-                    return QCMS.toast('Please enter display name / identity', 'warning');
+                    return OctaQube.toast('Please enter display name / identity', 'warning');
                 }
                 if (!phone) {
-                    return QCMS.toast('Please enter phone number (compulsory)', 'warning');
+                    return OctaQube.toast('Please enter phone number (compulsory)', 'warning');
                 }
                 
                 const cleanPhone = phone.replace(/[\s\-]/g, '');
                 if (!/^(\+?[0-9]{7,15})$/.test(cleanPhone)) {
-                    return QCMS.toast('Please enter a valid phone number (e.g. 9876543210 or +919876543210)', 'warning');
+                    return OctaQube.toast('Please enter a valid phone number (e.g. 9876543210 or +919876543210)', 'warning');
                 }
 
                 if (email) {
                     if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
-                        return QCMS.toast('Please enter a valid email address', 'warning');
+                        return OctaQube.toast('Please enter a valid email address', 'warning');
                     }
                 }
 
@@ -1656,11 +1656,11 @@
                 });
                 
                 if (missingRequired) {
-                    return QCMS.toast(`Compulsory field '${missingRequired}' is required`, 'warning');
+                    return OctaQube.toast(`Compulsory field '${missingRequired}' is required`, 'warning');
                 }
                 
                 if (validationError) {
-                    return QCMS.toast(validationError, 'warning');
+                    return OctaQube.toast(validationError, 'warning');
                 }
 
                 try {
@@ -1680,14 +1680,14 @@
                     Object.assign(payload, customPayload);
 
                     if (this.editingUserId) {
-                        QCMS.toast('Updating stakeholder...', 'info');
+                        OctaQube.toast('Updating stakeholder...', 'info');
                         await api.put(`/admin/users/${this.editingUserId}`, payload);
-                        QCMS.toast('Stakeholder updated successfully', 'success');
+                        OctaQube.toast('Stakeholder updated successfully', 'success');
                     } else {
-                        QCMS.toast('Provisioning stakeholder...', 'info');
+                        OctaQube.toast('Provisioning stakeholder...', 'info');
                         // Use standardized admin user creation endpoint instead of deprecated auth register
                         await api.post('/admin/users', payload);
-                        QCMS.toast('Stakeholder provisioned successfully', 'success');
+                        OctaQube.toast('Stakeholder provisioned successfully', 'success');
                     }
 
                     bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
@@ -1695,7 +1695,7 @@
                     this.loadUsers();
                 } catch (e) {
                     console.error('Operation failed:', e);
-                    QCMS.toast(e.message || 'Operation failed', 'error');
+                    OctaQube.toast(e.message || 'Operation failed', 'error');
                 }
             },
 
@@ -1706,10 +1706,10 @@
                     const allUsers = await api.get('/admin/users');
                     const user = allUsers.find(u => u.id === id);
                     await api.put(`/admin/users/${id}`, { is_active: !user.is_active });
-                    QCMS.toast(`User status updated successfully`, 'success');
+                    OctaQube.toast(`User status updated successfully`, 'success');
                     this.loadUsers();
                 } catch (e) {
-                    QCMS.toast('Operation failed', 'error');
+                    OctaQube.toast('Operation failed', 'error');
                 }
             },
 
@@ -1719,15 +1719,15 @@
                 }
 
                 try {
-                    QCMS.toast('Removing stakeholder...', 'info');
+                    OctaQube.toast('Removing stakeholder...', 'info');
                     const response = await api.delete(`/admin/users/${id}`);
-                    QCMS.toast(response.message || 'Stakeholder removed successfully', 'success');
+                    OctaQube.toast(response.message || 'Stakeholder removed successfully', 'success');
                     this.loadUsers();
                 } catch (e) {
                     if (e.code === 'DEPENDENCY_EXISTS') {
-                        QCMS.toast(e.message, 'warning');
+                        OctaQube.toast(e.message, 'warning');
                     } else {
-                        QCMS.toast(e.message || 'Failed to remove stakeholder.', 'error');
+                        OctaQube.toast(e.message || 'Failed to remove stakeholder.', 'error');
                     }
                 }
             },
@@ -1736,11 +1736,11 @@
                 if (!confirm(`This will invalidate the current password and send new temporary credentials to the user's email. Proceed?`)) return;
                 
                 try {
-                    QCMS.toast('Regenerating credentials...', 'info');
+                    OctaQube.toast('Regenerating credentials...', 'info');
                     const res = await api.post(`/admin/users/${id}/regenerate`);
-                    QCMS.toast(res?.message || 'New credentials generated and emailed successfully.', 'success');
+                    OctaQube.toast(res?.message || 'New credentials generated and emailed successfully.', 'success');
                 } catch (e) {
-                    QCMS.toast(e.message || 'Failed to regenerate credentials.', 'error');
+                    OctaQube.toast(e.message || 'Failed to regenerate credentials.', 'error');
                 }
             },
 
@@ -1811,7 +1811,7 @@
                 const isRunning = job.isRunning;
 
                 if (!isRunning && count === 0) {
-                    QCMS.toast('No active or recent upload to cancel.', 'info');
+                    OctaQube.toast('No active or recent upload to cancel.', 'info');
                     return;
                 }
 
@@ -1824,18 +1824,18 @@
                 job.isCancelled = true;
                 job.isRunning = false;
 
-                QCMS.toast(`Cancelling upload and revoking ${count} user(s)...`, 'info');
+                OctaQube.toast(`Cancelling upload and revoking ${count} user(s)...`, 'info');
 
                 try {
                     if (count > 0) {
                         const res = await api.post('/admin/users/bulk-rollback', { user_ids: job.createdUserIds });
-                        QCMS.toast(res.message || `Successfully revoked ${count} user(s).`, 'success');
+                        OctaQube.toast(res.message || `Successfully revoked ${count} user(s).`, 'success');
                     } else {
-                        QCMS.toast('Upload cancelled successfully.', 'success');
+                        OctaQube.toast('Upload cancelled successfully.', 'success');
                     }
                 } catch (err) {
                     console.error('[Bulk] Rollback error:', err);
-                    QCMS.toast(err.message || 'Failed to revoke uploaded users.', 'error');
+                    OctaQube.toast(err.message || 'Failed to revoke uploaded users.', 'error');
                 }
 
                 // Reset job state
@@ -1995,14 +1995,14 @@
                             <tr style="border-bottom:1px solid rgba(220,38,38,0.15);">
                                 <td class="px-2 py-1.5 fw-bold text-secondary">${r.row}</td>
                                 <td class="px-2 py-1.5 fw-semibold text-main">
-                                    <div>${QCMS.escapeHtml(r.username || '—')}</div>
-                                    <div class="text-xxs text-muted">${QCMS.escapeHtml(r.phone || '')}</div>
+                                    <div>${OctaQube.escapeHtml(r.username || '—')}</div>
+                                    <div class="text-xxs text-muted">${OctaQube.escapeHtml(r.phone || '')}</div>
                                 </td>
                                 <td class="px-2 py-1.5">
-                                    <div>${QCMS.escapeHtml(r.plant_location || '—')}</div>
-                                    <div class="text-xxs text-muted">${QCMS.escapeHtml(r.department || r.dept || '—')}</div>
+                                    <div>${OctaQube.escapeHtml(r.plant_location || '—')}</div>
+                                    <div class="text-xxs text-muted">${OctaQube.escapeHtml(r.department || r.dept || '—')}</div>
                                 </td>
-                                <td class="px-2 py-1.5 text-danger fw-medium">${QCMS.escapeHtml(r.reason || r.error || '—')}</td>
+                                <td class="px-2 py-1.5 text-danger fw-medium">${OctaQube.escapeHtml(r.reason || r.error || '—')}</td>
                             </tr>
                         `).join('');
                     }
@@ -2015,7 +2015,7 @@
 
             async downloadTemplate() {
                 try {
-                    QCMS.toast('Generating template...', 'info');
+                    OctaQube.toast('Generating template...', 'info');
                     const response = await fetch(api.baseUrl + '/admin/users/template', {
                         method: 'GET',
                         headers: {
@@ -2027,22 +2027,22 @@
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = 'qcms_users_bulk_template.csv';
+                    a.download = 'octaqube_users_bulk_template.csv';
                     document.body.appendChild(a);
                     a.click();
                     a.remove();
                     window.URL.revokeObjectURL(url);
-                    QCMS.toast('Template downloaded successfully!', 'success');
+                    OctaQube.toast('Template downloaded successfully!', 'success');
                 } catch (e) {
                     console.error('Template download error:', e);
-                    QCMS.toast('Failed to download template. Please check authorization.', 'error');
+                    OctaQube.toast('Failed to download template. Please check authorization.', 'error');
                 }
             },
 
             async processBulkUpload() {
                 const fileInput = document.getElementById('bulkFile');
                 if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-                    return QCMS.toast('Please select a CSV file first.', 'warning');
+                    return OctaQube.toast('Please select a CSV file first.', 'warning');
                 }
 
                 const file = fileInput.files[0];
@@ -2052,7 +2052,7 @@
                     const text = e.target.result || '';
                     const rawLines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
                     if (rawLines.length <= 1) {
-                        return QCMS.toast('CSV file is empty or missing data rows.', 'warning');
+                        return OctaQube.toast('CSV file is empty or missing data rows.', 'warning');
                     }
 
                     const headerLine = rawLines[0];
@@ -2077,7 +2077,7 @@
                     const confirmBtn = document.getElementById('btnConfirmBulk');
                     if (confirmBtn) confirmBtn.disabled = true;
 
-                    QCMS.toast(`Processing ${totalRowsCount} user record(s) in real-time...`, 'info');
+                    OctaQube.toast(`Processing ${totalRowsCount} user record(s) in real-time...`, 'info');
 
                     // Batch/Chunk Size: 3 rows per batch for small files, up to 10 rows for large files so numbers increment smoothly in real-time
                     const chunkSize = Math.min(10, Math.max(2, Math.ceil(totalRowsCount / 15)));
@@ -2163,10 +2163,10 @@
                         }
 
                         if (job.acceptedCount > 0) {
-                            QCMS.toast(`✓ Real-time import complete! ${job.acceptedCount} user(s) imported.`, 'success');
+                            OctaQube.toast(`✓ Real-time import complete! ${job.acceptedCount} user(s) imported.`, 'success');
                         }
                         if (job.rejectedCount > 0) {
-                            QCMS.toast(`✕ ${job.rejectedCount} record(s) rejected. Review reasons or download rejected CSV.`, 'warning');
+                            OctaQube.toast(`✕ ${job.rejectedCount} record(s) rejected. Review reasons or download rejected CSV.`, 'warning');
                         }
 
                         this.loadUsers();
@@ -2174,7 +2174,7 @@
                         console.error('Real-time bulk upload error:', err);
                         job.isRunning = false;
                         job.statusText = 'Upload interrupted or failed.';
-                        QCMS.toast(err.message || 'Failed to process bulk upload.', 'error');
+                        OctaQube.toast(err.message || 'Failed to process bulk upload.', 'error');
                         this.updateImportUIState();
                         this.updateBackgroundBannerUI();
                         if (!job.isModalOpen) {
@@ -2198,7 +2198,7 @@
                     : this.lastRejectedRows;
 
                 if (!rejected || rejected.length === 0) {
-                    return QCMS.toast('No rejected rows available for download.', 'info');
+                    return OctaQube.toast('No rejected rows available for download.', 'info');
                 }
                 const headers = ['Row Number', 'Username', 'Email Address', 'Full Name', 'Role', 'Plant Location', 'Department', 'Rejection Reason'];
                 const csvLines = [headers.join(',')];
@@ -2221,11 +2221,11 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.setAttribute('download', 'qcms_rejected_users_with_reasons.csv');
+                a.setAttribute('download', 'octaqube_rejected_users_with_reasons.csv');
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-                QCMS.toast('Downloaded rejected records CSV with reasons.', 'success');
+                OctaQube.toast('Downloaded rejected records CSV with reasons.', 'success');
             }
 
         };
