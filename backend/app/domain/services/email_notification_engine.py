@@ -778,7 +778,7 @@ class EmailNotificationEngine:
         return {"email": email, "name": name, "reply_to": reply_to}
 
     @staticmethod
-    def dispatch_dlt_sms(phone, sms_body, template_id=None, entity_id=None, sender_id=None):
+    def dispatch_dlt_sms(phone, sms_body, template_id=None, entity_id=None, sender_id=None, msg_type="OTP"):
         """
         Dispatch an SMS via active Jio DLT / Kaleyra SMS integration gateway.
         """
@@ -824,9 +824,10 @@ class EmailNotificationEngine:
                 if 'kaleyra.io' in url and '/v1/' not in url:
                     url = f"{url}/v1/messages"
 
+            kaleyra_type = msg_type if msg_type in ('OTP', 'MKT') else 'OTP'
             param_dict = {
                 "to": "+" + formatted_phone,
-                "type": "TXN",
+                "type": kaleyra_type,
                 "sender": final_sender_id,
                 "body": sms_body,
                 "template_id": final_template_id,

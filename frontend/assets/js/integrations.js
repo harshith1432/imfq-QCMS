@@ -552,7 +552,6 @@
                 schemaFields = [
                     { key: 'entity_id', label: 'Jio DLT Principal Entity ID (PE ID)', type: 'text', placeholder: 'e.g. 1201174858303838784' },
                     { key: 'sender_id', label: 'Approved Header / Sender ID (6 Chars)', type: 'text', placeholder: 'e.g. IFQMSK' },
-                    { key: 'template_id', label: 'DLT Content Template ID for OTP', type: 'text', placeholder: 'e.g. 1207177450026368470' },
                     { key: 'account_sid', label: 'Kaleyra Account SID (Optional for Kaleyra)', type: 'text', placeholder: 'e.g. HXIN17xxxxxxxxIN' },
                     { key: 'api_key', label: 'Jio DLT / Kaleyra API Auth Key', type: 'password', placeholder: 'Enter API Key' },
                     { key: 'api_url', label: 'SMS API Gateway Endpoint URL', type: 'text', placeholder: 'https://api.kaleyra.io/' }
@@ -651,7 +650,7 @@
                             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                                 <div>
                                     <strong class="text-primary d-block mb-1"><i data-lucide="help-circle" class="me-1"></i> How to get Jio DLT API Credentials?</strong>
-                                    <span class="text-secondary text-xxs">1. Log in to Jio DLT Portal (trueconnect.jio.com) &nbsp; 2. Copy Principal Entity ID & Header ID &nbsp; 3. Get Approved OTP Template ID & API Key</span>
+                                    <span class="text-secondary text-xxs">1. Log in to Jio DLT Portal (trueconnect.jio.com) &nbsp; 2. Copy Principal Entity ID & Header ID &nbsp; 3. Configure Template IDs under Set SMS Notifications</span>
                                 </div>
                                 <a href="https://trueconnect.jio.com" target="_blank" class="ds-btn ds-btn-primary ds-btn-sm text-decoration-none py-1.5 px-3">
                                     Jio DLT Portal <i data-lucide="external-link" style="width:12px;height:12px;" class="ms-1"></i>

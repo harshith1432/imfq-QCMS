@@ -581,10 +581,10 @@ def send_test_sms_template(template_key):
         'project_code': 'PRJ-J2FJ',
         'stage_number': '8',
         'submitter_name': 'Priya Singh',
-        'assigned_role': 'Team Leader',
-        'username': user.email or user.username or 'john.doe@company.com',
-        'email': user.email or 'john.doe@company.com',
-        'user_email': user.email or 'john.doe@company.com',
+        'username': user.email or getattr(user, 'phone', None) or 'user@company.com',
+        'login_identifier': user.email or getattr(user, 'phone', None) or 'user@company.com',
+        'email': user.email or 'user@company.com',
+        'user_email': user.email or 'user@company.com',
         'Password': os.getenv('DEFAULT_TEMP_PASSWORD', 'Welcome@123'),
         'password': os.getenv('DEFAULT_TEMP_PASSWORD', 'Welcome@123'),
         'temp_password': os.getenv('DEFAULT_TEMP_PASSWORD', 'Welcome@123'),
@@ -602,7 +602,18 @@ def send_test_sms_template(template_key):
     from app.domain.services.email_notification_engine import EmailNotificationEngine
     body = EmailNotificationEngine.replace_variables(tmpl.body or 'Test SMS Notification from IFQM QCMS', context)
 
-    print(f"\n[TEST SMS] Template: {tmpl.display_name} ({tmpl.template_key}) | To: {phone} | Body: {body}\n")
+    print(f"\n[TEST SMS] Template: {tmpl.display_name} ({tmpl.template_key}) | DLT: {tmpl.template_id} | To: {phone} | Body: {body}\n")
+
+    # Dispatch SMS via Jio DLT / Kaleyra using template's specific DLT parameters
+    msg_type = "OTP" if (tmpl.category == 'auth' or 'otp' in tmpl.template_key) else "TXN"
+    sms_ok, sms_msg = EmailNotificationEngine.dispatch_dlt_sms(
+        phone=phone,
+        sms_body=body,
+        template_id=tmpl.template_id,
+        entity_id=tmpl.entity_id,
+        sender_id=tmpl.sender_id,
+        msg_type=msg_type
+    )
 
     # Record delivery log
     try:
@@ -617,8 +628,9 @@ def send_test_sms_template(template_key):
             phone_number=phone,
             recipient_name=user.full_name or user.username or 'Admin User',
             org_name='Quality MSME Corp',
-            gateway='Fast2SMS / Resend',
-            status='Delivered',
+            gateway='Jio DLT / Kaleyra' if sms_ok else 'Jio DLT / Simulated',
+            status='Delivered' if sms_ok else 'Logged',
+            error_message=None if sms_ok else sms_msg,
             sent_by_id=user.id,
             sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )
@@ -630,10 +642,23 @@ def send_test_sms_template(template_key):
         db.session.rollback()
         print(f"[SMS Log Error] {e}")
 
+    if not sms_ok:
+        return jsonify({
+            "status": "error",
+            "message": f"Gateway Error: {sms_msg}",
+            "rendered_body": body,
+            "dlt_template_id": tmpl.template_id,
+            "dlt_entity_id": tmpl.entity_id,
+            "sender_id": tmpl.sender_id
+        }), 400
+
     return jsonify({
         "status": "success",
         "message": f"Test SMS for '{tmpl.display_name}' sent successfully to {phone}!",
-        "rendered_body": body
+        "rendered_body": body,
+        "dlt_template_id": tmpl.template_id,
+        "dlt_entity_id": tmpl.entity_id,
+        "sender_id": tmpl.sender_id
     }), 200
 
 

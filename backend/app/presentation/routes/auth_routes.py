@@ -459,24 +459,51 @@ def verify_registration_otp():
 def _dispatch_phone_otp_sms_sync(phone, otp, template_key='phone_otp_verification', user=None):
     """
     Synchronous implementation of Jio DLT / Kaleyra SMS dispatch.
+    Dynamically loads and prioritizes the specific template's DLT Template ID,
+    DLT Entity ID, Sender ID, and SMS body text configured in SmsTemplateConfig.
     """
     try:
-        from app.infrastructure.database.models.models import IntegrationConfig
+        from app.infrastructure.database.models.models import IntegrationConfig, SmsTemplateConfig, SmsNotificationLog
+        from app.domain.services.email_notification_engine import EmailNotificationEngine
+
+        # 1. Dynamically load the specific template configuration from SmsTemplateConfig
+        otp_tmpl = SmsTemplateConfig.query.filter_by(template_key=template_key, is_active=True).first()
+        if not otp_tmpl:
+            otp_tmpl = SmsTemplateConfig.query.filter_by(template_key=template_key).first()
+
+        tmpl_template_id = (otp_tmpl.template_id or '').strip() if otp_tmpl else ''
+        tmpl_entity_id = (otp_tmpl.entity_id or '').strip() if otp_tmpl else ''
+        tmpl_sender_id = (otp_tmpl.sender_id or '').strip() if otp_tmpl else ''
+        tmpl_name = (otp_tmpl.display_name if otp_tmpl else None) or ("Password Reset OTP" if template_key == 'password_reset_otp' else "Phone OTP")
+
+        # 2. Build the SMS body from the configured template
+        if otp_tmpl and otp_tmpl.body:
+            sms_body = EmailNotificationEngine.replace_variables(otp_tmpl.body, {'otp': str(otp), 'OTP': str(otp)})
+        elif template_key == 'password_reset_otp':
+            sms_body = f"Dear Customer, use OTP {otp} to reset your password on IFQM QCMS. Valid for 10 mins. Do not share this OTP with anyone. - IFQM"
+        else:
+            sms_body = f"Dear Customer, use OTP {otp} to verify your account on Quality Circle. Do not share this OTP with anyone. - IFQM"
+
+        # 3. Check integration config
         cfg = IntegrationConfig.query.filter_by(provider_id='jio_dlt').first()
+        settings = (cfg.settings or {}) if cfg else {}
+
+        # DLT parameters: prioritize template's individual DLT template ID, Entity ID, and Sender ID
+        template_id = tmpl_template_id or (settings.get('template_id') or '').strip()
+        entity_id = tmpl_entity_id or (settings.get('entity_id') or '').strip()
+        sender_id = tmpl_sender_id or (settings.get('sender_id') or '').strip() or 'IFQMSK'
+
         if not cfg or cfg.status != 'Connected':
-            print(f"[QCMS Phone OTP] Jio DLT integration status is '{cfg.status if cfg else 'not found'}'. Simulating OTP {otp} for {phone} (Template: {template_key})")
+            print(f"[QCMS Phone OTP] Jio DLT integration status is '{cfg.status if cfg else 'not found'}'. Simulating OTP {otp} for {phone} (Template: {template_key}, DLT ID: {template_id})")
             try:
-                from app.infrastructure.database.models.models import SmsTemplateConfig, SmsNotificationLog
-                tmpl = SmsTemplateConfig.query.filter_by(template_key=template_key).first()
-                tmpl_name = tmpl.display_name if tmpl else ("Password Reset OTP" if template_key == 'password_reset_otp' else "Phone OTP")
                 log = SmsNotificationLog(
                     template_key=template_key,
                     template_name=tmpl_name,
                     category="auth",
-                    sender_id=(tmpl.sender_id if tmpl else None) or "IFQMSK",
-                    dlt_template_id=tmpl.template_id if tmpl else None,
-                    dlt_entity_id=tmpl.entity_id if tmpl else None,
-                    message_body=f"Dear Customer, use OTP {otp} to verify on IFQM QCMS. Valid for 10 mins. Do not share with anyone. - IFQM",
+                    sender_id=sender_id,
+                    dlt_template_id=template_id or None,
+                    dlt_entity_id=entity_id or None,
+                    message_body=sms_body,
                     phone_number=phone,
                     recipient_name=(user.full_name or user.username) if user else "User",
                     org_name=(user.organization.name if user and user.organization else "Platform"),
@@ -486,122 +513,56 @@ def _dispatch_phone_otp_sms_sync(phone, otp, template_key='phone_otp_verificatio
                     sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 db.session.add(log)
+                if otp_tmpl:
+                    otp_tmpl.total_sent = (otp_tmpl.total_sent or 0) + 1
+                    otp_tmpl.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 db.session.commit()
             except Exception:
                 db.session.rollback()
             return False, "SMS gateway not connected"
 
-        settings = cfg.settings or {}
         api_key = (settings.get('api_key') or '').strip()
-        entity_id = (settings.get('entity_id') or '').strip()
-        sender_id = (settings.get('sender_id') or '').strip()
-        template_id = (settings.get('template_id') or '').strip()
-        account_sid = (settings.get('account_sid') or '').strip()
-        api_url = (settings.get('api_url') or '').strip() or 'https://api.kaleyra.io/'
-
         if not api_key:
             print(f"[QCMS Phone OTP] Jio DLT API key is missing. Simulating OTP {otp} for {phone}")
             return False, "SMS API key missing"
 
-        # Format phone number for SMS delivery (default country code +91 for 10-digit India numbers)
-        clean_phone = phone.replace(' ', '').replace('-', '').replace('+', '')
-        if len(clean_phone) == 10:
-            formatted_phone = '91' + clean_phone
-        else:
-            formatted_phone = clean_phone
-
-        # Load SMS body from DB (SmsTemplateConfig) — falls back to default if not configured
-        if template_key == 'password_reset_otp':
-            sms_body_template = f"Dear Customer, use OTP {otp} to reset your password on IFQM QCMS. Valid for 10 mins. Do not share this OTP with anyone. - IFQM"
-        else:
-            sms_body_template = f"Dear Customer, use OTP {otp} to complete your activation on IFQM Skills. Do not share this OTP with anyone."
+        # Dispatch live SMS using the dynamically resolved template parameters
+        sms_ok, sms_msg = EmailNotificationEngine.dispatch_dlt_sms(
+            phone=phone,
+            sms_body=sms_body,
+            template_id=template_id,
+            entity_id=entity_id,
+            sender_id=sender_id,
+            msg_type="OTP"
+        )
 
         try:
-            from app.infrastructure.database.models.models import SmsTemplateConfig
-            otp_tmpl = SmsTemplateConfig.query.filter_by(template_key=template_key, is_active=True).first()
-            if otp_tmpl and otp_tmpl.body:
-                sms_body_template = otp_tmpl.body.replace('{{otp}}', otp).replace('{otp}', otp)
-                # If template_id is configured in SmsTemplateConfig and not overridden in integration settings, use it
-                if otp_tmpl.template_id and not template_id:
-                    template_id = otp_tmpl.template_id
-                if otp_tmpl.entity_id and not entity_id:
-                    entity_id = otp_tmpl.entity_id
-                if otp_tmpl.sender_id and not sender_id:
-                    sender_id = otp_tmpl.sender_id
-        except Exception as _e:
-            print(f"[QCMS Phone OTP] Could not load SMS template from DB: {_e}")
-
-        sms_body = sms_body_template
-
-        import urllib.request
-        import urllib.parse
-        import urllib.error
-        import json
-
-        url = api_url.rstrip('/')
-        if account_sid and 'kaleyra.io' in url and '/v1/' not in url:
-            url = f"https://api.kaleyra.io/v1/{account_sid}/messages"
-        elif not url.endswith('/messages') and not url.endswith('/send') and not url.endswith('.php'):
-            if 'kaleyra.io' in url and '/v1/' not in url:
-                print(f"[QCMS Phone OTP] Tip: Kaleyra requires your Account SID in the endpoint URL, e.g.: https://api.kaleyra.io/v1/<YOUR_ACCOUNT_SID>/messages")
-                url = f"{url}/v1/messages"
-
-        # Payload dictionary
-        param_dict = {
-            "to": "+" + formatted_phone,
-            "type": "OTP",
-            "sender": sender_id,
-            "body": sms_body,
-            "template_id": template_id,
-            "entity_id": entity_id,
-            "dlt_template_id": template_id,
-            "pe_id": entity_id
-        }
-
-        # Try JSON POST first
-        headers = {
-            'User-Agent': 'QCMS-Enterprise-OS/1.0',
-            'Content-Type': 'application/json',
-            'api-key': api_key,
-            'Authorization': f'Bearer {api_key}'
-        }
-        
-        try:
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(param_dict).encode('utf-8'),
-                headers=headers,
-                method='POST'
+            log = SmsNotificationLog(
+                template_key=template_key,
+                template_name=tmpl_name,
+                category="auth",
+                sender_id=sender_id,
+                dlt_template_id=template_id or None,
+                dlt_entity_id=entity_id or None,
+                message_body=sms_body,
+                phone_number=phone,
+                recipient_name=(user.full_name or user.username) if user else "User",
+                org_name=(user.organization.name if user and user.organization else "Platform"),
+                gateway="Jio DLT / Kaleyra",
+                status="Delivered" if sms_ok else "Failed",
+                error_message=None if sms_ok else sms_msg,
+                sent_by_id=user.id if user else None,
+                sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
             )
-            with urllib.request.urlopen(req, timeout=12) as response:
-                res_body = response.read().decode('utf-8')
-                print(f"[QCMS Phone OTP] Jio DLT / Kaleyra API response HTTP {response.status}: {res_body}")
-                cfg.usage_count = (cfg.usage_count or 0) + 1
-                db.session.commit()
-                return True, "SMS sent"
-        except urllib.error.HTTPError as he:
-            err_body = he.read().decode('utf-8') if he.fp else str(he)
-            print(f"[QCMS Phone OTP] JSON request failed (HTTP {he.code}): {err_body}")
+            db.session.add(log)
+            if otp_tmpl and sms_ok:
+                otp_tmpl.total_sent = (otp_tmpl.total_sent or 0) + 1
+                otp_tmpl.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
-            # Try form-urlencoded format fallback
-            form_headers = {
-                'User-Agent': 'QCMS-Enterprise-OS/1.0',
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'api-key': api_key
-            }
-            form_data = urllib.parse.urlencode(param_dict).encode('utf-8')
-            req2 = urllib.request.Request(url, data=form_data, headers=form_headers, method='POST')
-            try:
-                with urllib.request.urlopen(req2, timeout=12) as response2:
-                    res_body2 = response2.read().decode('utf-8')
-                    print(f"[QCMS Phone OTP] Jio DLT Form API response HTTP {response2.status}: {res_body2}")
-                    cfg.usage_count = (cfg.usage_count or 0) + 1
-                    db.session.commit()
-                    return True, "SMS sent"
-            except urllib.error.HTTPError as he2:
-                err_body2 = he2.read().decode('utf-8') if he2.fp else str(he2)
-                print(f"[QCMS Phone OTP] Form request failed (HTTP {he2.code}): {err_body2}")
-                return False, f"SMS Gateway Error (HTTP {he2.code}): {err_body2}"
+        return sms_ok, sms_msg
 
     except Exception as e:
         print(f"[QCMS Phone OTP] Error calling Jio DLT SMS gateway: {e}")

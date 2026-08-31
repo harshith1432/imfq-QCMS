@@ -547,12 +547,11 @@ def create_user():
         db.session.rollback()
         return internal_server_error(e, "Failed to create user.")
     
-    # Send credentials email (Asynchronous Background Dispatch) if email provided
-    if email:
-        try:
-            EmailUtils.send_bulk_welcome_emails_async([{'user_id': new_user.id, 'temp_password': password}])
-        except Exception as e:
-            current_app.logger.error(f"Failed to queue welcome email to {email}: {str(e)}")
+    # Send credentials notification (SMS & Email Asynchronous Background Dispatch)
+    try:
+        EmailUtils.send_bulk_welcome_emails_async([{'user_id': new_user.id, 'temp_password': password}])
+    except Exception as e:
+        current_app.logger.error(f"Failed to queue welcome notification for user {new_user.id}: {str(e)}")
 
     log_action(current_user.id, "CREATE_USER", current_user.org_id, "users", new_user.id, {"username": new_user.username})
     return jsonify({
@@ -1232,8 +1231,7 @@ def bulk_upload_users():
 
             added_count += 1
             created_user_ids.append(new_user.id)
-            if email:
-                async_welcome_creds.append({'user_id': new_user.id, 'temp_password': password})
+            async_welcome_creds.append({'user_id': new_user.id, 'temp_password': password})
 
             log_action(current_user.id, "CREATE_USER_BULK", current_user.org_id,
                        "users", new_user.id, {"username": new_user.username})

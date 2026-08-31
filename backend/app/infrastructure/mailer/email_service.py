@@ -7,6 +7,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor
 from flask import current_app
+from app import db
 from app.domain.services.document_branding_service import DocumentBrandingService
 
 # Global dedicated thread pool for non-blocking asynchronous email processing
@@ -101,30 +102,29 @@ class EmailUtils:
             except Exception:
                 app = None
 
-        def _bulk_worker(target_app, creds):
+        def _process_single_credential(target_app, item):
             if target_app:
                 with target_app.app_context():
                     from app.infrastructure.database.models.models import User, db
-                    for item in creds:
-                        try:
-                            user_id = item.get('user_id')
-                            temp_pass = item.get('temp_password')
-                            user = db.session.get(User, user_id)
-                            if user and user.email:
-                                EmailUtils.send_temp_password_email(user, temp_pass)
-                        except Exception as err:
-                            target_app.logger.error(f"[BulkEmail] Error in async welcome email for user {item.get('user_id')}: {err}")
-            else:
-                for item in creds:
                     try:
-                        user = item.get('user')
+                        user_id = item.get('user_id')
                         temp_pass = item.get('temp_password')
-                        if user and user.email:
+                        user = db.session.get(User, user_id) if user_id else item.get('user')
+                        if user:
                             EmailUtils.send_temp_password_email(user, temp_pass)
                     except Exception as err:
-                        logger.info(f"[BulkEmail] Error in async welcome email: {err}")
+                        target_app.logger.error(f"[BulkEmail] Error in async welcome notification for user {item.get('user_id')}: {err}")
+            else:
+                try:
+                    user = item.get('user')
+                    temp_pass = item.get('temp_password')
+                    if user:
+                        EmailUtils.send_temp_password_email(user, temp_pass)
+                except Exception as err:
+                    logger.info(f"[BulkEmail] Error in async welcome notification: {err}")
 
-        email_executor.submit(_bulk_worker, app, user_credentials_list)
+        for item in user_credentials_list:
+            email_executor.submit(_process_single_credential, app, item)
         return True
 
     @staticmethod
@@ -476,6 +476,39 @@ class EmailUtils:
         return EmailUtils.send_email(user.email, subject, html, email_type='otp', org_id=user.org_id)
 
     @staticmethod
+    def get_user_login_identifier(user):
+        """
+        Determines the primary login identifier to present to the user:
+        1. If the organization allows email login ('email' in org.login_options) AND user.email is present -> return user.email
+        2. Otherwise (or if user has no email) -> return user.phone (or user.mobile / user.phone_number)
+        3. If phone is not present -> fallback to user.email or user.username
+        """
+        if not user:
+            return ""
+
+        org = getattr(user, 'organization', None)
+        org_login_opts = (org.login_options or ["phone", "email"]) if org else ["phone", "email"]
+        if not isinstance(org_login_opts, list):
+            org_login_opts = ["phone", "email"]
+
+        user_email = (getattr(user, 'email', None) or '').strip()
+        user_phone = (getattr(user, 'phone', None) or getattr(user, 'mobile', None) or getattr(user, 'phone_number', None) or '').strip()
+
+        # If email login is enabled for this organization and user has an email:
+        if "email" in org_login_opts and user_email:
+            return user_email
+
+        # Otherwise, default to phone number:
+        if user_phone:
+            return user_phone
+
+        # If phone is not available, fall back to email:
+        if user_email:
+            return user_email
+
+        return getattr(user, 'username', '')
+
+    @staticmethod
     def send_temp_password_email(user, temp_password, is_async=False):
         """Sends an email with a temporary password to a newly created user using the Email Notification Rule from DB if available."""
         from sqlalchemy import or_
@@ -486,12 +519,17 @@ class EmailUtils:
         org_name = user.organization.name if user.organization else branding_ctx.get('organization_name', 'QCMS Enterprise')
         user_name = user.full_name or user.username or user.email
         role_name = user.role.name if user.role else 'User'
+        user_phone = getattr(user, 'phone', None) or getattr(user, 'mobile', None) or getattr(user, 'phone_number', None) or ''
+        login_identifier = EmailUtils.get_user_login_identifier(user)
 
         user_ctx = {
             'user_name': user_name,
-            'username': user.username or user.email,
+            'username': login_identifier,
+            'login_identifier': login_identifier,
             'user_email': user.email,
             'email': user.email,
+            'phone': user_phone,
+            'phone_number': user_phone,
             'temp_password': temp_password,
             'password': temp_password,
             'Password': temp_password,
@@ -505,6 +543,54 @@ class EmailUtils:
             'software_short_name': branding_ctx.get('software_short_name', 'QCMS'),
             'support_email': branding_ctx.get('support_email', 'support@ifqm.org.in')
         }
+
+        # 1. Dispatch Welcome SMS from Set SMS Notifications (SmsTemplateConfig)
+        from app.infrastructure.database.models.models import SmsTemplateConfig, SmsNotificationLog
+        user_phone = getattr(user, 'phone', None) or getattr(user, 'mobile', None) or getattr(user, 'phone_number', None)
+        if user_phone:
+            try:
+                sms_tmpl = SmsTemplateConfig.query.filter_by(template_key='user_welcome_credentials', is_active=True).first()
+                if not sms_tmpl:
+                    sms_tmpl = SmsTemplateConfig.query.filter_by(template_key='user_welcome_credentials').first()
+
+                if sms_tmpl and (sms_tmpl.is_active is not False) and sms_tmpl.body:
+                    sms_body = EmailNotificationEngine.replace_variables(sms_tmpl.body, user_ctx)
+                    sms_ok, sms_msg = EmailNotificationEngine.dispatch_dlt_sms(
+                        phone=user_phone,
+                        sms_body=sms_body,
+                        template_id=sms_tmpl.template_id,
+                        entity_id=sms_tmpl.entity_id,
+                        sender_id=sms_tmpl.sender_id,
+                        msg_type="TXN"
+                    )
+                    sms_log = SmsNotificationLog(
+                        template_key=sms_tmpl.template_key,
+                        template_name=sms_tmpl.display_name,
+                        category=sms_tmpl.category or 'auth',
+                        sender_id=sms_tmpl.sender_id or 'IFQMQC',
+                        dlt_template_id=sms_tmpl.template_id,
+                        dlt_entity_id=sms_tmpl.entity_id,
+                        message_body=sms_body,
+                        phone_number=user_phone,
+                        recipient_name=user_name,
+                        org_name=org_name,
+                        gateway='Jio DLT / Kaleyra' if sms_ok else 'Jio DLT / Simulated',
+                        status='Delivered' if sms_ok else 'Logged',
+                        error_message=None if sms_ok else sms_msg,
+                        sent_by_id=user.id,
+                        sent_at=datetime.now(timezone.utc).replace(tzinfo=None)
+                    )
+                    db.session.add(sms_log)
+                    if sms_ok:
+                        sms_tmpl.total_sent = (sms_tmpl.total_sent or 0) + 1
+                        sms_tmpl.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
+                    db.session.commit()
+            except Exception as se:
+                db.session.rollback()
+                logger.info(f"[EmailUtils] Error dispatching user welcome SMS: {se}")
+
+        if not user.email:
+            return True
 
         try:
             # STRICT GATE: Look up the welcome rule for new_user_welcome / user_welcome regardless of active state.
@@ -521,9 +607,8 @@ class EmailUtils:
                     logger.info(f"[EmailUtils] User welcome notification rule '{rule.name}' is PAUSED/DISABLED in Set Email Notifications dashboard. Cancelling email generation and dispatch completely.")
                     return False
 
-                # Dispatch SMS alongside email if enabled on the rule
-                user_phone = getattr(user, 'phone', None) or getattr(user, 'mobile', None) or getattr(user, 'phone_number', None)
-                if rule.sms_enabled and rule.sms_body and user_phone:
+                # Dispatch SMS alongside email if enabled on the rule and not already sent
+                if rule.sms_enabled and rule.sms_body and user_phone and not sms_tmpl:
                     try:
                         p_sms_body = EmailNotificationEngine.replace_variables(rule.sms_body, user_ctx)
                         EmailNotificationEngine.dispatch_dlt_sms(
