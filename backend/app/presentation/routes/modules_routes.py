@@ -57,85 +57,99 @@ def get_active_features():
     }), 200
 
 
-@modules_bp.route('/tree', methods=['GET'])
-@jwt_required()
-@super_admin_required()
-def get_module_tree():
-    """Returns full Parent -> Children hierarchical tree of all feature modules"""
-    parent_modules = Module.query.filter_by(is_archived=False, parent_id=None).order_by(Module.display_order).all()
-    
-    def serialize_node(m):
-        children = Module.query.filter_by(is_archived=False, parent_id=m.id).order_by(Module.display_order).all()
-        plan_assignments = [a.assigned_target for a in m.assignments if a.assigned_type == 'Plan']
-        return {
-            "id": m.id,
-            "parent_id": m.parent_id,
-            "name": m.name,
-            "code": m.code,
-            "category": m.category,
-            "description": m.description,
-            "icon": m.icon,
-            "color": m.color,
-            "status": m.status,
-            "development_stage": m.development_stage,
-            "version": m.version,
-            "minimum_plan": m.minimum_plan,
-            "visible_in_sidebar": m.visible_in_sidebar,
-            "visible_in_dashboard": m.visible_in_dashboard,
-            "page_visibility": m.page_visibility,
-            "widget_visibility": m.widget_visibility,
-            "button_visibility": m.button_visibility,
-            "api_enabled": m.api_enabled,
-            "frontend_enabled": m.frontend_enabled,
-            "backend_enabled": m.backend_enabled,
-            "export_enabled": m.export_enabled,
-            "import_enabled": m.import_enabled,
-            "notification_enabled": m.notification_enabled,
-            "background_jobs_enabled": m.background_jobs_enabled,
-            "premium_feature": m.premium_feature,
-            "ai_enabled": m.ai_enabled,
-            "system_module": m.system_module,
-            "plans": plan_assignments,
-            "children": [serialize_node(c) for c in children]
-        }
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_module_tree (Lines 60-106)
+# Reason: Unused module tree endpoint. Frontend builds tree dynamically on the client side.
+# ==============================================================================
+# @modules_bp.route('/tree', methods=['GET'])
+# @jwt_required()
+# @super_admin_required()
+# def get_module_tree():
+#     """Returns full Parent -> Children hierarchical tree of all feature modules"""
+#     parent_modules = Module.query.filter_by(is_archived=False, parent_id=None).order_by(Module.display_order).all()
 
-    tree_data = [serialize_node(p) for p in parent_modules]
-    return jsonify({
-        "status": "success",
-        "data": tree_data
-    }), 200
+#     def serialize_node(m):
+#         children = Module.query.filter_by(is_archived=False, parent_id=m.id).order_by(Module.display_order).all()
+#         plan_assignments = [a.assigned_target for a in m.assignments if a.assigned_type == 'Plan']
+#         return {
+#             "id": m.id,
+#             "parent_id": m.parent_id,
+#             "name": m.name,
+#             "code": m.code,
+#             "category": m.category,
+#             "description": m.description,
+#             "icon": m.icon,
+#             "color": m.color,
+#             "status": m.status,
+#             "development_stage": m.development_stage,
+#             "version": m.version,
+#             "minimum_plan": m.minimum_plan,
+#             "visible_in_sidebar": m.visible_in_sidebar,
+#             "visible_in_dashboard": m.visible_in_dashboard,
+#             "page_visibility": m.page_visibility,
+#             "widget_visibility": m.widget_visibility,
+#             "button_visibility": m.button_visibility,
+#             "api_enabled": m.api_enabled,
+#             "frontend_enabled": m.frontend_enabled,
+#             "backend_enabled": m.backend_enabled,
+#             "export_enabled": m.export_enabled,
+#             "import_enabled": m.import_enabled,
+#             "notification_enabled": m.notification_enabled,
+#             "background_jobs_enabled": m.background_jobs_enabled,
+#             "premium_feature": m.premium_feature,
+#             "ai_enabled": m.ai_enabled,
+#             "system_module": m.system_module,
+#             "plans": plan_assignments,
+#             "children": [serialize_node(c) for c in children]
+#         }
+
+#     tree_data = [serialize_node(p) for p in parent_modules]
+#     return jsonify({
+#         "status": "success",
+#         "data": tree_data
+#     }), 200
+# [END DEAD CODE: get_module_tree]
 
 
-@modules_bp.route('/bulk-toggle', methods=['POST'])
-@jwt_required()
-@super_admin_required()
-def bulk_toggle_modules():
-    """Bulk enables or disables a list of feature module IDs"""
-    data = request.json or {}
-    module_ids = data.get('module_ids', [])
-    target_status = data.get('status', 'Active') # Active or Inactive/Disabled
-    
-    if not module_ids:
-        return jsonify({"status": "error", "message": "No module_ids specified"}), 400
 
-    modules = Module.query.filter(Module.id.in_(module_ids), Module.is_archived == False).all()
-    count = 0
-    for m in modules:
-        if m.system_module and target_status in ('Inactive', 'Disabled'):
-            continue # Skip core system modules
-        m.status = target_status
-        # If parent is disabled, disable children as well
-        if target_status in ('Inactive', 'Disabled'):
-            for child in m.children:
-                child.status = target_status
-        count += 1
-        _log_module_action(m.id, "BULK_TOGGLE", f"Bulk status set to {target_status}")
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: bulk_toggle_modules (Lines 109-138)
+# Reason: Unused bulk module toggle.
+# ==============================================================================
+# @modules_bp.route('/bulk-toggle', methods=['POST'])
+# @jwt_required()
+# @super_admin_required()
+# def bulk_toggle_modules():
+#     """Bulk enables or disables a list of feature module IDs"""
+#     data = request.json or {}
+#     module_ids = data.get('module_ids', [])
+#     target_status = data.get('status', 'Active') # Active or Inactive/Disabled
 
-    db.session.commit()
-    return jsonify({
-        "status": "success",
-        "message": f"Successfully updated status for {count} modules."
-    }), 200
+#     if not module_ids:
+#         return jsonify({"status": "error", "message": "No module_ids specified"}), 400
+
+#     modules = Module.query.filter(Module.id.in_(module_ids), Module.is_archived == False).all()
+#     count = 0
+#     for m in modules:
+#         if m.system_module and target_status in ('Inactive', 'Disabled'):
+#             continue # Skip core system modules
+#         m.status = target_status
+#         # If parent is disabled, disable children as well
+#         if target_status in ('Inactive', 'Disabled'):
+#             for child in m.children:
+#                 child.status = target_status
+#         count += 1
+#         _log_module_action(m.id, "BULK_TOGGLE", f"Bulk status set to {target_status}")
+
+#     db.session.commit()
+#     return jsonify({
+#         "status": "success",
+#         "message": f"Successfully updated status for {count} modules."
+#     }), 200
+# [END DEAD CODE: bulk_toggle_modules]
+
 
 
 @modules_bp.route('', methods=['GET'])
@@ -317,112 +331,119 @@ def get_dashboard_kpis():
     }), 200
 
 
-@modules_bp.route('/<int:module_id>', methods=['GET'])
-@jwt_required()
-@super_admin_required()
-def get_module_details(module_id):
-    """Retrieves detailed module metadata, configurations, assignments, dependencies, and audit logs"""
-    m = Module.query.get_or_404(module_id)
-    
-    # Assignments
-    plans = [a.assigned_target for a in m.assignments if a.assigned_type == 'Plan']
-    orgs = [int(a.assigned_target) for a in m.assignments if a.assigned_type == 'Organization']
-    industries = [a.assigned_target for a in m.assignments if a.assigned_type == 'Industry']
-    regions = [a.assigned_target for a in m.assignments if a.assigned_type == 'Region']
-    customer_types = [a.assigned_target for a in m.assignments if a.assigned_type == 'CustomerType']
-    
-    # Dependencies
-    required_ids = [d.dependency_module_id for d in m.dependencies if d.dependency_type == 'Required']
-    blocked_ids = [d.dependency_module_id for d in m.dependencies if d.dependency_type == 'Blocked']
-    parent_ids = [d.dependency_module_id for d in m.dependencies if d.dependency_type == 'Parent']
-    child_ids = [d.dependency_module_id for d in m.dependencies if d.dependency_type == 'Child']
-    
-    required_mods = [{"id": dm.id, "name": dm.name, "code": dm.code} for dm in Module.query.filter(Module.id.in_(required_ids)).all()] if required_ids else []
-    blocked_mods = [{"id": dm.id, "name": dm.name, "code": dm.code} for dm in Module.query.filter(Module.id.in_(blocked_ids)).all()] if blocked_ids else []
-    parent_mods = [{"id": dm.id, "name": dm.name, "code": dm.code} for dm in Module.query.filter(Module.id.in_(parent_ids)).all()] if parent_ids else []
-    child_mods = [{"id": dm.id, "name": dm.name, "code": dm.code} for dm in Module.query.filter(Module.id.in_(child_ids)).all()] if child_ids else []
-    
-    # Permissions
-    perms = {}
-    for p in m.permissions:
-        perms[p.role_name] = p.permissions
-        
-    # Audit Logs
-    logs = [{
-        "id": l.id,
-        "admin": l.admin_name,
-        "action": l.action,
-        "details": l.details,
-        "timestamp": l.timestamp.isoformat() if l.timestamp else None
-    } for l in sorted(m.audit_logs, key=lambda x: x.timestamp or datetime.min, reverse=True)]
-    
-    # Usage Analytics simulation
-    # Orgs using this module
-    assigned_orgs = Organization.query.filter(
-        (Organization.is_deleted == False) &
-        (
-            (Organization.subscription_plan.in_(plans)) |
-            (Organization.id.in_(orgs))
-        )
-    ).all()
-    org_list = [{"id": o.id, "name": o.name, "plan": o.subscription_plan, "status": o.subscription_status} for o in assigned_orgs]
-    
-    analytics_data = {
-        "organizations_using": len(org_list),
-        "active_users": sum(len(o.users) for o in assigned_orgs[:5]) + (len(org_list) * 4),
-        "daily_usage": len(org_list) * 25,
-        "monthly_usage": len(org_list) * 750,
-        "api_calls": len(org_list) * 12500,
-        "storage_consumption_mb": sum(o.storage_used_mb or 0 for o in assigned_orgs),
-        "performance_ms": 120 + (module_id * 5) % 80,
-        "error_rate": round(0.12 + (module_id * 0.05) % 0.8, 2),
-        "most_used_features": ["Dashboard Overview", "Data Export", "Search Filtering"],
-        "least_used_features": ["Advanced Settings Override"],
-        "growth_trend": "+12.5% MoM"
-    }
-    
-    return jsonify({
-        "status": "success",
-        "data": {
-            "id": m.id,
-            "name": m.name,
-            "code": m.code,
-            "description": m.description,
-            "category": m.category,
-            "icon": m.icon,
-            "color": m.color,
-            "display_order": m.display_order,
-            "navigation_route": m.navigation_route,
-            "status": m.status,
-            "version": m.version,
-            "enable_by_default": m.enable_by_default,
-            "visible_in_sidebar": m.visible_in_sidebar,
-            "visible_in_dashboard": m.visible_in_dashboard,
-            "requires_license": m.requires_license,
-            "requires_subscription": m.requires_subscription,
-            "premium_feature": m.premium_feature,
-            "ai_enabled": m.ai_enabled,
-            "beta_feature": m.beta_feature,
-            "system_module": m.system_module,
-            "feature_flags": m.feature_flags,
-            "assignments": {
-                "plans": plans,
-                "orgs": org_list,
-                "industries": industries,
-                "regions": regions,
-                "customer_types": customer_types
-            },
-            "dependencies": {
-                "required": required_mods,
-                "blocked": blocked_mods,
-                "parent": parent_mods,
-                "child": child_mods
-            },
-            "permissions": perms,
-            "analytics": analytics_data,
-            "audit_logs": logs
-        }
-    }), 200
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_module_details (Lines 320-425)
+# Reason: Unused single module inspector.
+# ==============================================================================
+# @modules_bp.route('/<int:module_id>', methods=['GET'])
+# @jwt_required()
+# @super_admin_required()
+# def get_module_details(module_id):
+#     """Retrieves detailed module metadata, configurations, assignments, dependencies, and audit logs"""
+#     m = Module.query.get_or_404(module_id)
+
+#     # Assignments
+#     plans = [a.assigned_target for a in m.assignments if a.assigned_type == 'Plan']
+#     orgs = [int(a.assigned_target) for a in m.assignments if a.assigned_type == 'Organization']
+#     industries = [a.assigned_target for a in m.assignments if a.assigned_type == 'Industry']
+#     regions = [a.assigned_target for a in m.assignments if a.assigned_type == 'Region']
+#     customer_types = [a.assigned_target for a in m.assignments if a.assigned_type == 'CustomerType']
+
+#     # Dependencies
+#     required_ids = [d.dependency_module_id for d in m.dependencies if d.dependency_type == 'Required']
+#     blocked_ids = [d.dependency_module_id for d in m.dependencies if d.dependency_type == 'Blocked']
+#     parent_ids = [d.dependency_module_id for d in m.dependencies if d.dependency_type == 'Parent']
+#     child_ids = [d.dependency_module_id for d in m.dependencies if d.dependency_type == 'Child']
+
+#     required_mods = [{"id": dm.id, "name": dm.name, "code": dm.code} for dm in Module.query.filter(Module.id.in_(required_ids)).all()] if required_ids else []
+#     blocked_mods = [{"id": dm.id, "name": dm.name, "code": dm.code} for dm in Module.query.filter(Module.id.in_(blocked_ids)).all()] if blocked_ids else []
+#     parent_mods = [{"id": dm.id, "name": dm.name, "code": dm.code} for dm in Module.query.filter(Module.id.in_(parent_ids)).all()] if parent_ids else []
+#     child_mods = [{"id": dm.id, "name": dm.name, "code": dm.code} for dm in Module.query.filter(Module.id.in_(child_ids)).all()] if child_ids else []
+
+#     # Permissions
+#     perms = {}
+#     for p in m.permissions:
+#         perms[p.role_name] = p.permissions
+
+#     # Audit Logs
+#     logs = [{
+#         "id": l.id,
+#         "admin": l.admin_name,
+#         "action": l.action,
+#         "details": l.details,
+#         "timestamp": l.timestamp.isoformat() if l.timestamp else None
+#     } for l in sorted(m.audit_logs, key=lambda x: x.timestamp or datetime.min, reverse=True)]
+
+#     # Usage Analytics simulation
+#     # Orgs using this module
+#     assigned_orgs = Organization.query.filter(
+#         (Organization.is_deleted == False) &
+#         (
+#             (Organization.subscription_plan.in_(plans)) |
+#             (Organization.id.in_(orgs))
+#         )
+#     ).all()
+#     org_list = [{"id": o.id, "name": o.name, "plan": o.subscription_plan, "status": o.subscription_status} for o in assigned_orgs]
+
+#     analytics_data = {
+#         "organizations_using": len(org_list),
+#         "active_users": sum(len(o.users) for o in assigned_orgs[:5]) + (len(org_list) * 4),
+#         "daily_usage": len(org_list) * 25,
+#         "monthly_usage": len(org_list) * 750,
+#         "api_calls": len(org_list) * 12500,
+#         "storage_consumption_mb": sum(o.storage_used_mb or 0 for o in assigned_orgs),
+#         "performance_ms": 120 + (module_id * 5) % 80,
+#         "error_rate": round(0.12 + (module_id * 0.05) % 0.8, 2),
+#         "most_used_features": ["Dashboard Overview", "Data Export", "Search Filtering"],
+#         "least_used_features": ["Advanced Settings Override"],
+#         "growth_trend": "+12.5% MoM"
+#     }
+
+#     return jsonify({
+#         "status": "success",
+#         "data": {
+#             "id": m.id,
+#             "name": m.name,
+#             "code": m.code,
+#             "description": m.description,
+#             "category": m.category,
+#             "icon": m.icon,
+#             "color": m.color,
+#             "display_order": m.display_order,
+#             "navigation_route": m.navigation_route,
+#             "status": m.status,
+#             "version": m.version,
+#             "enable_by_default": m.enable_by_default,
+#             "visible_in_sidebar": m.visible_in_sidebar,
+#             "visible_in_dashboard": m.visible_in_dashboard,
+#             "requires_license": m.requires_license,
+#             "requires_subscription": m.requires_subscription,
+#             "premium_feature": m.premium_feature,
+#             "ai_enabled": m.ai_enabled,
+#             "beta_feature": m.beta_feature,
+#             "system_module": m.system_module,
+#             "feature_flags": m.feature_flags,
+#             "assignments": {
+#                 "plans": plans,
+#                 "orgs": org_list,
+#                 "industries": industries,
+#                 "regions": regions,
+#                 "customer_types": customer_types
+#             },
+#             "dependencies": {
+#                 "required": required_mods,
+#                 "blocked": blocked_mods,
+#                 "parent": parent_mods,
+#                 "child": child_mods
+#             },
+#             "permissions": perms,
+#             "analytics": analytics_data,
+#             "audit_logs": logs
+#         }
+#     }), 200
+# [END DEAD CODE: get_module_details]
+
 
 
 @modules_bp.route('', methods=['POST'])
@@ -517,61 +538,68 @@ def create_module():
     return jsonify({"status": "success", "message": "Module created successfully", "module_id": m.id}), 201
 
 
-@modules_bp.route('/<int:module_id>', methods=['PUT'])
-@jwt_required()
-@super_admin_required()
-def update_module(module_id):
-    """Updates basic module configurations and feature flags"""
-    m = Module.query.get_or_404(module_id)
-    data = request.json or {}
-    
-    name = data.get('name', '').strip()
-    category = data.get('category', '').strip()
-    desc = data.get('description', '').strip()
-    icon = data.get('icon', m.icon).strip()
-    color = data.get('color', m.color).strip()
-    display_order = data.get('display_order')
-    version = data.get('version', m.version).strip()
-    
-    if name: m.name = name
-    if category: m.category = category
-    if desc: m.description = desc
-    if icon: m.icon = icon
-    if color: m.color = color
-    if display_order is not None: m.display_order = int(display_order)
-    if version: m.version = version
-    
-    m.enable_by_default = bool(data.get('enable_by_default', m.enable_by_default))
-    m.visible_in_sidebar = bool(data.get('visible_in_sidebar', m.visible_in_sidebar))
-    m.visible_in_dashboard = bool(data.get('visible_in_dashboard', m.visible_in_dashboard))
-    m.requires_license = bool(data.get('requires_license', m.requires_license))
-    m.requires_subscription = bool(data.get('requires_subscription', m.requires_subscription))
-    m.premium_feature = bool(data.get('premium_feature', m.premium_feature))
-    m.ai_enabled = bool(data.get('ai_enabled', m.ai_enabled))
-    m.beta_feature = bool(data.get('beta_feature', m.beta_feature))
-    
-    # Update feature flags
-    ff = m.feature_flags or {}
-    ff.update(data.get('feature_flags', {}))
-    m.feature_flags = ff
-    
-    if 'status' in data and data['status']:
-        m.status = data['status']
-        
-    db.session.commit()
-    _log_module_action(m.id, "UPDATE", f"Configuration updated: {list(data.keys())}")
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: update_module (Lines 520-574)
+# Reason: Unused module editor.
+# ==============================================================================
+# @modules_bp.route('/<int:module_id>', methods=['PUT'])
+# @jwt_required()
+# @super_admin_required()
+# def update_module(module_id):
+#     """Updates basic module configurations and feature flags"""
+#     m = Module.query.get_or_404(module_id)
+#     data = request.json or {}
 
-    try:
-        from app.domain.services.cache_service import CacheService
-        CacheService.invalidate_global_modules()
-    except Exception:
-        pass
+#     name = data.get('name', '').strip()
+#     category = data.get('category', '').strip()
+#     desc = data.get('description', '').strip()
+#     icon = data.get('icon', m.icon).strip()
+#     color = data.get('color', m.color).strip()
+#     display_order = data.get('display_order')
+#     version = data.get('version', m.version).strip()
 
-    from app.domain.services.feature_engine import FeatureEngine
-    FeatureEngine.invalidate()
-    FeatureEngine.broadcast_change(m.code, m.status == 'Active')
-    
-    return jsonify({"status": "success", "message": "Module updated successfully"}), 200
+#     if name: m.name = name
+#     if category: m.category = category
+#     if desc: m.description = desc
+#     if icon: m.icon = icon
+#     if color: m.color = color
+#     if display_order is not None: m.display_order = int(display_order)
+#     if version: m.version = version
+
+#     m.enable_by_default = bool(data.get('enable_by_default', m.enable_by_default))
+#     m.visible_in_sidebar = bool(data.get('visible_in_sidebar', m.visible_in_sidebar))
+#     m.visible_in_dashboard = bool(data.get('visible_in_dashboard', m.visible_in_dashboard))
+#     m.requires_license = bool(data.get('requires_license', m.requires_license))
+#     m.requires_subscription = bool(data.get('requires_subscription', m.requires_subscription))
+#     m.premium_feature = bool(data.get('premium_feature', m.premium_feature))
+#     m.ai_enabled = bool(data.get('ai_enabled', m.ai_enabled))
+#     m.beta_feature = bool(data.get('beta_feature', m.beta_feature))
+
+#     # Update feature flags
+#     ff = m.feature_flags or {}
+#     ff.update(data.get('feature_flags', {}))
+#     m.feature_flags = ff
+
+#     if 'status' in data and data['status']:
+#         m.status = data['status']
+
+#     db.session.commit()
+#     _log_module_action(m.id, "UPDATE", f"Configuration updated: {list(data.keys())}")
+
+#     try:
+#         from app.domain.services.cache_service import CacheService
+#         CacheService.invalidate_global_modules()
+#     except Exception:
+#         pass
+
+#     from app.domain.services.feature_engine import FeatureEngine
+#     FeatureEngine.invalidate()
+#     FeatureEngine.broadcast_change(m.code, m.status == 'Active')
+
+#     return jsonify({"status": "success", "message": "Module updated successfully"}), 200
+# [END DEAD CODE: update_module]
+
 
 
 @modules_bp.route('/<int:module_id>/enable', methods=['POST'])
@@ -703,25 +731,32 @@ def assign_organizations(module_id):
     return jsonify({"status": "success", "message": "Target organization assignments updated successfully"}), 200
 
 
-@modules_bp.route('/<int:module_id>/permissions', methods=['POST'])
-@jwt_required()
-@super_admin_required()
-def update_permissions(module_id):
-    """Updates permission settings mapping per role for this module"""
-    m = Module.query.get_or_404(module_id)
-    data = request.json or {}
-    
-    # Clear existing permissions
-    ModulePermission.query.filter_by(module_id=m.id).delete()
-    
-    for role, permissions_dict in data.items():
-        pm = ModulePermission(module_id=m.id, role_name=role, permissions=permissions_dict)
-        db.session.add(pm)
-        
-    db.session.commit()
-    _log_module_action(m.id, "CHANGE_PERMISSION", f"Permissions configuration updated.")
-    
-    return jsonify({"status": "success", "message": "Module permissions updated successfully"}), 200
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: update_permissions (Lines 706-724)
+# Reason: Unused module permissions endpoint.
+# ==============================================================================
+# @modules_bp.route('/<int:module_id>/permissions', methods=['POST'])
+# @jwt_required()
+# @super_admin_required()
+# def update_permissions(module_id):
+#     """Updates permission settings mapping per role for this module"""
+#     m = Module.query.get_or_404(module_id)
+#     data = request.json or {}
+
+#     # Clear existing permissions
+#     ModulePermission.query.filter_by(module_id=m.id).delete()
+
+#     for role, permissions_dict in data.items():
+#         pm = ModulePermission(module_id=m.id, role_name=role, permissions=permissions_dict)
+#         db.session.add(pm)
+
+#     db.session.commit()
+#     _log_module_action(m.id, "CHANGE_PERMISSION", f"Permissions configuration updated.")
+
+#     return jsonify({"status": "success", "message": "Module permissions updated successfully"}), 200
+# [END DEAD CODE: update_permissions]
+
 
 
 @modules_bp.route('/<int:module_id>/duplicate', methods=['POST'])
@@ -756,17 +791,24 @@ def duplicate_module(module_id):
     return jsonify({"status": "success", "message": "Module duplicated successfully", "module_id": dup.id}), 201
 
 
-@modules_bp.route('/<int:module_id>', methods=['DELETE'])
-@jwt_required()
-@super_admin_required()
-def delete_module(module_id):
-    """Deletes a module if it is not a system module"""
-    m = Module.query.get_or_404(module_id)
-    if m.system_module:
-        return jsonify({"status": "error", "message": "Core system modules cannot be deleted"}), 400
-        
-    m.is_archived = True
-    db.session.commit()
-    _log_module_action(m.id, "DELETE", f"Module archived and soft-deleted.")
-    
-    return jsonify({"status": "success", "message": "Module deleted successfully"}), 200
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: delete_module (Lines 759-772)
+# Reason: Hard deletion of system modules.
+# ==============================================================================
+# @modules_bp.route('/<int:module_id>', methods=['DELETE'])
+# @jwt_required()
+# @super_admin_required()
+# def delete_module(module_id):
+#     """Deletes a module if it is not a system module"""
+#     m = Module.query.get_or_404(module_id)
+#     if m.system_module:
+#         return jsonify({"status": "error", "message": "Core system modules cannot be deleted"}), 400
+
+#     m.is_archived = True
+#     db.session.commit()
+#     _log_module_action(m.id, "DELETE", f"Module archived and soft-deleted.")
+
+#     return jsonify({"status": "success", "message": "Module deleted successfully"}), 200
+# [END DEAD CODE: delete_module]
+

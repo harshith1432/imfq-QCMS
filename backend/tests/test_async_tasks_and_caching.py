@@ -7,6 +7,7 @@ from app.domain.services.cache_service import CacheService
 from app.infrastructure.database.models import User, Organization, Project, Stage8Standardization
 
 
+@pytest.mark.skip(reason="[DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE] Async Celery PDF export replaced by synchronous export.")
 def test_async_pdf_report_export_accepted(client, auth_context):
     """Verify that exporting PDF asynchronously returns HTTP 202 Accepted with polling job_id."""
     import uuid
@@ -37,7 +38,9 @@ def test_async_pdf_report_export_accepted(client, auth_context):
     assert 'status' in status_data
 
 
+@pytest.mark.skip(reason="[DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE] Async Celery Bulk PDF export replaced by synchronous export.")
 def test_async_bulk_pdf_zip_export_accepted(client, auth_context):
+
     """Verify that exporting bulk PDF zip asynchronously returns HTTP 202 Accepted with polling job_id."""
     res = client.post('/api/reports/export/pdf/all-async', headers=auth_context['headers'])
     assert res.status_code == 202

@@ -287,70 +287,77 @@ def list_licenses():
         }
     })
 
-@license_bp.route('/<int:org_id>', methods=['GET'])
-@jwt_required()
-def get_license_details(org_id):
-    user = _get_current_user()
-    err = _require_role(user, ['view'])
-    if err:
-        return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_license_details (Lines 290-353)
+# Reason: Unused single organization license detail.
+# ==============================================================================
+# @license_bp.route('/<int:org_id>', methods=['GET'])
+# @jwt_required()
+# def get_license_details(org_id):
+#     user = _get_current_user()
+#     err = _require_role(user, ['view'])
+#     if err:
+#         return err
 
-    org = db.get_or_404(Organization, org_id)
-    
-    active_users = len(org.users)
-    active_projects = len(org.projects)
-    active_depts = len(org.departments)
-    
-    sub = Subscription.query.filter_by(org_id=org_id, subscription_status='Active').first()
-    sub_data = None
-    if sub:
-        sub_data = {
-            'subscription_uid': sub.subscription_uid,
-            'billing_cycle': sub.billing_cycle,
-            'support_level': sub.support_level,
-            'payment_status': sub.payment_status,
-            'final_amount': sub.final_amount,
-            'currency': sub.currency
-        }
+#     org = db.get_or_404(Organization, org_id)
 
-    logs = SuperAdminLog.query.filter_by(target_id=org_id, target_type='Organization').order_by(SuperAdminLog.created_at.desc()).limit(15).all()
-    history = []
-    for l in logs:
-        history.append({
-            'action': l.action,
-            'admin': l.admin.full_name if l.admin else 'System',
-            'timestamp': l.created_at.isoformat(),
-            'details': l.details
-        })
+#     active_users = len(org.users)
+#     active_projects = len(org.projects)
+#     active_depts = len(org.departments)
 
-    return jsonify({
-        'status': 'success',
-        'data': {
-            'id': org.id,
-            'license_number': org.license_number or '—',
-            'organization_name': org.name,
-            'org_code': org.org_code or '—',
-            'admin_name': org.admin_name or '—',
-            'admin_email': org.email,
-            'subscription_plan': org.subscription_plan,
-            'subscription_status': org.subscription_status,
-            'license_start_date': org.license_start_date.isoformat() if org.license_start_date else None,
-            'license_expiry_date': org.license_expiry_date.isoformat() if org.license_expiry_date else None,
-            'max_users': org.max_users,
-            'storage_limit_gb': round(org.storage_limit_mb / 1024.0, 1),
-            'storage_used_mb': round(org.storage_used_mb, 2),
-            'enabled_modules': org.enabled_modules or [],
-            'created_at': org.created_at.isoformat() if org.created_at else None,
-            'usage': {
-                'active_users': active_users,
-                'active_projects': active_projects,
-                'active_departments': active_depts,
-                'api_calls': 4120
-            },
-            'subscription': sub_data,
-            'history': history
-        }
-    })
+#     sub = Subscription.query.filter_by(org_id=org_id, subscription_status='Active').first()
+#     sub_data = None
+#     if sub:
+#         sub_data = {
+#             'subscription_uid': sub.subscription_uid,
+#             'billing_cycle': sub.billing_cycle,
+#             'support_level': sub.support_level,
+#             'payment_status': sub.payment_status,
+#             'final_amount': sub.final_amount,
+#             'currency': sub.currency
+#         }
+
+#     logs = SuperAdminLog.query.filter_by(target_id=org_id, target_type='Organization').order_by(SuperAdminLog.created_at.desc()).limit(15).all()
+#     history = []
+#     for l in logs:
+#         history.append({
+#             'action': l.action,
+#             'admin': l.admin.full_name if l.admin else 'System',
+#             'timestamp': l.created_at.isoformat(),
+#             'details': l.details
+#         })
+
+#     return jsonify({
+#         'status': 'success',
+#         'data': {
+#             'id': org.id,
+#             'license_number': org.license_number or '—',
+#             'organization_name': org.name,
+#             'org_code': org.org_code or '—',
+#             'admin_name': org.admin_name or '—',
+#             'admin_email': org.email,
+#             'subscription_plan': org.subscription_plan,
+#             'subscription_status': org.subscription_status,
+#             'license_start_date': org.license_start_date.isoformat() if org.license_start_date else None,
+#             'license_expiry_date': org.license_expiry_date.isoformat() if org.license_expiry_date else None,
+#             'max_users': org.max_users,
+#             'storage_limit_gb': round(org.storage_limit_mb / 1024.0, 1),
+#             'storage_used_mb': round(org.storage_used_mb, 2),
+#             'enabled_modules': org.enabled_modules or [],
+#             'created_at': org.created_at.isoformat() if org.created_at else None,
+#             'usage': {
+#                 'active_users': active_users,
+#                 'active_projects': active_projects,
+#                 'active_departments': active_depts,
+#                 'api_calls': 4120
+#             },
+#             'subscription': sub_data,
+#             'history': history
+#         }
+#     })
+# [END DEAD CODE: get_license_details]
+
 
 @license_bp.route('/', methods=['POST'])
 @jwt_required()
@@ -418,48 +425,55 @@ def create_license():
         'license_key': key
     }), 201
 
-@license_bp.route('/<int:org_id>', methods=['PUT'])
-@jwt_required()
-def update_license(org_id):
-    user = _get_current_user()
-    err = _require_role(user, ['edit'])
-    if err:
-        return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: update_license (Lines 421-462)
+# Reason: Unused direct license editor.
+# ==============================================================================
+# @license_bp.route('/<int:org_id>', methods=['PUT'])
+# @jwt_required()
+# def update_license(org_id):
+#     user = _get_current_user()
+#     err = _require_role(user, ['edit'])
+#     if err:
+#         return err
 
-    org = db.get_or_404(Organization, org_id)
-    data = request.get_json() or {}
+#     org = db.get_or_404(Organization, org_id)
+#     data = request.get_json() or {}
 
-    old_val = {
-        'max_users': org.max_users,
-        'storage_limit_mb': org.storage_limit_mb,
-        'enabled_modules': org.enabled_modules,
-        'subscription_plan': org.subscription_plan
-    }
+#     old_val = {
+#         'max_users': org.max_users,
+#         'storage_limit_mb': org.storage_limit_mb,
+#         'enabled_modules': org.enabled_modules,
+#         'subscription_plan': org.subscription_plan
+#     }
 
-    if 'plan_name' in data:
-        org.subscription_plan = data['plan_name']
-    if 'max_users' in data:
-        org.max_users = int(data['max_users'])
-    if 'storage_limit_gb' in data:
-        org.storage_limit_mb = float(data['storage_limit_gb']) * 1024.0
-    if 'enabled_modules' in data:
-        org.enabled_modules = data['enabled_modules']
+#     if 'plan_name' in data:
+#         org.subscription_plan = data['plan_name']
+#     if 'max_users' in data:
+#         org.max_users = int(data['max_users'])
+#     if 'storage_limit_gb' in data:
+#         org.storage_limit_mb = float(data['storage_limit_gb']) * 1024.0
+#     if 'enabled_modules' in data:
+#         org.enabled_modules = data['enabled_modules']
 
-    db.session.commit()
-    
-    new_val = {
-        'max_users': org.max_users,
-        'storage_limit_mb': org.storage_limit_mb,
-        'enabled_modules': org.enabled_modules,
-        'subscription_plan': org.subscription_plan
-    }
-    
-    _log_action(user, 'LICENSE_UPDATED', org.id, old_val, new_val)
+#     db.session.commit()
 
-    return jsonify({
-        'status': 'success',
-        'message': 'License parameters updated successfully'
-    })
+#     new_val = {
+#         'max_users': org.max_users,
+#         'storage_limit_mb': org.storage_limit_mb,
+#         'enabled_modules': org.enabled_modules,
+#         'subscription_plan': org.subscription_plan
+#     }
+
+#     _log_action(user, 'LICENSE_UPDATED', org.id, old_val, new_val)
+
+#     return jsonify({
+#         'status': 'success',
+#         'message': 'License parameters updated successfully'
+#     })
+# [END DEAD CODE: update_license]
+
 
 @license_bp.route('/<int:org_id>/activate', methods=['POST'])
 @jwt_required()
@@ -514,37 +528,44 @@ def resume_license(org_id):
     _log_action(user, 'LICENSE_RESUMED', org.id, old_status, 'Active')
     return jsonify({'status': 'success', 'message': 'License resumed successfully'})
 
-@license_bp.route('/<int:org_id>/renew', methods=['POST'])
-@jwt_required()
-def renew_license(org_id):
-    user = _get_current_user()
-    err = _require_role(user, ['edit'])
-    if err:
-        return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: renew_license (Lines 517-547)
+# Reason: Unused license renewal route.
+# ==============================================================================
+# @license_bp.route('/<int:org_id>/renew', methods=['POST'])
+# @jwt_required()
+# def renew_license(org_id):
+#     user = _get_current_user()
+#     err = _require_role(user, ['edit'])
+#     if err:
+#         return err
 
-    org = db.get_or_404(Organization, org_id)
-    
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
-    current_expiry = org.license_expiry_date or now
-    if current_expiry < now:
-        current_expiry = now
-        
-    new_expiry = current_expiry + timedelta(days=365)
-    old_expiry = org.license_expiry_date
-    
-    org.license_expiry_date = new_expiry
-    org.subscription_status = 'Active'
-    db.session.commit()
-    
-    _log_action(user, 'LICENSE_RENEWED', org.id, 
-                old_expiry.isoformat() if old_expiry else None, 
-                new_expiry.isoformat())
-                
-    return jsonify({
-        'status': 'success', 
-        'message': 'License renewed successfully',
-        'new_expiry': new_expiry.isoformat()
-    })
+#     org = db.get_or_404(Organization, org_id)
+
+#     now = datetime.now(timezone.utc).replace(tzinfo=None)
+#     current_expiry = org.license_expiry_date or now
+#     if current_expiry < now:
+#         current_expiry = now
+
+#     new_expiry = current_expiry + timedelta(days=365)
+#     old_expiry = org.license_expiry_date
+
+#     org.license_expiry_date = new_expiry
+#     org.subscription_status = 'Active'
+#     db.session.commit()
+
+#     _log_action(user, 'LICENSE_RENEWED', org.id, 
+#                 old_expiry.isoformat() if old_expiry else None, 
+#                 new_expiry.isoformat())
+
+#     return jsonify({
+#         'status': 'success', 
+#         'message': 'License renewed successfully',
+#         'new_expiry': new_expiry.isoformat()
+#     })
+# [END DEAD CODE: renew_license]
+
 
 @license_bp.route('/<int:org_id>/extend', methods=['POST'])
 @jwt_required()

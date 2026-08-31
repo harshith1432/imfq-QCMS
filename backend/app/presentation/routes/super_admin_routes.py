@@ -96,57 +96,64 @@ def get_my_permissions():
     })
 
 
-@super_admin_bp.route('/stats', methods=['GET'])
-@jwt_required()
-@super_admin_required()
-def get_global_stats():
-    """Global KPI Overview for Super Admin"""
-    _excl = _tenant_filter
-    total_companies = _excl(Organization.query.filter_by(is_deleted=False)).count()
-    pending_companies = _excl(Organization.query.filter(Organization.is_deleted == False, Organization.subscription_status.in_(['Pending', 'Pending Approval']))).count()
-    active_companies = _excl(Organization.query.filter(Organization.is_deleted == False, Organization.subscription_status.in_(['Active', 'Trialing']))).count()
-    suspended_companies = _excl(Organization.query.filter(Organization.is_deleted == False, Organization.subscription_status.in_(['Suspended', 'Cancelled', 'Inactive']))).count()
-    sa_role = Role.query.filter_by(name='SuperAdmin').first()
-    total_users = User.query.filter(User.role_id != sa_role.id).count() if sa_role else User.query.count()
-    
-    # Revenue calculations (Single Source of Truth)
-    from app.domain.services.financial_metrics_engine import FinancialMetricsEngine
-    kpis = FinancialMetricsEngine.get_consolidated_kpis()
-    total_revenue = kpis["total_revenue"]
-    
-    # Growth metrics (last 30 days)
-    thirty_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
-    new_companies = _excl(Organization.query.filter(Organization.is_deleted == False, Organization.created_at >= thirty_days_ago)).count()
-    
-    # Support metrics
-    open_tickets = SupportTicket.query.filter_by(status='Open').count()
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_global_stats (Lines 99-149)
+# Reason: Legacy stats endpoint. Replaced by /v1/dashboard/stats.
+# ==============================================================================
+# @super_admin_bp.route('/stats', methods=['GET'])
+# @jwt_required()
+# @super_admin_required()
+# def get_global_stats():
+#     """Global KPI Overview for Super Admin"""
+#     _excl = _tenant_filter
+#     total_companies = _excl(Organization.query.filter_by(is_deleted=False)).count()
+#     pending_companies = _excl(Organization.query.filter(Organization.is_deleted == False, Organization.subscription_status.in_(['Pending', 'Pending Approval']))).count()
+#     active_companies = _excl(Organization.query.filter(Organization.is_deleted == False, Organization.subscription_status.in_(['Active', 'Trialing']))).count()
+#     suspended_companies = _excl(Organization.query.filter(Organization.is_deleted == False, Organization.subscription_status.in_(['Suspended', 'Cancelled', 'Inactive']))).count()
+#     sa_role = Role.query.filter_by(name='SuperAdmin').first()
+#     total_users = User.query.filter(User.role_id != sa_role.id).count() if sa_role else User.query.count()
 
-    # Storage metrics
-    # Sum storage from organizations if they have it
-    used_mb_total = db.session.query(func.sum(Organization.storage_used_mb)).scalar() or 0.0
-    used_gb = round(used_mb_total / 1024, 2)
-        
-    s = _get_settings()
-    storage = _get_category(s, 'storage_settings')
-    total_gb = storage.get('total_capacity_gb', 100.0)
-    
-    return jsonify({
-        "status": "success",
-        "data": {
-            "total_companies": total_companies,
-            "pending_companies": pending_companies,
-            "active_companies": active_companies,
-            "suspended_companies": suspended_companies,
-            "total_users": total_users,
-            "total_revenue": total_revenue,
-            "new_companies_30d": new_companies,
-            "open_tickets": open_tickets,
-            "platform_health": "Healthy",
-            "storage_used_gb": used_gb,
-            "storage_total_gb": total_gb,
-            "api_health_ms": 42
-        }
-    })
+#     # Revenue calculations (Single Source of Truth)
+#     from app.domain.services.financial_metrics_engine import FinancialMetricsEngine
+#     kpis = FinancialMetricsEngine.get_consolidated_kpis()
+#     total_revenue = kpis["total_revenue"]
+
+#     # Growth metrics (last 30 days)
+#     thirty_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
+#     new_companies = _excl(Organization.query.filter(Organization.is_deleted == False, Organization.created_at >= thirty_days_ago)).count()
+
+#     # Support metrics
+#     open_tickets = SupportTicket.query.filter_by(status='Open').count()
+
+#     # Storage metrics
+#     # Sum storage from organizations if they have it
+#     used_mb_total = db.session.query(func.sum(Organization.storage_used_mb)).scalar() or 0.0
+#     used_gb = round(used_mb_total / 1024, 2)
+
+#     s = _get_settings()
+#     storage = _get_category(s, 'storage_settings')
+#     total_gb = storage.get('total_capacity_gb', 100.0)
+
+#     return jsonify({
+#         "status": "success",
+#         "data": {
+#             "total_companies": total_companies,
+#             "pending_companies": pending_companies,
+#             "active_companies": active_companies,
+#             "suspended_companies": suspended_companies,
+#             "total_users": total_users,
+#             "total_revenue": total_revenue,
+#             "new_companies_30d": new_companies,
+#             "open_tickets": open_tickets,
+#             "platform_health": "Healthy",
+#             "storage_used_gb": used_gb,
+#             "storage_total_gb": total_gb,
+#             "api_health_ms": 42
+#         }
+#     })
+# [END DEAD CODE: get_global_stats]
+
 @super_admin_bp.route('/companies/filter-options', methods=['GET'])
 @jwt_required()
 @super_admin_required()
@@ -1438,157 +1445,178 @@ def bulk_action_companies():
     
     return jsonify({"status": "success", "message": f"Successfully performed action '{action}' on {count} organizations."})
 
-@super_admin_bp.route('/companies/<int:org_id>/users', methods=['GET'])
-@jwt_required()
-@super_admin_required()
-def get_company_users(org_id):
-    """List users belonging to this organization with search and pagination"""
-    org = Organization.query.get_or_404(org_id)
-    
-    search_q = request.args.get('q', '').strip() or request.args.get('search', '').strip()
-    page = request.args.get('page', type=int)
-    per_page = request.args.get('per_page', 5, type=int)
-    
-    query = User.query.filter(User.org_id == org_id)
-    
-    if search_q:
-        search_pattern = f"%{search_q}%"
-        query = query.filter(
-            db.or_(
-                User.username.ilike(search_pattern),
-                User.email.ilike(search_pattern),
-                User.full_name.ilike(search_pattern)
-            )
-        )
-        
-    query = query.order_by(User.id.asc())
-    
-    if page is not None:
-        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-        users = paginated.items
-        total = paginated.total
-        total_pages = paginated.pages
-    else:
-        users = query.all()
-        total = len(users)
-        total_pages = 1
-        page = 1
-        per_page = total if total > 0 else 5
-        
-    output = []
-    for u in users:
-        role_name = u.role.name if hasattr(u, 'role') and hasattr(u.role, 'name') else (str(u.role) if getattr(u, 'role', None) else 'Member')
-        status_name = u.status if hasattr(u, 'status') and u.status else ('Active' if u.is_active else 'Inactive')
-        output.append({
-            "id": u.id,
-            "username": u.username,
-            "email": u.email,
-            "full_name": u.full_name or '—',
-            "role": role_name,
-            "status": status_name,
-            "is_active": u.is_active,
-            "created_at": u.created_at.isoformat() if u.created_at else None,
-            "last_login": u.last_login.isoformat() if u.last_login else None
-        })
-        
-    return jsonify({
-        "status": "success",
-        "data": output,
-        "pagination": {
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "total_pages": total_pages
-        }
-    })
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_company_users (Lines 1441-1503)
+# Reason: Tenant user sub-list; super-admin uses /companies details modal.
+# ==============================================================================
+# @super_admin_bp.route('/companies/<int:org_id>/users', methods=['GET'])
+# @jwt_required()
+# @super_admin_required()
+# def get_company_users(org_id):
+#     """List users belonging to this organization with search and pagination"""
+#     org = Organization.query.get_or_404(org_id)
 
-@super_admin_bp.route('/companies/<int:org_id>/logs', methods=['GET'])
-@jwt_required()
-@super_admin_required()
-def get_company_logs(org_id):
-    """Get audit logs specific to this organization"""
-    org = Organization.query.get_or_404(org_id)
-    logs = SuperAdminLog.query.filter(
-        db.or_(
-            db.and_(SuperAdminLog.target_type == 'Organization', SuperAdminLog.target_id == org_id),
-            db.and_(SuperAdminLog.target_type == 'User', SuperAdminLog.target_id.in_(db.session.query(User.id).filter_by(org_id=org_id)))
-        )
-    ).order_by(SuperAdminLog.created_at.desc()).limit(100).all()
-    
-    output = []
-    for log in logs:
-        output.append({
-            "id": log.id,
-            "admin": log.admin.username if log.admin else "System",
-            "action": log.action,
-            "target": f"{log.target_type} ({log.target_id})" if log.target_type else "System",
-            "ip": log.ip_address,
-            "timestamp": log.created_at.isoformat()
-        })
-    return jsonify({"status": "success", "data": output})
+#     search_q = request.args.get('q', '').strip() or request.args.get('search', '').strip()
+#     page = request.args.get('page', type=int)
+#     per_page = request.args.get('per_page', 5, type=int)
 
-@super_admin_bp.route('/companies/<int:org_id>/plan', methods=['PUT'])
-@jwt_required()
-@super_admin_required()
-@sub_role_write_required('organizations')
-def update_company_plan(org_id):
-    """Change an organization's subscription plan"""
-    org = Organization.query.get_or_404(org_id)
-    data = request.json
+#     query = User.query.filter(User.org_id == org_id)
 
-    new_plan = data.get('plan')
-    if not new_plan:
-        return jsonify({"msg": "Plan name is required."}), 400
+#     if search_q:
+#         search_pattern = f"%{search_q}%"
+#         query = query.filter(
+#             db.or_(
+#                 User.username.ilike(search_pattern),
+#                 User.email.ilike(search_pattern),
+#                 User.full_name.ilike(search_pattern)
+#             )
+#         )
 
-    old_plan = org.subscription_plan
-    org.subscription_plan = new_plan
-    plan_name_clean = str(new_plan).strip().lower()
-    if plan_name_clean not in ('trial', 'trialing', 'default trial plan', ''):
-        if org.subscription_status in ('Trialing', 'Trial', 'On Trial', None, ''):
-            org.subscription_status = 'Active'
-        sub = Subscription.query.filter_by(org_id=org.id).order_by(Subscription.id.desc()).first()
-        if sub:
-            sub.plan_name = new_plan
-            if sub.subscription_status in ('Trial', 'Trialing'):
-                sub.subscription_status = 'Active'
+#     query = query.order_by(User.id.asc())
 
-    clean_plan = new_plan.strip()
-    saas_plan = SaaSPlan.query.filter(
-        (func.lower(func.trim(SaaSPlan.name)) == clean_plan.lower()) |
-        (func.lower(func.trim(SaaSPlan.code)) == clean_plan.lower())
-    ).first()
-    if saas_plan:
-        limits = getattr(saas_plan, 'limits', None)
-        if limits and getattr(limits, 'max_users', None) is not None:
-            org.max_users = limits.max_users
-        elif hasattr(saas_plan, 'max_users') and saas_plan.max_users:
-            org.max_users = saas_plan.max_users
-        if limits and getattr(limits, 'storage_limit_gb', None) is not None:
-            org.storage_limit_mb = limits.storage_limit_gb * 1024
-        elif hasattr(saas_plan, 'storage_limit_gb') and saas_plan.storage_limit_gb:
-            org.storage_limit_mb = saas_plan.storage_limit_gb * 1024
-    else:
-        plan_features = {
-            'Starter': {'max_users': 50, 'is_white_label': False, 'api_access': False, 'multi_plant': False},
-            'Professional': {'max_users': 500, 'is_white_label': False, 'api_access': True, 'multi_plant': False},
-            'Enterprise': {'max_users': 99999, 'is_white_label': True, 'api_access': True, 'multi_plant': True}
-        }
-        features = plan_features.get(new_plan, {})
-        org.max_users = features.get('max_users', org.max_users)
-        org.is_white_label = features.get('is_white_label', org.is_white_label)
-        org.api_access = features.get('api_access', org.api_access)
-        org.multi_plant = features.get('multi_plant', org.multi_plant)
+#     if page is not None:
+#         paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+#         users = paginated.items
+#         total = paginated.total
+#         total_pages = paginated.pages
+#     else:
+#         users = query.all()
+#         total = len(users)
+#         total_pages = 1
+#         page = 1
+#         per_page = total if total > 0 else 5
 
-    db.session.commit()
+#     output = []
+#     for u in users:
+#         role_name = u.role.name if hasattr(u, 'role') and hasattr(u.role, 'name') else (str(u.role) if getattr(u, 'role', None) else 'Member')
+#         status_name = u.status if hasattr(u, 'status') and u.status else ('Active' if u.is_active else 'Inactive')
+#         output.append({
+#             "id": u.id,
+#             "username": u.username,
+#             "email": u.email,
+#             "full_name": u.full_name or '—',
+#             "role": role_name,
+#             "status": status_name,
+#             "is_active": u.is_active,
+#             "created_at": u.created_at.isoformat() if u.created_at else None,
+#             "last_login": u.last_login.isoformat() if u.last_login else None
+#         })
 
-    log_admin_action(
-        f"Changed company plan from {old_plan} to {new_plan}",
-        target_type="Organization",
-        target_id=org.id,
-        details=f"Features updated: max_users={org.max_users}, white_label={org.is_white_label}, api={org.api_access}"
-    )
+#     return jsonify({
+#         "status": "success",
+#         "data": output,
+#         "pagination": {
+#             "page": page,
+#             "per_page": per_page,
+#             "total": total,
+#             "total_pages": total_pages
+#         }
+#     })
+# [END DEAD CODE: get_company_users]
 
-    return jsonify({"status": "success", "message": f"Plan changed from {old_plan} to {new_plan}"})
+
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_company_logs (Lines 1505-1528)
+# Reason: Tenant log sub-list.
+# ==============================================================================
+# @super_admin_bp.route('/companies/<int:org_id>/logs', methods=['GET'])
+# @jwt_required()
+# @super_admin_required()
+# def get_company_logs(org_id):
+#     """Get audit logs specific to this organization"""
+#     org = Organization.query.get_or_404(org_id)
+#     logs = SuperAdminLog.query.filter(
+#         db.or_(
+#             db.and_(SuperAdminLog.target_type == 'Organization', SuperAdminLog.target_id == org_id),
+#             db.and_(SuperAdminLog.target_type == 'User', SuperAdminLog.target_id.in_(db.session.query(User.id).filter_by(org_id=org_id)))
+#         )
+#     ).order_by(SuperAdminLog.created_at.desc()).limit(100).all()
+
+#     output = []
+#     for log in logs:
+#         output.append({
+#             "id": log.id,
+#             "admin": log.admin.username if log.admin else "System",
+#             "action": log.action,
+#             "target": f"{log.target_type} ({log.target_id})" if log.target_type else "System",
+#             "ip": log.ip_address,
+#             "timestamp": log.created_at.isoformat()
+#         })
+#     return jsonify({"status": "success", "data": output})
+# [END DEAD CODE: get_company_logs]
+
+
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: update_company_plan (Lines 1530-1591)
+# Reason: Legacy plan change route.
+# ==============================================================================
+# @super_admin_bp.route('/companies/<int:org_id>/plan', methods=['PUT'])
+# @jwt_required()
+# @super_admin_required()
+# @sub_role_write_required('organizations')
+# def update_company_plan(org_id):
+#     """Change an organization's subscription plan"""
+#     org = Organization.query.get_or_404(org_id)
+#     data = request.json
+
+#     new_plan = data.get('plan')
+#     if not new_plan:
+#         return jsonify({"msg": "Plan name is required."}), 400
+
+#     old_plan = org.subscription_plan
+#     org.subscription_plan = new_plan
+#     plan_name_clean = str(new_plan).strip().lower()
+#     if plan_name_clean not in ('trial', 'trialing', 'default trial plan', ''):
+#         if org.subscription_status in ('Trialing', 'Trial', 'On Trial', None, ''):
+#             org.subscription_status = 'Active'
+#         sub = Subscription.query.filter_by(org_id=org.id).order_by(Subscription.id.desc()).first()
+#         if sub:
+#             sub.plan_name = new_plan
+#             if sub.subscription_status in ('Trial', 'Trialing'):
+#                 sub.subscription_status = 'Active'
+
+#     clean_plan = new_plan.strip()
+#     saas_plan = SaaSPlan.query.filter(
+#         (func.lower(func.trim(SaaSPlan.name)) == clean_plan.lower()) |
+#         (func.lower(func.trim(SaaSPlan.code)) == clean_plan.lower())
+#     ).first()
+#     if saas_plan:
+#         limits = getattr(saas_plan, 'limits', None)
+#         if limits and getattr(limits, 'max_users', None) is not None:
+#             org.max_users = limits.max_users
+#         elif hasattr(saas_plan, 'max_users') and saas_plan.max_users:
+#             org.max_users = saas_plan.max_users
+#         if limits and getattr(limits, 'storage_limit_gb', None) is not None:
+#             org.storage_limit_mb = limits.storage_limit_gb * 1024
+#         elif hasattr(saas_plan, 'storage_limit_gb') and saas_plan.storage_limit_gb:
+#             org.storage_limit_mb = saas_plan.storage_limit_gb * 1024
+#     else:
+#         plan_features = {
+#             'Starter': {'max_users': 50, 'is_white_label': False, 'api_access': False, 'multi_plant': False},
+#             'Professional': {'max_users': 500, 'is_white_label': False, 'api_access': True, 'multi_plant': False},
+#             'Enterprise': {'max_users': 99999, 'is_white_label': True, 'api_access': True, 'multi_plant': True}
+#         }
+#         features = plan_features.get(new_plan, {})
+#         org.max_users = features.get('max_users', org.max_users)
+#         org.is_white_label = features.get('is_white_label', org.is_white_label)
+#         org.api_access = features.get('api_access', org.api_access)
+#         org.multi_plant = features.get('multi_plant', org.multi_plant)
+
+#     db.session.commit()
+
+#     log_admin_action(
+#         f"Changed company plan from {old_plan} to {new_plan}",
+#         target_type="Organization",
+#         target_id=org.id,
+#         details=f"Features updated: max_users={org.max_users}, white_label={org.is_white_label}, api={org.api_access}"
+#     )
+
+#     return jsonify({"status": "success", "message": f"Plan changed from {old_plan} to {new_plan}"})
+# [END DEAD CODE: update_company_plan]
+
 
 @super_admin_bp.route('/trial-extensions', methods=['GET'])
 @jwt_required()
@@ -1651,73 +1679,80 @@ def get_trial_extension_requests():
 
     return jsonify({"status": "success", "data": results})
 
-@super_admin_bp.route('/companies/<int:org_id>/trial', methods=['PUT'])
-@jwt_required()
-@super_admin_required()
-def extend_company_trial(org_id):
-    """Extend or set a trial end date for an organization"""
-    org = Organization.query.get_or_404(org_id)
-    data = request.json or {}
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: extend_company_trial (Lines 1654-1720)
+# Reason: Legacy trial extension. Replaced by /trial/<sub_id>/extend.
+# ==============================================================================
+# @super_admin_bp.route('/companies/<int:org_id>/trial', methods=['PUT'])
+# @jwt_required()
+# @super_admin_required()
+# def extend_company_trial(org_id):
+#     """Extend or set a trial end date for an organization"""
+#     org = Organization.query.get_or_404(org_id)
+#     data = request.json or {}
 
-    days = data.get('days')
-    new_date_str = data.get('trial_ends_at')
+#     days = data.get('days')
+#     new_date_str = data.get('trial_ends_at')
 
-    if days is not None:
-        try:
-            days = int(days)
-            new_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=days)
-        except ValueError:
-            return jsonify({"msg": "Invalid days value"}), 400
-    elif new_date_str:
-        try:
-            new_date = datetime.fromisoformat(new_date_str.replace('Z', '+00:00')).replace(tzinfo=None)
-        except (ValueError, AttributeError):
-            return jsonify({"msg": "Invalid date format. Use ISO format (YYYY-MM-DD)"}), 400
-    else:
-        return jsonify({"msg": "Either 'days' or 'trial_ends_at' date is required"}), 400
+#     if days is not None:
+#         try:
+#             days = int(days)
+#             new_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=days)
+#         except ValueError:
+#             return jsonify({"msg": "Invalid days value"}), 400
+#     elif new_date_str:
+#         try:
+#             new_date = datetime.fromisoformat(new_date_str.replace('Z', '+00:00')).replace(tzinfo=None)
+#         except (ValueError, AttributeError):
+#             return jsonify({"msg": "Invalid date format. Use ISO format (YYYY-MM-DD)"}), 400
+#     else:
+#         return jsonify({"msg": "Either 'days' or 'trial_ends_at' date is required"}), 400
 
-    old_date = org.trial_ends_at.isoformat() if org.trial_ends_at else 'None'
-    org.trial_ends_at = new_date
-    org.license_expiry_date = new_date
-    org.subscription_status = 'Trialing'
+#     old_date = org.trial_ends_at.isoformat() if org.trial_ends_at else 'None'
+#     org.trial_ends_at = new_date
+#     org.license_expiry_date = new_date
+#     org.subscription_status = 'Trialing'
 
-    # Update trial extension metrics in security_settings
-    sec_settings = dict(getattr(org, 'security_settings', {}) or {})
-    manual_count = sec_settings.get('manual_approved_trial_extensions', 0) + 1
-    sec_settings['manual_approved_trial_extensions'] = manual_count
-    
-    pending = sec_settings.get('pending_trial_extension')
-    if pending and pending.get('status') == 'Pending':
-        pending['status'] = 'Approved'
-        pending['approved_at'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
-        pending['approved_by'] = 'SuperAdmin'
-        sec_settings['pending_trial_extension'] = pending
-        
-    total_reqs = sec_settings.get('total_trial_requests', 0)
-    sec_settings['total_trial_requests'] = max(total_reqs, sec_settings.get('auto_approved_trial_extensions', 0) + manual_count)
-    
-    org.security_settings = sec_settings
-    from sqlalchemy.orm.attributes import flag_modified
-    flag_modified(org, 'security_settings')
+#     # Update trial extension metrics in security_settings
+#     sec_settings = dict(getattr(org, 'security_settings', {}) or {})
+#     manual_count = sec_settings.get('manual_approved_trial_extensions', 0) + 1
+#     sec_settings['manual_approved_trial_extensions'] = manual_count
 
-    # Also sync subscription model if present
-    sub = Subscription.query.filter_by(org_id=org.id).first()
-    if not sub:
-        sub = Subscription.query.filter_by(organization_id=org.id).first()
-    if sub:
-        sub.trial_end_date = org.trial_ends_at
-        sub.end_date = org.trial_ends_at
-        sub.subscription_status = 'Trial'
+#     pending = sec_settings.get('pending_trial_extension')
+#     if pending and pending.get('status') == 'Pending':
+#         pending['status'] = 'Approved'
+#         pending['approved_at'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+#         pending['approved_by'] = 'SuperAdmin'
+#         sec_settings['pending_trial_extension'] = pending
 
-    db.session.commit()
+#     total_reqs = sec_settings.get('total_trial_requests', 0)
+#     sec_settings['total_trial_requests'] = max(total_reqs, sec_settings.get('auto_approved_trial_extensions', 0) + manual_count)
 
-    log_admin_action(
-        f"Manually extended trial from {old_date} to {new_date.isoformat()}",
-        target_type="Organization",
-        target_id=org.id
-    )
+#     org.security_settings = sec_settings
+#     from sqlalchemy.orm.attributes import flag_modified
+#     flag_modified(org, 'security_settings')
 
-    return jsonify({"status": "success", "message": f"Trial extended to {new_date.strftime('%b %d, %Y')}"})
+#     # Also sync subscription model if present
+#     sub = Subscription.query.filter_by(org_id=org.id).first()
+#     if not sub:
+#         sub = Subscription.query.filter_by(organization_id=org.id).first()
+#     if sub:
+#         sub.trial_end_date = org.trial_ends_at
+#         sub.end_date = org.trial_ends_at
+#         sub.subscription_status = 'Trial'
+
+#     db.session.commit()
+
+#     log_admin_action(
+#         f"Manually extended trial from {old_date} to {new_date.isoformat()}",
+#         target_type="Organization",
+#         target_id=org.id
+#     )
+
+#     return jsonify({"status": "success", "message": f"Trial extended to {new_date.strftime('%b %d, %Y')}"})
+# [END DEAD CODE: extend_company_trial]
+
 
 @super_admin_bp.route('/companies/<int:org_id>/status', methods=['PUT'])
 @jwt_required()
@@ -2342,21 +2377,28 @@ def security_kpis():
     })
 
 
-@super_admin_bp.route('/settings/security-threats', methods=['GET'])
-@jwt_required()
-@super_admin_required()
-def security_threat_log():
-    """Return a paginated list of recent WAF / firewall threat events."""
-    from app.presentation.middleware.security import get_security_kpis
-    kpis = get_security_kpis()
-    return jsonify({
-        "status": "success",
-        "data": {
-            "recent_threats": kpis['recent_threat_events'],
-            "total_blocked_24h": kpis['blocked_ips_24h'],
-            "total_critical_24h": kpis['critical_threat_alerts'],
-        }
-    })
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: security_threat_log (Lines 2345-2359)
+# Reason: Unused security threat list.
+# ==============================================================================
+# @super_admin_bp.route('/settings/security-threats', methods=['GET'])
+# @jwt_required()
+# @super_admin_required()
+# def security_threat_log():
+#     """Return a paginated list of recent WAF / firewall threat events."""
+#     from app.presentation.middleware.security import get_security_kpis
+#     kpis = get_security_kpis()
+#     return jsonify({
+#         "status": "success",
+#         "data": {
+#             "recent_threats": kpis['recent_threat_events'],
+#             "total_blocked_24h": kpis['blocked_ips_24h'],
+#             "total_critical_24h": kpis['critical_threat_alerts'],
+#         }
+#     })
+# [END DEAD CODE: security_threat_log]
+
 
 
 @super_admin_bp.route('/settings/auth-kpis', methods=['GET'])

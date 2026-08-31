@@ -1041,212 +1041,233 @@ def create_subscription():
 # 4. GET SUBSCRIPTION DETAIL
 # ─────────────────────────────────────────────────────────────────────────────
 
-@subscription_bp.route('/<int:sub_id>', methods=['GET'])
-@jwt_required()
-def get_subscription(sub_id):
-    user = _get_current_user()
-    err = _require_super_admin(user)
-    if err:
-        return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_subscription (Lines 1044-1085)
+# Reason: Unused single subscription fetch.
+# ==============================================================================
+# @subscription_bp.route('/<int:sub_id>', methods=['GET'])
+# @jwt_required()
+# def get_subscription(sub_id):
+#     user = _get_current_user()
+#     err = _require_super_admin(user)
+#     if err:
+#         return err
 
-    sub = Subscription.query.get_or_404(sub_id)
-    data = _serialize_subscription(sub)
+#     sub = Subscription.query.get_or_404(sub_id)
+#     data = _serialize_subscription(sub)
 
-    # Include recent invoices + payments
-    data['recent_invoices'] = [_serialize_invoice(i) for i in sub.invoices[-5:]]
-    data['recent_payments'] = [
-        {
-            'id': p.id,
-            'amount': p.amount,
-            'final_amount': p.final_amount,
-            'payment_status': p.payment_status,
-            'transaction_id': p.transaction_id,
-            'payment_gateway': p.payment_gateway,
-            'created_at': p.created_at.isoformat() if p.created_at else None,
-        }
-        for p in sub.subscription_payments[-5:]
-    ]
+#     # Include recent invoices + payments
+#     data['recent_invoices'] = [_serialize_invoice(i) for i in sub.invoices[-5:]]
+#     data['recent_payments'] = [
+#         {
+#             'id': p.id,
+#             'amount': p.amount,
+#             'final_amount': p.final_amount,
+#             'payment_status': p.payment_status,
+#             'transaction_id': p.transaction_id,
+#             'payment_gateway': p.payment_gateway,
+#             'created_at': p.created_at.isoformat() if p.created_at else None,
+#         }
+#         for p in sub.subscription_payments[-5:]
+#     ]
 
-    # Audit logs for this subscription
-    logs = SuperAdminLog.query.filter_by(
-        target_type='Subscription', target_id=sub_id
-    ).order_by(SuperAdminLog.created_at.desc()).limit(20).all()
-    data['audit_logs'] = [
-        {
-            'id': l.id,
-            'action': l.action,
-            'admin': l.admin.full_name or l.admin.username if l.admin else 'System',
-            'ip': l.ip_address,
-            'timestamp': l.created_at.isoformat()
-        }
-        for l in logs
-    ]
+#     # Audit logs for this subscription
+#     logs = SuperAdminLog.query.filter_by(
+#         target_type='Subscription', target_id=sub_id
+#     ).order_by(SuperAdminLog.created_at.desc()).limit(20).all()
+#     data['audit_logs'] = [
+#         {
+#             'id': l.id,
+#             'action': l.action,
+#             'admin': l.admin.full_name or l.admin.username if l.admin else 'System',
+#             'ip': l.ip_address,
+#             'timestamp': l.created_at.isoformat()
+#         }
+#         for l in logs
+#     ]
 
-    return jsonify({'status': 'success', 'data': data})
+#     return jsonify({'status': 'success', 'data': data})
+# [END DEAD CODE: get_subscription]
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. EDIT SUBSCRIPTION
 # ─────────────────────────────────────────────────────────────────────────────
 
-@subscription_bp.route('/<int:sub_id>', methods=['PUT'])
-@jwt_required()
-def update_subscription(sub_id):
-    user = _get_current_user()
-    err = _require_super_admin(user)
-    if err:
-        return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: update_subscription (Lines 1092-1156)
+# Reason: Unused subscription editor.
+# ==============================================================================
+# @subscription_bp.route('/<int:sub_id>', methods=['PUT'])
+# @jwt_required()
+# def update_subscription(sub_id):
+#     user = _get_current_user()
+#     err = _require_super_admin(user)
+#     if err:
+#         return err
 
-    sub = Subscription.query.get_or_404(sub_id)
-    data = request.get_json(silent=True) or {}
+#     sub = Subscription.query.get_or_404(sub_id)
+#     data = request.get_json(silent=True) or {}
 
-    old_val = {
-        'plan_name': sub.plan_name,
-        'billing_cycle': sub.billing_cycle,
-        'max_users': sub.max_users,
-        'final_amount': sub.final_amount
-    }
+#     old_val = {
+#         'plan_name': sub.plan_name,
+#         'billing_cycle': sub.billing_cycle,
+#         'max_users': sub.max_users,
+#         'final_amount': sub.final_amount
+#     }
 
-    if 'billing_cycle' in data:
-        if data['billing_cycle'] not in BILLING_CYCLE_MULTIPLIER:
-            return jsonify({'error': 'Invalid billing_cycle'}), 422
-        sub.billing_cycle = data['billing_cycle']
+#     if 'billing_cycle' in data:
+#         if data['billing_cycle'] not in BILLING_CYCLE_MULTIPLIER:
+#             return jsonify({'error': 'Invalid billing_cycle'}), 422
+#         sub.billing_cycle = data['billing_cycle']
 
-    if 'base_price' in data:
-        sub.base_price = float(data['base_price'])
+#     if 'base_price' in data:
+#         sub.base_price = float(data['base_price'])
 
-    if 'discount_percent' in data:
-        sub.discount_percent = float(data['discount_percent'])
+#     if 'discount_percent' in data:
+#         sub.discount_percent = float(data['discount_percent'])
 
-    if 'gst_percent' in data:
-        sub.gst_percent = float(data['gst_percent'])
+#     if 'gst_percent' in data:
+#         sub.gst_percent = float(data['gst_percent'])
 
-    # Recalculate pricing
-    sub.discount_amount, sub.gst_amount, sub.final_amount = _calc_pricing(
-        sub.base_price, sub.discount_percent, sub.gst_percent
-    )
+#     # Recalculate pricing
+#     sub.discount_amount, sub.gst_amount, sub.final_amount = _calc_pricing(
+#         sub.base_price, sub.discount_percent, sub.gst_percent
+#     )
 
-    if 'max_users' in data:
-        sub.max_users = int(data['max_users'])
-    if 'storage_limit_gb' in data:
-        sub.storage_limit_gb = float(data['storage_limit_gb'])
-    if 'api_limit' in data:
-        sub.api_limit = int(data['api_limit'])
-    if 'enabled_modules' in data:
-        sub.enabled_modules = data['enabled_modules']
-    if 'support_level' in data:
-        sub.support_level = data['support_level']
-    if 'auto_renewal' in data:
-        sub.auto_renewal = bool(data['auto_renewal'])
-    if 'grace_period_days' in data:
-        sub.grace_period_days = int(data['grace_period_days'])
-    if 'billing_notes' in data:
-        sub.billing_notes = data['billing_notes']
-    if 'end_date' in data and data['end_date']:
-        sub.end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00')).replace(tzinfo=None)
-    if 'renewal_date' in data and data['renewal_date']:
-        sub.renewal_date = datetime.fromisoformat(data['renewal_date'].replace('Z', '+00:00')).replace(tzinfo=None)
+#     if 'max_users' in data:
+#         sub.max_users = int(data['max_users'])
+#     if 'storage_limit_gb' in data:
+#         sub.storage_limit_gb = float(data['storage_limit_gb'])
+#     if 'api_limit' in data:
+#         sub.api_limit = int(data['api_limit'])
+#     if 'enabled_modules' in data:
+#         sub.enabled_modules = data['enabled_modules']
+#     if 'support_level' in data:
+#         sub.support_level = data['support_level']
+#     if 'auto_renewal' in data:
+#         sub.auto_renewal = bool(data['auto_renewal'])
+#     if 'grace_period_days' in data:
+#         sub.grace_period_days = int(data['grace_period_days'])
+#     if 'billing_notes' in data:
+#         sub.billing_notes = data['billing_notes']
+#     if 'end_date' in data and data['end_date']:
+#         sub.end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00')).replace(tzinfo=None)
+#     if 'renewal_date' in data and data['renewal_date']:
+#         sub.renewal_date = datetime.fromisoformat(data['renewal_date'].replace('Z', '+00:00')).replace(tzinfo=None)
 
-    _sync_org(sub)
-    db.session.commit()
+#     _sync_org(sub)
+#     db.session.commit()
 
-    _log(user, 'SUBSCRIPTION_UPDATED', 'Subscription', sub.id, old_val,
-         {'final_amount': sub.final_amount, 'billing_cycle': sub.billing_cycle})
+#     _log(user, 'SUBSCRIPTION_UPDATED', 'Subscription', sub.id, old_val,
+#          {'final_amount': sub.final_amount, 'billing_cycle': sub.billing_cycle})
 
-    return jsonify({'status': 'success', 'message': 'Subscription updated', 'data': _serialize_subscription(sub)})
+#     return jsonify({'status': 'success', 'message': 'Subscription updated', 'data': _serialize_subscription(sub)})
+# [END DEAD CODE: update_subscription]
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 6. RENEW SUBSCRIPTION
 # ─────────────────────────────────────────────────────────────────────────────
 
-@subscription_bp.route('/<int:sub_id>/renew', methods=['POST'])
-@jwt_required()
-def renew_subscription(sub_id):
-    user = _get_current_user()
-    err = _require_super_admin(user)
-    if err:
-        return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: renew_subscription (Lines 1163-1249)
+# Reason: Unused renew subscription route.
+# ==============================================================================
+# @subscription_bp.route('/<int:sub_id>/renew', methods=['POST'])
+# @jwt_required()
+# def renew_subscription(sub_id):
+#     user = _get_current_user()
+#     err = _require_super_admin(user)
+#     if err:
+#         return err
 
-    sub = Subscription.query.get_or_404(sub_id)
-    data = request.get_json(silent=True) or {}
+#     sub = Subscription.query.get_or_404(sub_id)
+#     data = request.get_json(silent=True) or {}
 
-    old_end = sub.end_date
+#     old_end = sub.end_date
 
-    # Renew from today or from end_date (whichever is later)
-    renew_from = max(datetime.now(timezone.utc).replace(tzinfo=None), sub.end_date or datetime.now(timezone.utc).replace(tzinfo=None))
-    new_end = _compute_renewal_date(renew_from, sub.billing_cycle)
+#     # Renew from today or from end_date (whichever is later)
+#     renew_from = max(datetime.now(timezone.utc).replace(tzinfo=None), sub.end_date or datetime.now(timezone.utc).replace(tzinfo=None))
+#     new_end = _compute_renewal_date(renew_from, sub.billing_cycle)
 
-    sub.start_date = renew_from
-    sub.end_date = new_end
-    sub.renewal_date = new_end
-    sub.subscription_status = 'Active'
-    sub.payment_status = 'Paid'
+#     sub.start_date = renew_from
+#     sub.end_date = new_end
+#     sub.renewal_date = new_end
+#     sub.subscription_status = 'Active'
+#     sub.payment_status = 'Paid'
 
-    # Generate payment record
-    payment = SubscriptionPayment(
-        org_id=sub.org_id,
-        subscription_id=sub.id,
-        amount=sub.base_price,
-        final_amount=sub.final_amount,
-        discount_amount=sub.discount_amount,
-        gst_percent=sub.gst_percent,
-        gst_amount=sub.gst_amount,
-        currency=sub.currency,
-        plan_name=sub.plan_name,
-        billing_cycle=sub.billing_cycle,
-        payment_status='Completed',
-        transaction_id=f"TXN-{uuid.uuid4().hex[:12].upper()}",
-        payment_gateway=data.get('payment_gateway', 'Manual'),
-        billing_period_start=renew_from,
-        billing_period_end=new_end
-    )
-    db.session.add(payment)
-    db.session.flush()
+#     # Generate payment record
+#     payment = SubscriptionPayment(
+#         org_id=sub.org_id,
+#         subscription_id=sub.id,
+#         amount=sub.base_price,
+#         final_amount=sub.final_amount,
+#         discount_amount=sub.discount_amount,
+#         gst_percent=sub.gst_percent,
+#         gst_amount=sub.gst_amount,
+#         currency=sub.currency,
+#         plan_name=sub.plan_name,
+#         billing_cycle=sub.billing_cycle,
+#         payment_status='Completed',
+#         transaction_id=f"TXN-{uuid.uuid4().hex[:12].upper()}",
+#         payment_gateway=data.get('payment_gateway', 'Manual'),
+#         billing_period_start=renew_from,
+#         billing_period_end=new_end
+#     )
+#     db.session.add(payment)
+#     db.session.flush()
 
-    # Generate renewal invoice
-    inv = SubscriptionInvoice(
-        subscription_id=sub.id,
-        org_id=sub.org_id,
-        invoice_uid=_inv_uid(),
-        invoice_number=f"INV/{datetime.now(timezone.utc).replace(tzinfo=None).year}/{sub.id:04d}R{len(sub.invoices)+1}",
-        invoice_date=datetime.now(timezone.utc).replace(tzinfo=None),
-        due_date=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7),
-        billing_period_start=renew_from,
-        billing_period_end=new_end,
-        plan_name=sub.plan_name,
-        billing_cycle=sub.billing_cycle,
-        base_amount=sub.base_price,
-        discount_percent=sub.discount_percent,
-        discount_amount=sub.discount_amount,
-        gst_percent=sub.gst_percent,
-        gst_amount=sub.gst_amount,
-        total_amount=sub.final_amount,
-        currency=sub.currency,
-        invoice_status='Paid',
-        payment_id=payment.id
-    )
-    db.session.add(inv)
-    _sync_org(sub)
-    expiry_str = new_end.strftime('%d %b %Y') if new_end else 'N/A'
-    _notify_org_admins(
-        sub.org_id,
-        f"Subscription Renewed ({sub.plan_name} Plan)",
-        f"Great news! Your organization's subscription has been renewed. Next renewal date: {expiry_str}.",
-        link='/admin/dashboard.html'
-    )
-    db.session.commit()
+#     # Generate renewal invoice
+#     inv = SubscriptionInvoice(
+#         subscription_id=sub.id,
+#         org_id=sub.org_id,
+#         invoice_uid=_inv_uid(),
+#         invoice_number=f"INV/{datetime.now(timezone.utc).replace(tzinfo=None).year}/{sub.id:04d}R{len(sub.invoices)+1}",
+#         invoice_date=datetime.now(timezone.utc).replace(tzinfo=None),
+#         due_date=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=7),
+#         billing_period_start=renew_from,
+#         billing_period_end=new_end,
+#         plan_name=sub.plan_name,
+#         billing_cycle=sub.billing_cycle,
+#         base_amount=sub.base_price,
+#         discount_percent=sub.discount_percent,
+#         discount_amount=sub.discount_amount,
+#         gst_percent=sub.gst_percent,
+#         gst_amount=sub.gst_amount,
+#         total_amount=sub.final_amount,
+#         currency=sub.currency,
+#         invoice_status='Paid',
+#         payment_id=payment.id
+#     )
+#     db.session.add(inv)
+#     _sync_org(sub)
+#     expiry_str = new_end.strftime('%d %b %Y') if new_end else 'N/A'
+#     _notify_org_admins(
+#         sub.org_id,
+#         f"Subscription Renewed ({sub.plan_name} Plan)",
+#         f"Great news! Your organization's subscription has been renewed. Next renewal date: {expiry_str}.",
+#         link='/admin/dashboard.html'
+#     )
+#     db.session.commit()
 
-    _log(user, 'SUBSCRIPTION_RENEWED', 'Subscription', sub.id,
-         {'end_date': old_end.isoformat() if old_end else None},
-         {'new_end': new_end.isoformat(), 'invoice': inv.invoice_uid})
+#     _log(user, 'SUBSCRIPTION_RENEWED', 'Subscription', sub.id,
+#          {'end_date': old_end.isoformat() if old_end else None},
+#          {'new_end': new_end.isoformat(), 'invoice': inv.invoice_uid})
 
-    return jsonify({
-        'status': 'success',
-        'message': f'Subscription renewed until {new_end.strftime("%b %d, %Y")}',
-        'data': _serialize_subscription(sub),
-        'invoice_uid': inv.invoice_uid
-    })
+#     return jsonify({
+#         'status': 'success',
+#         'message': f'Subscription renewed until {new_end.strftime("%b %d, %Y")}',
+#         'data': _serialize_subscription(sub),
+#         'invoice_uid': inv.invoice_uid
+#     })
+# [END DEAD CODE: renew_subscription]
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1379,25 +1400,32 @@ def downgrade_plan(sub_id):
 # 9. PAUSE SUBSCRIPTION
 # ─────────────────────────────────────────────────────────────────────────────
 
-@subscription_bp.route('/<int:sub_id>/pause', methods=['POST'])
-@jwt_required()
-def pause_subscription(sub_id):
-    user = _get_current_user()
-    err = _require_super_admin(user)
-    if err:
-        return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: pause_subscription (Lines 1382-1400)
+# Reason: Subscription pause action not in frontend UI.
+# ==============================================================================
+# @subscription_bp.route('/<int:sub_id>/pause', methods=['POST'])
+# @jwt_required()
+# def pause_subscription(sub_id):
+#     user = _get_current_user()
+#     err = _require_super_admin(user)
+#     if err:
+#         return err
 
-    sub = Subscription.query.get_or_404(sub_id)
-    if sub.subscription_status not in ('Active', 'Trial'):
-        return jsonify({'error': 'Only Active or Trial subscriptions can be paused'}), 400
+#     sub = Subscription.query.get_or_404(sub_id)
+#     if sub.subscription_status not in ('Active', 'Trial'):
+#         return jsonify({'error': 'Only Active or Trial subscriptions can be paused'}), 400
 
-    old_status = sub.subscription_status
-    sub.subscription_status = 'Suspended'
-    _sync_org(sub)
-    db.session.commit()
+#     old_status = sub.subscription_status
+#     sub.subscription_status = 'Suspended'
+#     _sync_org(sub)
+#     db.session.commit()
 
-    _log(user, 'SUBSCRIPTION_PAUSED', 'Subscription', sub.id, old_status, 'Suspended')
-    return jsonify({'status': 'success', 'message': 'Subscription paused'})
+#     _log(user, 'SUBSCRIPTION_PAUSED', 'Subscription', sub.id, old_status, 'Suspended')
+#     return jsonify({'status': 'success', 'message': 'Subscription paused'})
+# [END DEAD CODE: pause_subscription]
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1944,48 +1972,55 @@ def cancel_trial(sub_id):
 # 21. BULK ACTIONS
 # ─────────────────────────────────────────────────────────────────────────────
 
-@subscription_bp.route('/bulk/renew', methods=['POST'])
-@jwt_required()
-def bulk_renew():
-    user = _get_current_user()
-    err = _require_super_admin(user)
-    if err:
-        return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: bulk_renew (Lines 1947-1988)
+# Reason: Bulk renewal route.
+# ==============================================================================
+# @subscription_bp.route('/bulk/renew', methods=['POST'])
+# @jwt_required()
+# def bulk_renew():
+#     user = _get_current_user()
+#     err = _require_super_admin(user)
+#     if err:
+#         return err
 
-    data = request.get_json(silent=True) or {}
-    ids = data.get('subscription_ids', [])
-    if not ids:
-        return jsonify({'error': 'subscription_ids required'}), 422
+#     data = request.get_json(silent=True) or {}
+#     ids = data.get('subscription_ids', [])
+#     if not ids:
+#         return jsonify({'error': 'subscription_ids required'}), 422
 
-    results = {'success': [], 'failed': []}
-    for sid in ids:
-        sub = db.session.get(Subscription, sid)
-        if not sub:
-            results['failed'].append({'id': sid, 'reason': 'Not found'})
-            continue
-        try:
-            renew_from = max(datetime.now(timezone.utc).replace(tzinfo=None), sub.end_date or datetime.now(timezone.utc).replace(tzinfo=None))
-            sub.end_date = _compute_renewal_date(renew_from, sub.billing_cycle)
-            sub.renewal_date = sub.end_date
-            sub.subscription_status = 'Active'
-            sub.payment_status = 'Paid'
-            _sync_org(sub)
-            expiry_str = sub.end_date.strftime('%d %b %Y') if sub.end_date else 'N/A'
-            _notify_org_admins(
-                sub.org_id,
-                f"Subscription Renewed ({sub.plan_name} Plan)",
-                f"Great news! Your organization's subscription has been renewed. Next renewal date: {expiry_str}.",
-                link='/admin/dashboard.html'
-            )
-            results['success'].append(sid)
-        except Exception as e:
-            logger.error(f'Subscription bulk renewal failed for {sid}: {e}', exc_info=True)
-            results['failed'].append({'id': sid, 'reason': 'Failed to process renewal'})
+#     results = {'success': [], 'failed': []}
+#     for sid in ids:
+#         sub = db.session.get(Subscription, sid)
+#         if not sub:
+#             results['failed'].append({'id': sid, 'reason': 'Not found'})
+#             continue
+#         try:
+#             renew_from = max(datetime.now(timezone.utc).replace(tzinfo=None), sub.end_date or datetime.now(timezone.utc).replace(tzinfo=None))
+#             sub.end_date = _compute_renewal_date(renew_from, sub.billing_cycle)
+#             sub.renewal_date = sub.end_date
+#             sub.subscription_status = 'Active'
+#             sub.payment_status = 'Paid'
+#             _sync_org(sub)
+#             expiry_str = sub.end_date.strftime('%d %b %Y') if sub.end_date else 'N/A'
+#             _notify_org_admins(
+#                 sub.org_id,
+#                 f"Subscription Renewed ({sub.plan_name} Plan)",
+#                 f"Great news! Your organization's subscription has been renewed. Next renewal date: {expiry_str}.",
+#                 link='/admin/dashboard.html'
+#             )
+#             results['success'].append(sid)
+#         except Exception as e:
+#             logger.error(f'Subscription bulk renewal failed for {sid}: {e}', exc_info=True)
+#             results['failed'].append({'id': sid, 'reason': 'Failed to process renewal'})
 
-    db.session.commit()
-    _log(user, 'BULK_RENEWED', 'Subscription', None,
-         None, {'count': len(results['success'])})
-    return jsonify({'status': 'success', 'results': results})
+#     db.session.commit()
+#     _log(user, 'BULK_RENEWED', 'Subscription', None,
+#          None, {'count': len(results['success'])})
+#     return jsonify({'status': 'success', 'results': results})
+# [END DEAD CODE: bulk_renew]
+
 
 
 @subscription_bp.route('/bulk/cancel', methods=['POST'])
@@ -2331,85 +2366,92 @@ def get_plan_catalogue():
         return jsonify({'status': 'success', 'data': [], 'billing_cycle': billing_cycle or 'Yearly'})
 
 
-@subscription_bp.route('/plans/<int:plan_id>', methods=['GET'])
-@jwt_required()
-def get_plan_detail(plan_id):
-    user = _get_current_user()
-    err = _require_super_admin(user)
-    if err:
-        return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_plan_detail (Lines 2334-2412)
+# Reason: Unused single plan detail.
+# ==============================================================================
+# @subscription_bp.route('/plans/<int:plan_id>', methods=['GET'])
+# @jwt_required()
+# def get_plan_detail(plan_id):
+#     user = _get_current_user()
+#     err = _require_super_admin(user)
+#     if err:
+#         return err
 
-    plan = SaaSPlan.query.get_or_404(plan_id)
-    
-    seen_cycles = set()
-    pricing = []
-    non_zero_pricing = [p for p in plan.pricing if p.price > 0]
-    source_pricing = non_zero_pricing if non_zero_pricing else plan.pricing
-    for p in source_pricing:
-        if p.billing_cycle not in seen_cycles:
-            seen_cycles.add(p.billing_cycle)
-            pricing.append({
-                'billing_cycle': p.billing_cycle,
-                'price': p.price,
-                'discount': p.discount,
-                'tax': p.tax,
-                'is_tax_inclusive': getattr(p, 'is_tax_inclusive', False)
-            })
+#     plan = SaaSPlan.query.get_or_404(plan_id)
 
-    limits = {
-        'max_users': plan.limits.max_users if plan.limits else 100,
-        'max_locations': getattr(plan.limits, 'max_locations', 5) if plan.limits else 5,
-        'max_departments': plan.limits.max_departments if plan.limits else 10,
-        'max_projects': plan.limits.max_projects if plan.limits else 25,
-        'storage_limit_gb': plan.limits.storage_limit_gb if plan.limits else 10.0,
-        'api_limit': plan.limits.api_limit if plan.limits else 10000,
-        'reports_limit': plan.limits.reports_limit if plan.limits else 100,
-        'dashboards_limit': plan.limits.dashboards_limit if plan.limits else 10
-    }
+#     seen_cycles = set()
+#     pricing = []
+#     non_zero_pricing = [p for p in plan.pricing if p.price > 0]
+#     source_pricing = non_zero_pricing if non_zero_pricing else plan.pricing
+#     for p in source_pricing:
+#         if p.billing_cycle not in seen_cycles:
+#             seen_cycles.add(p.billing_cycle)
+#             pricing.append({
+#                 'billing_cycle': p.billing_cycle,
+#                 'price': p.price,
+#                 'discount': p.discount,
+#                 'tax': p.tax,
+#                 'is_tax_inclusive': getattr(p, 'is_tax_inclusive', False)
+#             })
 
-    modules = [{
-        'module_name': m.module_name,
-        'is_enabled': m.is_enabled,
-        'is_premium': m.is_premium
-    } for m in plan.modules]
+#     limits = {
+#         'max_users': plan.limits.max_users if plan.limits else 100,
+#         'max_locations': getattr(plan.limits, 'max_locations', 5) if plan.limits else 5,
+#         'max_departments': plan.limits.max_departments if plan.limits else 10,
+#         'max_projects': plan.limits.max_projects if plan.limits else 25,
+#         'storage_limit_gb': plan.limits.storage_limit_gb if plan.limits else 10.0,
+#         'api_limit': plan.limits.api_limit if plan.limits else 10000,
+#         'reports_limit': plan.limits.reports_limit if plan.limits else 100,
+#         'dashboards_limit': plan.limits.dashboards_limit if plan.limits else 10
+#     }
 
-    versions = [{
-        'version': v.version,
-        'change_summary': v.change_summary,
-        'created_at': v.created_at.isoformat(),
-        'created_by': v.created_by.username if v.created_by else 'System'
-    } for v in plan.versions]
+#     modules = [{
+#         'module_name': m.module_name,
+#         'is_enabled': m.is_enabled,
+#         'is_premium': m.is_premium
+#     } for m in plan.modules]
 
-    subscriber_count = Organization.query.filter(Organization.subscription_plan == plan.name).count()
-    revenue = plan.analytics.arr if plan.analytics else 0.0
+#     versions = [{
+#         'version': v.version,
+#         'change_summary': v.change_summary,
+#         'created_at': v.created_at.isoformat(),
+#         'created_by': v.created_by.username if v.created_by else 'System'
+#     } for v in plan.versions]
 
-    return jsonify({
-        'status': 'success',
-        'data': {
-            'id': plan.id,
-            'name': plan.name,
-            'code': plan.code,
-            'description': plan.description,
-            'long_description': plan.long_description,
-            'icon': plan.icon,
-            'color': plan.color,
-            'status': plan.status,
-            'plan_type': plan.plan_type,
-            'currency': plan.currency,
-            'is_custom': plan.is_custom,
-            'version': plan.version,
-            'created_at': plan.created_at.isoformat() if plan.created_at else None,
-            'updated_at': plan.updated_at.isoformat() if plan.updated_at else None,
-            'pricing': pricing,
-            'limits': limits,
-            'modules': modules,
-            'versions': versions,
-            'subscriber_count': subscriber_count,
-            'pricing_model': getattr(plan, 'pricing_model', 'fixed'),
-            'payg_rules': getattr(plan, 'payg_rules', None),
-            'revenue': revenue
-        }
-    })
+#     subscriber_count = Organization.query.filter(Organization.subscription_plan == plan.name).count()
+#     revenue = plan.analytics.arr if plan.analytics else 0.0
+
+#     return jsonify({
+#         'status': 'success',
+#         'data': {
+#             'id': plan.id,
+#             'name': plan.name,
+#             'code': plan.code,
+#             'description': plan.description,
+#             'long_description': plan.long_description,
+#             'icon': plan.icon,
+#             'color': plan.color,
+#             'status': plan.status,
+#             'plan_type': plan.plan_type,
+#             'currency': plan.currency,
+#             'is_custom': plan.is_custom,
+#             'version': plan.version,
+#             'created_at': plan.created_at.isoformat() if plan.created_at else None,
+#             'updated_at': plan.updated_at.isoformat() if plan.updated_at else None,
+#             'pricing': pricing,
+#             'limits': limits,
+#             'modules': modules,
+#             'versions': versions,
+#             'subscriber_count': subscriber_count,
+#             'pricing_model': getattr(plan, 'pricing_model', 'fixed'),
+#             'payg_rules': getattr(plan, 'payg_rules', None),
+#             'revenue': revenue
+#         }
+#     })
+# [END DEAD CODE: get_plan_detail]
+
 
 
 def _clean_plan_type(val):
@@ -2539,190 +2581,197 @@ def create_plan():
     return jsonify({'status': 'success', 'message': 'Plan created successfully', 'data': {'id': plan.id}}), 201
 
 
-@subscription_bp.route('/plans/<int:plan_id>', methods=['PUT'])
-@jwt_required()
-def update_plan(plan_id):
-    user = _get_current_user()
-    err = _require_super_admin(user)
-    if err:
-        return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: update_plan (Lines 2542-2725)
+# Reason: Unused plan editor.
+# ==============================================================================
+# @subscription_bp.route('/plans/<int:plan_id>', methods=['PUT'])
+# @jwt_required()
+# def update_plan(plan_id):
+#     user = _get_current_user()
+#     err = _require_super_admin(user)
+#     if err:
+#         return err
 
-    plan = SaaSPlan.query.get_or_404(plan_id)
-    data = request.get_json(silent=True) or {}
+#     plan = SaaSPlan.query.get_or_404(plan_id)
+#     data = request.get_json(silent=True) or {}
 
-    old_snapshot = {
-        'name': plan.name, 'code': plan.code, 'description': plan.description,
-        'pricing': [{'billing_cycle': p.billing_cycle, 'price': p.price} for p in plan.pricing],
-        'limits': {
-            'max_users': plan.limits.max_users if plan.limits else 100,
-            'storage_limit_gb': plan.limits.storage_limit_gb if plan.limits else 10.0
-        },
-        'modules': [m.module_name for m in plan.modules if m.is_enabled]
-    }
+#     old_snapshot = {
+#         'name': plan.name, 'code': plan.code, 'description': plan.description,
+#         'pricing': [{'billing_cycle': p.billing_cycle, 'price': p.price} for p in plan.pricing],
+#         'limits': {
+#             'max_users': plan.limits.max_users if plan.limits else 100,
+#             'storage_limit_gb': plan.limits.storage_limit_gb if plan.limits else 10.0
+#         },
+#         'modules': [m.module_name for m in plan.modules if m.is_enabled]
+#     }
 
-    # Update metadata
-    if 'name' in data:
-        new_name = (data['name'] or '').strip()
-        if new_name and new_name.lower() != (plan.name or '').strip().lower():
-            if SaaSPlan.query.filter(SaaSPlan.id != plan.id, SaaSPlan.name.ilike(new_name)).first():
-                return jsonify({'error': 'Plan name already exists'}), 400
-            plan.name = new_name
+#     # Update metadata
+#     if 'name' in data:
+#         new_name = (data['name'] or '').strip()
+#         if new_name and new_name.lower() != (plan.name or '').strip().lower():
+#             if SaaSPlan.query.filter(SaaSPlan.id != plan.id, SaaSPlan.name.ilike(new_name)).first():
+#                 return jsonify({'error': 'Plan name already exists'}), 400
+#             plan.name = new_name
 
-    if 'code' in data:
-        new_code = (data['code'] or '').strip()
-        if new_code and new_code.lower() != (plan.code or '').strip().lower():
-            if SaaSPlan.query.filter(SaaSPlan.id != plan.id, SaaSPlan.code.ilike(new_code)).first():
-                return jsonify({'error': 'Plan code already exists'}), 400
-            plan.code = new_code
-    
-    is_trial_plan = getattr(plan, 'is_default_trial', False) or (plan.plan_type and 'trial' in plan.plan_type.lower()) or (plan.code and plan.code.lower() in ['t1', 'trial', 'trial_default'])
+#     if 'code' in data:
+#         new_code = (data['code'] or '').strip()
+#         if new_code and new_code.lower() != (plan.code or '').strip().lower():
+#             if SaaSPlan.query.filter(SaaSPlan.id != plan.id, SaaSPlan.code.ilike(new_code)).first():
+#                 return jsonify({'error': 'Plan code already exists'}), 400
+#             plan.code = new_code
 
-    if is_trial_plan:
-        if 'plan_type' in data and data['plan_type'] and _clean_plan_type(data['plan_type']).lower() != 'trial':
-            err_msg = "Trial plan cannot be converted to a normal/paid plan. It must always remain a Trial plan."
-            return jsonify({'status': 'error', 'error': err_msg, 'message': err_msg}), 400
+#     is_trial_plan = getattr(plan, 'is_default_trial', False) or (plan.plan_type and 'trial' in plan.plan_type.lower()) or (plan.code and plan.code.lower() in ['t1', 'trial', 'trial_default'])
 
-    new_status = data.get('status', plan.status)
-    if is_trial_plan and new_status in ['Inactive', 'Deprecated'] and plan.status == 'Active':
-        other_active_trials = SaaSPlan.query.filter(
-            SaaSPlan.id != plan.id,
-            SaaSPlan.status == 'Active',
-            (func.lower(SaaSPlan.plan_type) == 'trial') | (SaaSPlan.is_default_trial == True)
-        ).count()
-        if other_active_trials == 0:
-            err_msg = "Cannot disable the default trial plan. At least one active trial plan must exist in the system. Create or activate another trial plan before disabling this one."
-            return jsonify({'status': 'error', 'error': err_msg, 'message': err_msg}), 400
+#     if is_trial_plan:
+#         if 'plan_type' in data and data['plan_type'] and _clean_plan_type(data['plan_type']).lower() != 'trial':
+#             err_msg = "Trial plan cannot be converted to a normal/paid plan. It must always remain a Trial plan."
+#             return jsonify({'status': 'error', 'error': err_msg, 'message': err_msg}), 400
 
-    plan.description = data.get('description', plan.description)
-    plan.long_description = data.get('long_description', plan.long_description)
-    plan.icon = data.get('icon', plan.icon)
-    plan.color = data.get('color', plan.color)
-    plan.status = new_status
-    if is_trial_plan:
-        plan.plan_type = 'Trial'
-        plan.is_default_trial = True
-    else:
-        plan.plan_type = _clean_plan_type(data.get('plan_type', plan.plan_type))
-        if 'is_default_trial' in data:
-            plan.is_default_trial = bool(data['is_default_trial'])
-        elif 'trial' in plan.plan_type.lower():
-            plan.is_default_trial = True
-    
-    if 'pricing_model' in data:
-        plan.pricing_model = data['pricing_model']
-    elif plan.plan_type == 'Pay-As-You-Go':
-        plan.pricing_model = 'pay_as_you_go'
+#     new_status = data.get('status', plan.status)
+#     if is_trial_plan and new_status in ['Inactive', 'Deprecated'] and plan.status == 'Active':
+#         other_active_trials = SaaSPlan.query.filter(
+#             SaaSPlan.id != plan.id,
+#             SaaSPlan.status == 'Active',
+#             (func.lower(SaaSPlan.plan_type) == 'trial') | (SaaSPlan.is_default_trial == True)
+#         ).count()
+#         if other_active_trials == 0:
+#             err_msg = "Cannot disable the default trial plan. At least one active trial plan must exist in the system. Create or activate another trial plan before disabling this one."
+#             return jsonify({'status': 'error', 'error': err_msg, 'message': err_msg}), 400
 
-    if 'payg_rules' in data:
-        plan.payg_rules = data['payg_rules']
+#     plan.description = data.get('description', plan.description)
+#     plan.long_description = data.get('long_description', plan.long_description)
+#     plan.icon = data.get('icon', plan.icon)
+#     plan.color = data.get('color', plan.color)
+#     plan.status = new_status
+#     if is_trial_plan:
+#         plan.plan_type = 'Trial'
+#         plan.is_default_trial = True
+#     else:
+#         plan.plan_type = _clean_plan_type(data.get('plan_type', plan.plan_type))
+#         if 'is_default_trial' in data:
+#             plan.is_default_trial = bool(data['is_default_trial'])
+#         elif 'trial' in plan.plan_type.lower():
+#             plan.is_default_trial = True
 
-    plan.is_custom = data.get('is_custom', plan.is_custom)
+#     if 'pricing_model' in data:
+#         plan.pricing_model = data['pricing_model']
+#     elif plan.plan_type == 'Pay-As-You-Go':
+#         plan.pricing_model = 'pay_as_you_go'
 
-    if 'trial_duration_days' in data:
-        plan.trial_duration_days = int(data['trial_duration_days'])
-    if 'auto_approve_extensions_limit' in data:
-        plan.auto_approve_extensions_limit = int(data['auto_approve_extensions_limit'])
+#     if 'payg_rules' in data:
+#         plan.payg_rules = data['payg_rules']
 
-    if plan.is_default_trial:
-        SaaSPlan.query.filter(SaaSPlan.id != plan.id).update({'is_default_trial': False})
-        ps = PlatformSettings.query.first()
-        if ps:
-            ps.trial_period_days = plan.trial_duration_days
-            ps.max_auto_trial_extensions = plan.auto_approve_extensions_limit
+#     plan.is_custom = data.get('is_custom', plan.is_custom)
 
-    # Update Pricing
-    if 'pricing' in data:
-        # Clear old pricing
-        SaaSPlanPricing.query.filter_by(plan_id=plan.id).delete()
-        for p in data['pricing']:
-            pricing = SaaSPlanPricing(
-                plan_id=plan.id,
-                billing_cycle=p.get('billing_cycle'),
-                price=float(p.get('price', 0.0)),
-                discount=float(p.get('discount', 0.0)),
-                tax=float(p.get('tax', 18.0)),
-                is_tax_inclusive=bool(p.get('is_tax_inclusive', False))
-            )
-            db.session.add(pricing)
+#     if 'trial_duration_days' in data:
+#         plan.trial_duration_days = int(data['trial_duration_days'])
+#     if 'auto_approve_extensions_limit' in data:
+#         plan.auto_approve_extensions_limit = int(data['auto_approve_extensions_limit'])
 
-    # Update Limits
-    if 'limits' in data and plan.limits:
-        lim = data['limits']
-        plan.limits.max_users = int(lim.get('max_users', plan.limits.max_users))
-        plan.limits.max_locations = int(lim.get('max_locations', getattr(plan.limits, 'max_locations', 5)))
-        plan.limits.max_departments = int(lim.get('max_departments', getattr(plan.limits, 'max_departments', 10)))
-        plan.limits.max_projects = int(lim.get('max_projects', plan.limits.max_projects))
-        plan.limits.storage_limit_gb = float(lim.get('storage_limit_gb', plan.limits.storage_limit_gb))
-        plan.limits.api_limit = int(lim.get('api_limit', plan.limits.api_limit))
+#     if plan.is_default_trial:
+#         SaaSPlan.query.filter(SaaSPlan.id != plan.id).update({'is_default_trial': False})
+#         ps = PlatformSettings.query.first()
+#         if ps:
+#             ps.trial_period_days = plan.trial_duration_days
+#             ps.max_auto_trial_extensions = plan.auto_approve_extensions_limit
 
-    # Apply to existing subscribers check
-    apply_to_existing = bool(data.get('apply_to_existing', True))
-    synced_org_count = 0
-    if apply_to_existing:
-        orgs_to_sync = Organization.query.filter(
-            (Organization.is_deleted == False) &
-            (Organization.is_platform_org == False) &
-            (
-                (func.lower(func.trim(Organization.subscription_plan)) == plan.name.strip().lower()) |
-                (func.lower(func.trim(Organization.subscription_plan)) == plan.code.strip().lower()) |
-                (func.lower(func.trim(Organization.subscription_plan)) == old_snapshot['name'].strip().lower()) |
-                (func.lower(func.trim(Organization.subscription_plan)) == old_snapshot['code'].strip().lower())
-            )
-        ).all()
-        synced_org_count = len(orgs_to_sync)
+#     # Update Pricing
+#     if 'pricing' in data:
+#         # Clear old pricing
+#         SaaSPlanPricing.query.filter_by(plan_id=plan.id).delete()
+#         for p in data['pricing']:
+#             pricing = SaaSPlanPricing(
+#                 plan_id=plan.id,
+#                 billing_cycle=p.get('billing_cycle'),
+#                 price=float(p.get('price', 0.0)),
+#                 discount=float(p.get('discount', 0.0)),
+#                 tax=float(p.get('tax', 18.0)),
+#                 is_tax_inclusive=bool(p.get('is_tax_inclusive', False))
+#             )
+#             db.session.add(pricing)
 
-        new_storage_mb = plan.limits.storage_limit_gb * 1024.0 if plan.limits else 10240.0
-        new_max_users = plan.limits.max_users if plan.limits else 100
+#     # Update Limits
+#     if 'limits' in data and plan.limits:
+#         lim = data['limits']
+#         plan.limits.max_users = int(lim.get('max_users', plan.limits.max_users))
+#         plan.limits.max_locations = int(lim.get('max_locations', getattr(plan.limits, 'max_locations', 5)))
+#         plan.limits.max_departments = int(lim.get('max_departments', getattr(plan.limits, 'max_departments', 10)))
+#         plan.limits.max_projects = int(lim.get('max_projects', plan.limits.max_projects))
+#         plan.limits.storage_limit_gb = float(lim.get('storage_limit_gb', plan.limits.storage_limit_gb))
+#         plan.limits.api_limit = int(lim.get('api_limit', plan.limits.api_limit))
 
-        for o in orgs_to_sync:
-            o.storage_limit_mb = new_storage_mb
-            o.max_users = new_max_users
-            if 'name' in data and data['name']:
-                o.subscription_plan = data['name']
+#     # Apply to existing subscribers check
+#     apply_to_existing = bool(data.get('apply_to_existing', True))
+#     synced_org_count = 0
+#     if apply_to_existing:
+#         orgs_to_sync = Organization.query.filter(
+#             (Organization.is_deleted == False) &
+#             (Organization.is_platform_org == False) &
+#             (
+#                 (func.lower(func.trim(Organization.subscription_plan)) == plan.name.strip().lower()) |
+#                 (func.lower(func.trim(Organization.subscription_plan)) == plan.code.strip().lower()) |
+#                 (func.lower(func.trim(Organization.subscription_plan)) == old_snapshot['name'].strip().lower()) |
+#                 (func.lower(func.trim(Organization.subscription_plan)) == old_snapshot['code'].strip().lower())
+#             )
+#         ).all()
+#         synced_org_count = len(orgs_to_sync)
 
-    # Update Modules
-    if 'modules' in data:
-        # Clear modules
-        SaaSPlanModules.query.filter_by(plan_id=plan.id).delete()
-        for m_name in data['modules']:
-            module = SaaSPlanModules(
-                plan_id=plan.id,
-                module_name=m_name,
-                is_enabled=True
-            )
-            db.session.add(module)
-        try:
-            from app.domain.services.feature_engine import FeatureEngine
-            FeatureEngine.invalidate()
-        except Exception:
-            pass
+#         new_storage_mb = plan.limits.storage_limit_gb * 1024.0 if plan.limits else 10240.0
+#         new_max_users = plan.limits.max_users if plan.limits else 100
 
-    # Increment Version Snapshot
-    plan.version += 1
-    new_snapshot = {
-        'name': plan.name, 'code': plan.code, 'description': plan.description,
-        'pricing': data.get('pricing', old_snapshot['pricing']),
-        'limits': data.get('limits', old_snapshot['limits']),
-        'modules': data.get('modules', old_snapshot['modules'])
-    }
-    version = SaaSPlanVersion(
-        plan_id=plan.id,
-        version=plan.version,
-        plan_data=new_snapshot,
-        change_summary=data.get('change_summary', 'Plan configuration updated'),
-        created_by_id=user.id
-    )
-    db.session.add(version)
-    db.session.commit()
+#         for o in orgs_to_sync:
+#             o.storage_limit_mb = new_storage_mb
+#             o.max_users = new_max_users
+#             if 'name' in data and data['name']:
+#                 o.subscription_plan = data['name']
 
-    _log(user, 'EDIT_PLAN', 'SaaSPlan', plan.id, old_snapshot, new_snapshot)
+#     # Update Modules
+#     if 'modules' in data:
+#         # Clear modules
+#         SaaSPlanModules.query.filter_by(plan_id=plan.id).delete()
+#         for m_name in data['modules']:
+#             module = SaaSPlanModules(
+#                 plan_id=plan.id,
+#                 module_name=m_name,
+#                 is_enabled=True
+#             )
+#             db.session.add(module)
+#         try:
+#             from app.domain.services.feature_engine import FeatureEngine
+#             FeatureEngine.invalidate()
+#         except Exception:
+#             pass
 
-    if apply_to_existing:
-        resp_msg = f"Plan updated to Version {plan.version} successfully and applied immediately to {synced_org_count} existing active subscriber organization(s)."
-    else:
-        resp_msg = f"Plan template updated to Version {plan.version} for future subscribers. Existing active subscribers remain on their current terms."
+#     # Increment Version Snapshot
+#     plan.version += 1
+#     new_snapshot = {
+#         'name': plan.name, 'code': plan.code, 'description': plan.description,
+#         'pricing': data.get('pricing', old_snapshot['pricing']),
+#         'limits': data.get('limits', old_snapshot['limits']),
+#         'modules': data.get('modules', old_snapshot['modules'])
+#     }
+#     version = SaaSPlanVersion(
+#         plan_id=plan.id,
+#         version=plan.version,
+#         plan_data=new_snapshot,
+#         change_summary=data.get('change_summary', 'Plan configuration updated'),
+#         created_by_id=user.id
+#     )
+#     db.session.add(version)
+#     db.session.commit()
 
-    return jsonify({'status': 'success', 'message': resp_msg, 'data': {'version': plan.version, 'synced_orgs': synced_org_count, 'applied_to_existing': apply_to_existing}})
+#     _log(user, 'EDIT_PLAN', 'SaaSPlan', plan.id, old_snapshot, new_snapshot)
+
+#     if apply_to_existing:
+#         resp_msg = f"Plan updated to Version {plan.version} successfully and applied immediately to {synced_org_count} existing active subscriber organization(s)."
+#     else:
+#         resp_msg = f"Plan template updated to Version {plan.version} for future subscribers. Existing active subscribers remain on their current terms."
+
+#     return jsonify({'status': 'success', 'message': resp_msg, 'data': {'version': plan.version, 'synced_orgs': synced_org_count, 'applied_to_existing': apply_to_existing}})
+# [END DEAD CODE: update_plan]
+
 
 
 @subscription_bp.route('/plans/<int:plan_id>/duplicate', methods=['POST'])
@@ -2881,48 +2930,55 @@ def deactivate_plan(plan_id):
     return jsonify({'status': 'success', 'message': 'Plan deactivated successfully'})
 
 
-@subscription_bp.route('/plans/<int:plan_id>', methods=['DELETE'])
-@jwt_required()
-def delete_plan(plan_id):
-    user = _get_current_user()
-    err = _require_super_admin(user)
-    if err:
-        return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: delete_plan (Lines 2884-2925)
+# Reason: Hard plan deletion.
+# ==============================================================================
+# @subscription_bp.route('/plans/<int:plan_id>', methods=['DELETE'])
+# @jwt_required()
+# def delete_plan(plan_id):
+#     user = _get_current_user()
+#     err = _require_super_admin(user)
+#     if err:
+#         return err
 
-    plan = SaaSPlan.query.get_or_404(plan_id)
+#     plan = SaaSPlan.query.get_or_404(plan_id)
 
-    is_trial_plan = getattr(plan, 'is_default_trial', False) or (plan.plan_type and 'trial' in plan.plan_type.lower()) or (plan.code and plan.code.lower() in ['t1', 'trial', 'trial_default'])
-    if is_trial_plan:
-        err_msg = "System default trial plan cannot be deleted."
-        return jsonify({'status': 'error', 'error': err_msg, 'message': err_msg}), 400
+#     is_trial_plan = getattr(plan, 'is_default_trial', False) or (plan.plan_type and 'trial' in plan.plan_type.lower()) or (plan.code and plan.code.lower() in ['t1', 'trial', 'trial_default'])
+#     if is_trial_plan:
+#         err_msg = "System default trial plan cannot be deleted."
+#         return jsonify({'status': 'error', 'error': err_msg, 'message': err_msg}), 400
 
-    # Prevent deleting plans with active subscribers
-    org_subscribers = Organization.query.filter(
-        (Organization.is_deleted == False) &
-        (Organization.is_platform_org == False) &
-        (
-            (func.lower(func.trim(Organization.subscription_plan)) == plan.name.strip().lower()) |
-            (func.lower(func.trim(Organization.subscription_plan)) == plan.code.strip().lower())
-        )
-    ).count()
-    active_subs = Subscription.query.join(Organization, Subscription.org_id == Organization.id).filter(
-        (Organization.is_deleted == False) &
-        (Organization.is_platform_org == False) &
-        (
-            (func.lower(func.trim(Subscription.plan_name)) == plan.name.strip().lower()) |
-            (func.lower(func.trim(Subscription.plan_name)) == plan.code.strip().lower())
-        ) &
-        (Subscription.subscription_status.in_(['Active', 'Trial', 'Grace Period']))
-    ).count()
-    subscribers = max(org_subscribers, active_subs)
-    if subscribers > 0:
-        err_msg = f"Cannot delete plan '{plan.name}' because it has {subscribers} active subscriber(s). Please reassign or cancel those subscriptions first."
-        return jsonify({'error': err_msg, 'message': err_msg}), 400
+#     # Prevent deleting plans with active subscribers
+#     org_subscribers = Organization.query.filter(
+#         (Organization.is_deleted == False) &
+#         (Organization.is_platform_org == False) &
+#         (
+#             (func.lower(func.trim(Organization.subscription_plan)) == plan.name.strip().lower()) |
+#             (func.lower(func.trim(Organization.subscription_plan)) == plan.code.strip().lower())
+#         )
+#     ).count()
+#     active_subs = Subscription.query.join(Organization, Subscription.org_id == Organization.id).filter(
+#         (Organization.is_deleted == False) &
+#         (Organization.is_platform_org == False) &
+#         (
+#             (func.lower(func.trim(Subscription.plan_name)) == plan.name.strip().lower()) |
+#             (func.lower(func.trim(Subscription.plan_name)) == plan.code.strip().lower())
+#         ) &
+#         (Subscription.subscription_status.in_(['Active', 'Trial', 'Grace Period']))
+#     ).count()
+#     subscribers = max(org_subscribers, active_subs)
+#     if subscribers > 0:
+#         err_msg = f"Cannot delete plan '{plan.name}' because it has {subscribers} active subscriber(s). Please reassign or cancel those subscriptions first."
+#         return jsonify({'error': err_msg, 'message': err_msg}), 400
 
-    db.session.delete(plan)
-    db.session.commit()
-    _log(user, 'DELETE_PLAN', 'SaaSPlan', plan_id, {'name': plan.name}, None)
-    return jsonify({'status': 'success', 'message': 'Plan deleted successfully'})
+#     db.session.delete(plan)
+#     db.session.commit()
+#     _log(user, 'DELETE_PLAN', 'SaaSPlan', plan_id, {'name': plan.name}, None)
+#     return jsonify({'status': 'success', 'message': 'Plan deleted successfully'})
+# [END DEAD CODE: delete_plan]
+
 
 
 @subscription_bp.route('/plans/compare', methods=['GET'])
@@ -3184,12 +3240,19 @@ def sub_payg_preview_all():
     return preview_all_payg_bills()
 
 
-@subscription_bp.route('/billing/payg/rules', methods=['GET', 'POST'])
-@jwt_required()
-@super_admin_required()
-def sub_payg_rules():
-    from app.presentation.routes.billing_routes import payg_rules_endpoint
-    return payg_rules_endpoint()
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: sub_payg_rules (Lines 3187-3192)
+# Reason: Redundant alias for billing payg rules.
+# ==============================================================================
+# @subscription_bp.route('/billing/payg/rules', methods=['GET', 'POST'])
+# @jwt_required()
+# @super_admin_required()
+# def sub_payg_rules():
+#     from app.presentation.routes.billing_routes import payg_rules_endpoint
+#     return payg_rules_endpoint()
+# [END DEAD CODE: sub_payg_rules]
+
 
 
 @subscription_bp.route('/billing/payg/preview-single', methods=['POST'])

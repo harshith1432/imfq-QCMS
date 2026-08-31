@@ -761,81 +761,88 @@ def get_audit_logs():
         }
     }), 200
 
-@audit_bp.route('/logs/<int:log_id>', methods=['GET'])
-@jwt_required()
-@audit_required
-def get_audit_log_detail(log_id):
-    user = _get_user_from_jwt()
-    
-    org_filter = get_user_org_filter(user, AuditLog)
-    log = AuditLog.query.filter(org_filter, AuditLog.id == log_id).first_or_404()
-    
-    # Related logs: same session or same user in the last hour
-    hour_ago = log.created_at - timedelta(hours=1)
-    hour_later = log.created_at + timedelta(hours=1)
-    org_cond = (AuditLog.org_id == log.org_id) if log.org_id else sa.true()
-    related = AuditLog.query.filter(
-        org_cond,
-        AuditLog.id != log.id,
-        db.or_(
-            AuditLog.session_id == log.session_id,
-            db.and_(AuditLog.user_id == log.user_id, AuditLog.created_at >= hour_ago, AuditLog.created_at <= hour_later)
-        )
-    ).order_by(AuditLog.created_at.desc()).limit(5).all()
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_audit_log_detail (Lines 764-838)
+# Reason: Unused single audit log modal fetch. Frontend modal renders data directly from table row JSON.
+# ==============================================================================
+# @audit_bp.route('/logs/<int:log_id>', methods=['GET'])
+# @jwt_required()
+# @audit_required
+# def get_audit_log_detail(log_id):
+#     user = _get_user_from_jwt()
 
-    # Timeline events for this session
-    timeline = []
-    if log.session_id:
-        sess_logs = AuditLog.query.filter(org_cond, AuditLog.session_id == log.session_id).order_by(AuditLog.created_at.asc()).all()
-        timeline = [{
-            "id": sl.id,
-            "timestamp": sl.created_at.isoformat() + "Z" if sl.created_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
-            "action": sl.action,
-            "status": "Failed" if (sl.response_code and sl.response_code >= 400) else "Success"
-        } for sl in sess_logs]
+#     org_filter = get_user_org_filter(user, AuditLog)
+#     log = AuditLog.query.filter(org_filter, AuditLog.id == log_id).first_or_404()
 
-    # Extract differences in fields for Update/Create/Delete/Modify actions
-    diffs, has_diff, summary = extract_audit_diff_and_summary(log)
+#     # Related logs: same session or same user in the last hour
+#     hour_ago = log.created_at - timedelta(hours=1)
+#     hour_later = log.created_at + timedelta(hours=1)
+#     org_cond = (AuditLog.org_id == log.org_id) if log.org_id else sa.true()
+#     related = AuditLog.query.filter(
+#         org_cond,
+#         AuditLog.id != log.id,
+#         db.or_(
+#             AuditLog.session_id == log.session_id,
+#             db.and_(AuditLog.user_id == log.user_id, AuditLog.created_at >= hour_ago, AuditLog.created_at <= hour_later)
+#         )
+#     ).order_by(AuditLog.created_at.desc()).limit(5).all()
 
-    return jsonify({
-        "status": "success",
-        "data": {
-            "id": log.id,
-            "timestamp": log.created_at.isoformat() + "Z" if log.created_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
-            "action": log.action,
-            "module": log.target_table or "Global",
-            "record_id": log.target_id,
-            "user": log.user.username if log.user else "System",
-            "user_email": log.user.email if log.user else "—",
-            "role": log.user.role.name if log.user and log.user.role else "—",
-            "ip_address": log.ip_address,
-            "location": log.location or "Unknown",
-            "browser": log.browser or "Other",
-            "os": log.os or "Other",
-            "device": log.device or "Desktop",
-            "session_id": log.session_id or "—",
-            "request_id": log.request_id or "—",
-            "response_code": log.response_code or 200,
-            "execution_time": log.execution_time if log.execution_time is not None else 0.0,
-            "risk_level": log.risk_level or "Low",
-            "before_data": log.before_data,
-            "after_data": log.after_data,
-            "has_diff": has_diff,
-            "change_summary": summary,
-            "changed_fields": diffs,
-            "details": log.details or {},
-            "hash_signature": log.hash_signature,
-            "is_tampered": log.is_tampered,
-            "related_logs": [{
-                "id": rl.id,
-                "timestamp": rl.created_at.isoformat() + "Z" if rl.created_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
-                "action": rl.action,
-                "user": rl.user.username if rl.user else "System",
-                "risk_level": rl.risk_level
-            } for rl in related],
-            "timeline": timeline
-        }
-    }), 200
+#     # Timeline events for this session
+#     timeline = []
+#     if log.session_id:
+#         sess_logs = AuditLog.query.filter(org_cond, AuditLog.session_id == log.session_id).order_by(AuditLog.created_at.asc()).all()
+#         timeline = [{
+#             "id": sl.id,
+#             "timestamp": sl.created_at.isoformat() + "Z" if sl.created_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
+#             "action": sl.action,
+#             "status": "Failed" if (sl.response_code and sl.response_code >= 400) else "Success"
+#         } for sl in sess_logs]
+
+#     # Extract differences in fields for Update/Create/Delete/Modify actions
+#     diffs, has_diff, summary = extract_audit_diff_and_summary(log)
+
+#     return jsonify({
+#         "status": "success",
+#         "data": {
+#             "id": log.id,
+#             "timestamp": log.created_at.isoformat() + "Z" if log.created_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
+#             "action": log.action,
+#             "module": log.target_table or "Global",
+#             "record_id": log.target_id,
+#             "user": log.user.username if log.user else "System",
+#             "user_email": log.user.email if log.user else "—",
+#             "role": log.user.role.name if log.user and log.user.role else "—",
+#             "ip_address": log.ip_address,
+#             "location": log.location or "Unknown",
+#             "browser": log.browser or "Other",
+#             "os": log.os or "Other",
+#             "device": log.device or "Desktop",
+#             "session_id": log.session_id or "—",
+#             "request_id": log.request_id or "—",
+#             "response_code": log.response_code or 200,
+#             "execution_time": log.execution_time if log.execution_time is not None else 0.0,
+#             "risk_level": log.risk_level or "Low",
+#             "before_data": log.before_data,
+#             "after_data": log.after_data,
+#             "has_diff": has_diff,
+#             "change_summary": summary,
+#             "changed_fields": diffs,
+#             "details": log.details or {},
+#             "hash_signature": log.hash_signature,
+#             "is_tampered": log.is_tampered,
+#             "related_logs": [{
+#                 "id": rl.id,
+#                 "timestamp": rl.created_at.isoformat() + "Z" if rl.created_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
+#                 "action": rl.action,
+#                 "user": rl.user.username if rl.user else "System",
+#                 "risk_level": rl.risk_level
+#             } for rl in related],
+#             "timeline": timeline
+#         }
+#     }), 200
+# [END DEAD CODE: get_audit_log_detail]
+
 
 def cleanup_inactive_sessions(org_id=None, inactivity_hours=2):
     """

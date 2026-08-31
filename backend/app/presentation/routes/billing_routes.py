@@ -387,60 +387,67 @@ def create_invoice():
         "invoice_id": inv.id
     }), 201
 
-@billing_bp.route('/invoices/<int:inv_id>/pay', methods=['POST'])
-@jwt_required()
-@super_admin_required()
-def pay_invoice(inv_id):
-    inv = SubscriptionInvoice.query.get_or_404(inv_id)
-    if inv.invoice_status == 'Paid':
-        return jsonify({"status": "error", "message": "Invoice is already paid"}), 422
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: pay_invoice (Lines 390-443)
+# Reason: Legacy direct payment mock endpoint. Replaced by Razorpay order generation & offline payment proof flows.
+# ==============================================================================
+# @billing_bp.route('/invoices/<int:inv_id>/pay', methods=['POST'])
+# @jwt_required()
+# @super_admin_required()
+# def pay_invoice(inv_id):
+#     inv = SubscriptionInvoice.query.get_or_404(inv_id)
+#     if inv.invoice_status == 'Paid':
+#         return jsonify({"status": "error", "message": "Invoice is already paid"}), 422
 
-    data = request.json or {}
-    payment_method = data.get('payment_method', 'Manual')
-    gateway_ref = data.get('gateway_reference', 'REF-' + uuid.uuid4().hex[:8].upper())
-    
-    # Record payment transaction
-    tx_id = "TXN-" + uuid.uuid4().hex[:10].upper()
-    payment = SubscriptionPayment(
-        org_id=inv.org_id,
-        subscription_id=inv.subscription_id,
-        invoice_id=inv.id,
-        amount=inv.base_amount,
-        currency=inv.currency,
-        plan_name=inv.plan_name,
-        billing_cycle=inv.billing_cycle,
-        payment_status='Completed',
-        transaction_id=tx_id,
-        payment_gateway=payment_method,
-        gateway_reference=gateway_ref,
-        discount_amount=inv.discount_amount,
-        gst_percent=inv.gst_percent,
-        gst_amount=inv.gst_amount,
-        final_amount=inv.total_amount,
-        refund_status='None',
-        billing_period_start=inv.billing_period_start or datetime.now(timezone.utc).replace(tzinfo=None),
-        billing_period_end=inv.billing_period_end or (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=365))
-    )
-    
-    db.session.add(payment)
-    db.session.flush()
+#     data = request.json or {}
+#     payment_method = data.get('payment_method', 'Manual')
+#     gateway_ref = data.get('gateway_reference', 'REF-' + uuid.uuid4().hex[:8].upper())
 
-    inv.invoice_status = 'Paid'
-    inv.payment_id = payment.id
-    db.session.commit()
+#     # Record payment transaction
+#     tx_id = "TXN-" + uuid.uuid4().hex[:10].upper()
+#     payment = SubscriptionPayment(
+#         org_id=inv.org_id,
+#         subscription_id=inv.subscription_id,
+#         invoice_id=inv.id,
+#         amount=inv.base_amount,
+#         currency=inv.currency,
+#         plan_name=inv.plan_name,
+#         billing_cycle=inv.billing_cycle,
+#         payment_status='Completed',
+#         transaction_id=tx_id,
+#         payment_gateway=payment_method,
+#         gateway_reference=gateway_ref,
+#         discount_amount=inv.discount_amount,
+#         gst_percent=inv.gst_percent,
+#         gst_amount=inv.gst_amount,
+#         final_amount=inv.total_amount,
+#         refund_status='None',
+#         billing_period_start=inv.billing_period_start or datetime.now(timezone.utc).replace(tzinfo=None),
+#         billing_period_end=inv.billing_period_end or (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=365))
+#     )
 
-    _audit_log(inv.org_id, inv.id, "Payment Received", {"transaction_id": tx_id, "amount": inv.total_amount})
+#     db.session.add(payment)
+#     db.session.flush()
 
-    # Trigger subscription status update to Active if linked
-    if inv.subscription:
-        inv.subscription.subscription_status = 'Active'
-        db.session.commit()
+#     inv.invoice_status = 'Paid'
+#     inv.payment_id = payment.id
+#     db.session.commit()
 
-    return jsonify({
-        "status": "success",
-        "message": "Payment recorded successfully",
-        "transaction_id": tx_id
-    })
+#     _audit_log(inv.org_id, inv.id, "Payment Received", {"transaction_id": tx_id, "amount": inv.total_amount})
+
+#     # Trigger subscription status update to Active if linked
+#     if inv.subscription:
+#         inv.subscription.subscription_status = 'Active'
+#         db.session.commit()
+
+#     return jsonify({
+#         "status": "success",
+#         "message": "Payment recorded successfully",
+#         "transaction_id": tx_id
+#     })
+# [END DEAD CODE: pay_invoice]
+
 
 @billing_bp.route('/invoices/<int:inv_id>/refund', methods=['POST'])
 @jwt_required()
@@ -598,23 +605,30 @@ def get_revenue_report():
         }
     })
 
-@billing_bp.route('/reports/taxes', methods=['GET'])
-@jwt_required()
-@super_admin_required()
-def get_tax_report():
-    payments = SubscriptionPayment.query.filter_by(payment_status='Completed').all()
-    gst_collected = sum(p.gst_amount for p in payments)
-    
-    return jsonify({
-        "status": "success",
-        "data": {
-            "gst_collected": gst_collected,
-            "taxes": [
-                {"tax_type": "CGST", "amount": gst_collected / 2},
-                {"tax_type": "SGST", "amount": gst_collected / 2}
-            ]
-        }
-    })
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_tax_report (Lines 601-617)
+# Reason: Unused standalone tax report endpoint.
+# ==============================================================================
+# @billing_bp.route('/reports/taxes', methods=['GET'])
+# @jwt_required()
+# @super_admin_required()
+# def get_tax_report():
+#     payments = SubscriptionPayment.query.filter_by(payment_status='Completed').all()
+#     gst_collected = sum(p.gst_amount for p in payments)
+
+#     return jsonify({
+#         "status": "success",
+#         "data": {
+#             "gst_collected": gst_collected,
+#             "taxes": [
+#                 {"tax_type": "CGST", "amount": gst_collected / 2},
+#                 {"tax_type": "SGST", "amount": gst_collected / 2}
+#             ]
+#         }
+#     })
+# [END DEAD CODE: get_tax_report]
+
 
 @billing_bp.route('/reports/ai-insights', methods=['GET'])
 @jwt_required()
@@ -1286,33 +1300,40 @@ def upload_proof_screenshot(proof_id):
 # PAY-AS-YOU-GO (PAYG) METERED BILLING & INVOICING API
 # ─────────────────────────────────────────────────────────────────────────────
 
-@billing_bp.route('/payg/live-usage', methods=['GET'])
-@jwt_required()
-def get_payg_live_usage():
-    """
-    Returns real-time usage telemetry, rate configuration, and current estimated accrued bill
-    for the authenticated organization (or specified org_id for Super Admin).
-    """
-    user = _get_current_user()
-    if not user:
-        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_payg_live_usage (Lines 1289-1315)
+# Reason: Unused live usage gauge endpoint.
+# ==============================================================================
+# @billing_bp.route('/payg/live-usage', methods=['GET'])
+# @jwt_required()
+# def get_payg_live_usage():
+#     """
+#     Returns real-time usage telemetry, rate configuration, and current estimated accrued bill
+#     for the authenticated organization (or specified org_id for Super Admin).
+#     """
+#     user = _get_current_user()
+#     if not user:
+#         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
-    role_name = user.role.name if (user and hasattr(user, 'role') and hasattr(user.role, 'name')) else str(getattr(user, 'role', ''))
-    is_super = role_name == 'SuperAdmin' or getattr(user, 'system_role', '') == 'SuperAdmin' or getattr(user, 'is_super_admin', False)
+#     role_name = user.role.name if (user and hasattr(user, 'role') and hasattr(user.role, 'name')) else str(getattr(user, 'role', ''))
+#     is_super = role_name == 'SuperAdmin' or getattr(user, 'system_role', '') == 'SuperAdmin' or getattr(user, 'is_super_admin', False)
 
-    target_org_id = request.args.get('org_id', type=int) if is_super else _get_effective_org_id(user)
-    if not target_org_id:
-        target_org_id = 1
+#     target_org_id = request.args.get('org_id', type=int) if is_super else _get_effective_org_id(user)
+#     if not target_org_id:
+#         target_org_id = 1
 
-    try:
-        from app.domain.services.payg_billing_service import PaygBillingService
-        breakdown = PaygBillingService.calculate_payg_bill_breakdown(target_org_id)
-        return jsonify({
-            "status": "success",
-            "data": breakdown
-        }), 200
-    except Exception as e:
-        return internal_server_error(e, "Failed to compute real-time usage.")
+#     try:
+#         from app.domain.services.payg_billing_service import PaygBillingService
+#         breakdown = PaygBillingService.calculate_payg_bill_breakdown(target_org_id)
+#         return jsonify({
+#             "status": "success",
+#             "data": breakdown
+#         }), 200
+#     except Exception as e:
+#         return internal_server_error(e, "Failed to compute real-time usage.")
+# [END DEAD CODE: get_payg_live_usage]
+
 
 
 @billing_bp.route('/payg/rules', methods=['GET', 'POST'])
@@ -1483,25 +1504,32 @@ def generate_payg_monthly_bills():
         return internal_server_error(e, "Billing generation failed.")
 
 
-@billing_bp.route('/payg/invoices/<int:invoice_id>/html', methods=['GET'])
-@jwt_required()
-def get_payg_invoice_html(invoice_id):
-    """
-    Renders standalone printable / web tax invoice for a Pay-As-You-Go invoice.
-    """
-    user = _get_current_user()
-    invoice = SubscriptionInvoice.query.get_or_404(invoice_id)
-    
-    role_name = user.role.name if (user and hasattr(user, 'role') and hasattr(user.role, 'name')) else str(getattr(user, 'role', ''))
-    is_super = role_name == 'SuperAdmin' or getattr(user, 'system_role', '') == 'SuperAdmin' or getattr(user, 'is_super_admin', False)
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_payg_invoice_html (Lines 1486-1506)
+# Reason: Unused HTML invoice view.
+# ==============================================================================
+# @billing_bp.route('/payg/invoices/<int:invoice_id>/html', methods=['GET'])
+# @jwt_required()
+# def get_payg_invoice_html(invoice_id):
+#     """
+#     Renders standalone printable / web tax invoice for a Pay-As-You-Go invoice.
+#     """
+#     user = _get_current_user()
+#     invoice = SubscriptionInvoice.query.get_or_404(invoice_id)
 
-    if not is_super and user.org_id != invoice.org_id:
-        return jsonify({"status": "error", "message": "Unauthorized access to invoice"}), 403
+#     role_name = user.role.name if (user and hasattr(user, 'role') and hasattr(user.role, 'name')) else str(getattr(user, 'role', ''))
+#     is_super = role_name == 'SuperAdmin' or getattr(user, 'system_role', '') == 'SuperAdmin' or getattr(user, 'is_super_admin', False)
 
-    from app.domain.services.payg_billing_service import PaygBillingService
-    org = db.session.get(Organization, invoice.org_id)
-    breakdown = invoice.usage_breakdown or PaygBillingService.calculate_payg_bill_breakdown(invoice.org_id)
-    
-    html_content = PaygBillingService.generate_payg_invoice_html(invoice, org, breakdown)
-    return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
+#     if not is_super and user.org_id != invoice.org_id:
+#         return jsonify({"status": "error", "message": "Unauthorized access to invoice"}), 403
+
+#     from app.domain.services.payg_billing_service import PaygBillingService
+#     org = db.session.get(Organization, invoice.org_id)
+#     breakdown = invoice.usage_breakdown or PaygBillingService.calculate_payg_bill_breakdown(invoice.org_id)
+
+#     html_content = PaygBillingService.generate_payg_invoice_html(invoice, org, breakdown)
+#     return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
+# [END DEAD CODE: get_payg_invoice_html]
+
 

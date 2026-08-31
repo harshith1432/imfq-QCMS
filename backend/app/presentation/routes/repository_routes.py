@@ -885,86 +885,100 @@ def search_repository():
 # ============================
 # DETAIL VIEW
 # ============================
-@repository_bp.route('/<int:entry_id>', methods=['GET'])
-@jwt_required()
-def get_entry_detail(entry_id):
-    """Full read-only detail view of an archived project."""
-    user = db.session.get(User, get_jwt_identity())
-    entry = KnowledgeRepository.query.filter_by(id=entry_id, org_id=user.org_id).first()
-    if not entry:
-        entry = KnowledgeRepository.query.filter_by(project_id=entry_id, org_id=user.org_id).first()
-    if not entry:
-        project = Project.query.filter_by(id=entry_id, org_id=user.org_id).first()
-        if project:
-            entry = auto_archive_project_to_repository(project.id, user.org_id)
-            db.session.commit()
-    if not entry:
-        return jsonify({"msg": "Repository entry not found"}), 404
-    
-    # Get all stage data
-    workflows = ProjectWorkflow.query.filter_by(project_id=entry.project_id, org_id=user.org_id).all()
-    stages_data = {wf.stage_id: wf.data for wf in workflows}
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_entry_detail (Lines 888-939)
+# Reason: Unused repository entry detail. Frontend modal uses /search /list objects.
+# ==============================================================================
+# @repository_bp.route('/<int:entry_id>', methods=['GET'])
+# @jwt_required()
+# def get_entry_detail(entry_id):
+#     """Full read-only detail view of an archived project."""
+#     user = db.session.get(User, get_jwt_identity())
+#     entry = KnowledgeRepository.query.filter_by(id=entry_id, org_id=user.org_id).first()
+#     if not entry:
+#         entry = KnowledgeRepository.query.filter_by(project_id=entry_id, org_id=user.org_id).first()
+#     if not entry:
+#         project = Project.query.filter_by(id=entry_id, org_id=user.org_id).first()
+#         if project:
+#             entry = auto_archive_project_to_repository(project.id, user.org_id)
+#             db.session.commit()
+#     if not entry:
+#         return jsonify({"msg": "Repository entry not found"}), 404
 
-    kpi_val = entry.kpi_improvement_pct or 0.0
-    cost_val = entry.cost_savings or 0.0
-    if not kpi_val or not cost_val:
-        calc_kpi, calc_sav = extract_project_kpi_and_savings(entry.project_id, user.org_id)
-        if not kpi_val and calc_kpi:
-            kpi_val = calc_kpi
-            entry.kpi_improvement_pct = calc_kpi
-        if not cost_val and calc_sav:
-            cost_val = calc_sav
-            entry.cost_savings = calc_sav
-        if calc_kpi or calc_sav:
-            try:
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-    
-    return jsonify({
-        "id": entry.id,
-        "project_id": entry.project_id,
-        "title": entry.title,
-        "category": entry.category,
-        "problem_summary": entry.problem_summary,
-        "root_cause": entry.root_cause,
-        "solution_summary": entry.solution_summary,
-        "kpi_improvement_pct": kpi_val,
-        "cost_savings": cost_val,
-        "sop_path": entry.sop_path,
-        "closure_report_path": entry.closure_report_path,
-        "tags": entry.tags,
-        "archived_at": entry.archived_at.isoformat() + "Z" if entry.archived_at else None,
-        "all_stages": stages_data
-    })
+#     # Get all stage data
+#     workflows = ProjectWorkflow.query.filter_by(project_id=entry.project_id, org_id=user.org_id).all()
+#     stages_data = {wf.stage_id: wf.data for wf in workflows}
+
+#     kpi_val = entry.kpi_improvement_pct or 0.0
+#     cost_val = entry.cost_savings or 0.0
+#     if not kpi_val or not cost_val:
+#         calc_kpi, calc_sav = extract_project_kpi_and_savings(entry.project_id, user.org_id)
+#         if not kpi_val and calc_kpi:
+#             kpi_val = calc_kpi
+#             entry.kpi_improvement_pct = calc_kpi
+#         if not cost_val and calc_sav:
+#             cost_val = calc_sav
+#             entry.cost_savings = calc_sav
+#         if calc_kpi or calc_sav:
+#             try:
+#                 db.session.commit()
+#             except Exception:
+#                 db.session.rollback()
+
+#     return jsonify({
+#         "id": entry.id,
+#         "project_id": entry.project_id,
+#         "title": entry.title,
+#         "category": entry.category,
+#         "problem_summary": entry.problem_summary,
+#         "root_cause": entry.root_cause,
+#         "solution_summary": entry.solution_summary,
+#         "kpi_improvement_pct": kpi_val,
+#         "cost_savings": cost_val,
+#         "sop_path": entry.sop_path,
+#         "closure_report_path": entry.closure_report_path,
+#         "tags": entry.tags,
+#         "archived_at": entry.archived_at.isoformat() + "Z" if entry.archived_at else None,
+#         "all_stages": stages_data
+#     })
+# [END DEAD CODE: get_entry_detail]
+
 
 # ============================
 # SOP LIBRARY
 # ============================
-@repository_bp.route('/sop-library', methods=['GET'])
-@jwt_required()
-def sop_library():
-    """Searchable SOP index."""
-    user = db.session.get(User, get_jwt_identity())
-    query = KnowledgeRepository.query.filter_by(org_id=user.org_id)
-    
-    dept_id = request.args.get('department_id')
-    if dept_id:
-        query = query.filter_by(department_id=int(dept_id))
-    
-    entries = query.all()
-    from app.infrastructure.database.models.models import SOP
-    results = []
-    for e in entries:
-        sop = SOP.query.filter_by(project_id=e.project_id, org_id=user.org_id).first()
-        # Include if there is an active/approved database SOP OR a valid legacy file path
-        if (sop and sop.status in ['Active', 'Approved']) or (e.sop_path and e.sop_path != 'None'):
-            results.append({
-                "id": e.id,
-                "title": e.title,
-                "category": e.category,
-                "sop_path": e.sop_path if e.sop_path != 'None' else None,
-                "department_id": e.department_id,
-                "sop_id": sop.id if sop else None
-            })
-    return jsonify(results)
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: sop_library (Lines 944-970)
+# Reason: Legacy SOP repository endpoint.
+# ==============================================================================
+# @repository_bp.route('/sop-library', methods=['GET'])
+# @jwt_required()
+# def sop_library():
+#     """Searchable SOP index."""
+#     user = db.session.get(User, get_jwt_identity())
+#     query = KnowledgeRepository.query.filter_by(org_id=user.org_id)
+
+#     dept_id = request.args.get('department_id')
+#     if dept_id:
+#         query = query.filter_by(department_id=int(dept_id))
+
+#     entries = query.all()
+#     from app.infrastructure.database.models.models import SOP
+#     results = []
+#     for e in entries:
+#         sop = SOP.query.filter_by(project_id=e.project_id, org_id=user.org_id).first()
+#         # Include if there is an active/approved database SOP OR a valid legacy file path
+#         if (sop and sop.status in ['Active', 'Approved']) or (e.sop_path and e.sop_path != 'None'):
+#             results.append({
+#                 "id": e.id,
+#                 "title": e.title,
+#                 "category": e.category,
+#                 "sop_path": e.sop_path if e.sop_path != 'None' else None,
+#                 "department_id": e.department_id,
+#                 "sop_id": sop.id if sop else None
+#             })
+#     return jsonify(results)
+# [END DEAD CODE: sop_library]
+

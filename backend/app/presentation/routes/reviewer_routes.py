@@ -756,10 +756,17 @@ def get_history():
     return jsonify(result)
 
 # Legacy alias for frontend compatibility if needed
-@reviewer_bp.route('/queue', methods=['GET'])
-@reviewer_required
-def get_queue_alias():
-    return get_pending_approvals()
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_queue_alias (Lines 759-762)
+# Reason: Redundant alias for /pending.
+# ==============================================================================
+# @reviewer_bp.route('/queue', methods=['GET'])
+# @reviewer_required
+# def get_queue_alias():
+#     return get_pending_approvals()
+# [END DEAD CODE: get_queue_alias]
+
 
 @reviewer_bp.route('/decision/<int:project_id>', methods=['POST'])
 @reviewer_required

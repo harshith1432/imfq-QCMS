@@ -217,199 +217,206 @@ def save_config(provider_id):
     return jsonify({"message": f"Configuration saved for '{provider_id}'", "status": cfg.status, "health_score": cfg.health_score, "settings": cfg.settings}), 200
 
 
-@integrations_bp.route('/integrations/<provider_id>/test', methods=['POST'])
-@jwt_required()
-def test_connection(provider_id):
-    cfg = IntegrationConfig.query.filter_by(provider_id=provider_id).first()
-    if not cfg:
-        return jsonify({"error": f"Integration provider '{provider_id}' not found"}), 404
-        
-    # Simulate a connection check depending on provider settings
-    settings = cfg.settings or {}
-    success = True
-    message = "Connection verified successfully!"
-    latency = secrets.randbelow(150) + 50 # 50-200ms
-    
-    if provider_id == 'resend':
-        key = settings.get('api_key', '')
-        email = settings.get('sender_email', '')
-        if not key or not key.startswith('re_'):
-            success = False
-            message = "Invalid Resend API Token. Must start with 're_'"
-        elif '@' not in email or '.' not in email:
-            success = False
-            message = "Invalid Sender Email format."
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: test_connection (Lines 220-412)
+# Reason: Unused third-party integration test runner.
+# ==============================================================================
+# @integrations_bp.route('/integrations/<provider_id>/test', methods=['POST'])
+# @jwt_required()
+# def test_connection(provider_id):
+#     cfg = IntegrationConfig.query.filter_by(provider_id=provider_id).first()
+#     if not cfg:
+#         return jsonify({"error": f"Integration provider '{provider_id}' not found"}), 404
 
-    elif provider_id == 'jio_dlt':
-        entity_id = settings.get('entity_id', '')
-        sender_id = settings.get('sender_id', '')
-        template_id = settings.get('template_id', '')
-        api_key = settings.get('api_key', '')
-        if not entity_id or len(entity_id) < 5:
-            success = False
-            message = "Invalid Jio DLT Principal Entity ID. Entity ID is required."
-        elif not sender_id or len(sender_id) > 10:
-            success = False
-            message = "Invalid Sender / Header ID. Must be 3-6 characters (e.g. QCMOTP)."
-        elif not template_id or len(template_id) < 5:
-            success = False
-            message = "Invalid DLT Content Template ID."
-        elif not api_key or len(api_key) < 5:
-            success = False
-            message = "Jio DLT API Auth Key is required."
+#     # Simulate a connection check depending on provider settings
+#     settings = cfg.settings or {}
+#     success = True
+#     message = "Connection verified successfully!"
+#     latency = secrets.randbelow(150) + 50 # 50-200ms
 
-    elif provider_id == 'zeptomail':
-        api_key = settings.get('api_key', '')
-        sender_email = settings.get('sender_email', '')
-        if not api_key or len(api_key) < 8:
-            success = False
-            message = "Invalid ZeptoMail Send Mail Token. Token is required (e.g., Zoho-enczapikey...)."
-        elif not sender_email or '@' not in sender_email or '.' not in sender_email:
-            success = False
-            message = "Invalid Verified Sender Email Address."
-            
-    elif provider_id == 'twilio_sms':
-        sid = settings.get('account_sid', '')
-        token = settings.get('auth_token', '')
-        if not sid or not sid.startswith('AC') or len(sid) != 34:
-            success = False
-            message = "Invalid Twilio Account SID. Must start with 'AC' and be 34 characters."
-        elif not token or len(token) < 16:
-            success = False
-            message = "Invalid Twilio Auth Token length."
-            
-    elif provider_id == 'meta_whatsapp':
-        pid = settings.get('phone_number_id', '')
-        token = settings.get('access_token', '')
-        if not pid or not pid.isdigit():
-            success = False
-            message = "Invalid Phone Number ID. Must be numeric."
-        elif not token or len(token) < 16:
-            success = False
-            message = "Invalid Meta access token."
-            
-    elif provider_id == 'google_oauth':
-        cid = settings.get('client_id', '')
-        sec = settings.get('client_secret', '')
-        if not cid or 'googleusercontent.com' not in cid:
-            success = False
-            message = "Invalid Google Client ID. Must contain 'googleusercontent.com'"
-        elif not sec or len(sec) < 8:
-            success = False
-            message = "Google Client Secret is too short."
-            
-    elif provider_id == 'firebase_auth':
-        pid = settings.get('project_id', '')
-        key = settings.get('api_key', '')
-        if not pid or len(pid) < 3:
-            success = False
-            message = "Invalid Firebase Project ID."
-        elif not key or not key.startswith('AIzaSy'):
-            success = False
-            message = "Invalid Firebase API Key. Must start with 'AIzaSy'"
-            
-    elif provider_id == 'openai':
-        key = settings.get('api_key', '')
-        if not key or not key.startswith('sk-'):
-            success = False
-            message = "Invalid OpenAI API Key format. Must start with 'sk-'"
-            
-    elif provider_id == 'google_gemini':
-        key = settings.get('api_key', '')
-        if not key or not key.startswith('AIzaSy'):
-            success = False
-            message = "Invalid Google Gemini API Key. Must start with 'AIzaSy'"
-            
-    elif provider_id == 'aws_s3':
-        bucket = settings.get('bucket_name', '')
-        reg = settings.get('region', '')
-        ak = settings.get('access_key_id', '')
-        sk = settings.get('secret_access_key', '')
-        if not bucket:
-            success = False
-            message = "S3 bucket name cannot be empty."
-        elif len(reg) < 3:
-            success = False
-            message = "Invalid AWS region code."
-        elif not ak or not ak.startswith('AKIA'):
-            success = False
-            message = "Invalid Access Key ID. Must start with 'AKIA'"
-        elif not sk or len(sk) < 20:
-            success = False
-            message = "AWS Secret Access Key is invalid."
-            
-    elif provider_id == 'postgresql':
-        host = settings.get('host', '')
-        port = settings.get('port')
-        db_name = settings.get('database', '')
-        if not host or len(host) < 3:
-            success = False
-            message = "Database hostname is required."
-        elif not port or not str(port).isdigit() or not (1 <= int(port) <= 65535):
-            success = False
-            message = "Invalid host port configuration (1 - 65535)."
-        elif not db_name or len(db_name) < 2:
-            success = False
-            message = "Logical database name is required."
-            
-    elif provider_id == 'stripe':
-        pk = settings.get('public_key', '')
-        sk = settings.get('secret_key', '')
-        if not pk or not pk.startswith('pk_'):
-            success = False
-            message = "Invalid Stripe Public Key. Must start with 'pk_'"
-        elif not sk or not sk.startswith('sk_'):
-            success = False
-            message = "Invalid Stripe Secret Key. Must start with 'sk_'"
-            
-    elif provider_id == 'google_analytics':
-        mid = settings.get('measurement_id', '')
-        if not mid or not mid.startswith('G-'):
-            success = False
-            message = "Invalid GA4 Measurement ID. Must start with 'G-'"
-            
-    elif provider_id == 'sentry':
-        dsn = settings.get('dsn_url', '')
-        if not dsn or not dsn.startswith('https://') or '@' not in dsn or 'sentry.io' not in dsn:
-            success = False
-            message = "Invalid Sentry DSN URL format."
-            
-    elif provider_id == 'google_maps':
-        key = settings.get('api_key', '')
-        if not key or not key.startswith('AIzaSy'):
-            success = False
-            message = "Invalid Google Maps API Key. Must start with 'AIzaSy'"
-            
-    elif provider_id == 'health_checks':
-        interval = settings.get('heartbeat_interval')
-        if not interval or not str(interval).isdigit() or not (5 <= int(interval) <= 3600):
-            success = False
-            message = "Heartbeat interval must be an integer between 5 and 3600 seconds."
-            
-    if success:
-        cfg.status = 'Connected'
-        cfg.health_score = min(100, cfg.health_score + 5)
-    else:
-        cfg.status = 'Error'
-        cfg.health_score = max(0, cfg.health_score - 20)
-        cfg.error_count += 1
-        
-    # Audit log
-    audit = IntegrationAuditLog(
-        action="Test Connection", 
-        provider_id=provider_id, 
-        details={"success": success, "message": message, "latency_ms": latency}
-    )
-    db.session.add(audit)
-    db.session.commit()
-    
-    return jsonify({
-        "success": success,
-        "message": message,
-        "latency_ms": latency,
-        "status": cfg.status,
-        "health_score": cfg.health_score
-    }), 200
+#     if provider_id == 'resend':
+#         key = settings.get('api_key', '')
+#         email = settings.get('sender_email', '')
+#         if not key or not key.startswith('re_'):
+#             success = False
+#             message = "Invalid Resend API Token. Must start with 're_'"
+#         elif '@' not in email or '.' not in email:
+#             success = False
+#             message = "Invalid Sender Email format."
+
+#     elif provider_id == 'jio_dlt':
+#         entity_id = settings.get('entity_id', '')
+#         sender_id = settings.get('sender_id', '')
+#         template_id = settings.get('template_id', '')
+#         api_key = settings.get('api_key', '')
+#         if not entity_id or len(entity_id) < 5:
+#             success = False
+#             message = "Invalid Jio DLT Principal Entity ID. Entity ID is required."
+#         elif not sender_id or len(sender_id) > 10:
+#             success = False
+#             message = "Invalid Sender / Header ID. Must be 3-6 characters (e.g. QCMOTP)."
+#         elif not template_id or len(template_id) < 5:
+#             success = False
+#             message = "Invalid DLT Content Template ID."
+#         elif not api_key or len(api_key) < 5:
+#             success = False
+#             message = "Jio DLT API Auth Key is required."
+
+#     elif provider_id == 'zeptomail':
+#         api_key = settings.get('api_key', '')
+#         sender_email = settings.get('sender_email', '')
+#         if not api_key or len(api_key) < 8:
+#             success = False
+#             message = "Invalid ZeptoMail Send Mail Token. Token is required (e.g., Zoho-enczapikey...)."
+#         elif not sender_email or '@' not in sender_email or '.' not in sender_email:
+#             success = False
+#             message = "Invalid Verified Sender Email Address."
+
+#     elif provider_id == 'twilio_sms':
+#         sid = settings.get('account_sid', '')
+#         token = settings.get('auth_token', '')
+#         if not sid or not sid.startswith('AC') or len(sid) != 34:
+#             success = False
+#             message = "Invalid Twilio Account SID. Must start with 'AC' and be 34 characters."
+#         elif not token or len(token) < 16:
+#             success = False
+#             message = "Invalid Twilio Auth Token length."
+
+#     elif provider_id == 'meta_whatsapp':
+#         pid = settings.get('phone_number_id', '')
+#         token = settings.get('access_token', '')
+#         if not pid or not pid.isdigit():
+#             success = False
+#             message = "Invalid Phone Number ID. Must be numeric."
+#         elif not token or len(token) < 16:
+#             success = False
+#             message = "Invalid Meta access token."
+
+#     elif provider_id == 'google_oauth':
+#         cid = settings.get('client_id', '')
+#         sec = settings.get('client_secret', '')
+#         if not cid or 'googleusercontent.com' not in cid:
+#             success = False
+#             message = "Invalid Google Client ID. Must contain 'googleusercontent.com'"
+#         elif not sec or len(sec) < 8:
+#             success = False
+#             message = "Google Client Secret is too short."
+
+#     elif provider_id == 'firebase_auth':
+#         pid = settings.get('project_id', '')
+#         key = settings.get('api_key', '')
+#         if not pid or len(pid) < 3:
+#             success = False
+#             message = "Invalid Firebase Project ID."
+#         elif not key or not key.startswith('AIzaSy'):
+#             success = False
+#             message = "Invalid Firebase API Key. Must start with 'AIzaSy'"
+
+#     elif provider_id == 'openai':
+#         key = settings.get('api_key', '')
+#         if not key or not key.startswith('sk-'):
+#             success = False
+#             message = "Invalid OpenAI API Key format. Must start with 'sk-'"
+
+#     elif provider_id == 'google_gemini':
+#         key = settings.get('api_key', '')
+#         if not key or not key.startswith('AIzaSy'):
+#             success = False
+#             message = "Invalid Google Gemini API Key. Must start with 'AIzaSy'"
+
+#     elif provider_id == 'aws_s3':
+#         bucket = settings.get('bucket_name', '')
+#         reg = settings.get('region', '')
+#         ak = settings.get('access_key_id', '')
+#         sk = settings.get('secret_access_key', '')
+#         if not bucket:
+#             success = False
+#             message = "S3 bucket name cannot be empty."
+#         elif len(reg) < 3:
+#             success = False
+#             message = "Invalid AWS region code."
+#         elif not ak or not ak.startswith('AKIA'):
+#             success = False
+#             message = "Invalid Access Key ID. Must start with 'AKIA'"
+#         elif not sk or len(sk) < 20:
+#             success = False
+#             message = "AWS Secret Access Key is invalid."
+
+#     elif provider_id == 'postgresql':
+#         host = settings.get('host', '')
+#         port = settings.get('port')
+#         db_name = settings.get('database', '')
+#         if not host or len(host) < 3:
+#             success = False
+#             message = "Database hostname is required."
+#         elif not port or not str(port).isdigit() or not (1 <= int(port) <= 65535):
+#             success = False
+#             message = "Invalid host port configuration (1 - 65535)."
+#         elif not db_name or len(db_name) < 2:
+#             success = False
+#             message = "Logical database name is required."
+
+#     elif provider_id == 'stripe':
+#         pk = settings.get('public_key', '')
+#         sk = settings.get('secret_key', '')
+#         if not pk or not pk.startswith('pk_'):
+#             success = False
+#             message = "Invalid Stripe Public Key. Must start with 'pk_'"
+#         elif not sk or not sk.startswith('sk_'):
+#             success = False
+#             message = "Invalid Stripe Secret Key. Must start with 'sk_'"
+
+#     elif provider_id == 'google_analytics':
+#         mid = settings.get('measurement_id', '')
+#         if not mid or not mid.startswith('G-'):
+#             success = False
+#             message = "Invalid GA4 Measurement ID. Must start with 'G-'"
+
+#     elif provider_id == 'sentry':
+#         dsn = settings.get('dsn_url', '')
+#         if not dsn or not dsn.startswith('https://') or '@' not in dsn or 'sentry.io' not in dsn:
+#             success = False
+#             message = "Invalid Sentry DSN URL format."
+
+#     elif provider_id == 'google_maps':
+#         key = settings.get('api_key', '')
+#         if not key or not key.startswith('AIzaSy'):
+#             success = False
+#             message = "Invalid Google Maps API Key. Must start with 'AIzaSy'"
+
+#     elif provider_id == 'health_checks':
+#         interval = settings.get('heartbeat_interval')
+#         if not interval or not str(interval).isdigit() or not (5 <= int(interval) <= 3600):
+#             success = False
+#             message = "Heartbeat interval must be an integer between 5 and 3600 seconds."
+
+#     if success:
+#         cfg.status = 'Connected'
+#         cfg.health_score = min(100, cfg.health_score + 5)
+#     else:
+#         cfg.status = 'Error'
+#         cfg.health_score = max(0, cfg.health_score - 20)
+#         cfg.error_count += 1
+
+#     # Audit log
+#     audit = IntegrationAuditLog(
+#         action="Test Connection", 
+#         provider_id=provider_id, 
+#         details={"success": success, "message": message, "latency_ms": latency}
+#     )
+#     db.session.add(audit)
+#     db.session.commit()
+
+#     return jsonify({
+#         "success": success,
+#         "message": message,
+#         "latency_ms": latency,
+#         "status": cfg.status,
+#         "health_score": cfg.health_score
+#     }), 200
+# [END DEAD CODE: test_connection]
+
 
 @integrations_bp.route('/integrations/<provider_id>/rotate', methods=['POST'])
 @jwt_required()
@@ -652,17 +659,24 @@ def get_logs():
         "request_logs": request_logs
     }), 200
 
-@integrations_bp.route('/integrations/webhooks/deliveries/<int:delivery_id>/retry', methods=['POST'])
-@jwt_required()
-def retry_webhook(delivery_id):
-    # Simulate a successful webhook redelivery
-    return jsonify({
-        "success": True,
-        "message": f"Webhook delivery #{delivery_id} re-enqueued. Dispatching payload...",
-        "response_code": 200,
-        "status": "Success",
-        "latency_ms": 95.4
-    }), 200
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: retry_webhook (Lines 655-665)
+# Reason: Unused manual webhook retry endpoint.
+# ==============================================================================
+# @integrations_bp.route('/integrations/webhooks/deliveries/<int:delivery_id>/retry', methods=['POST'])
+# @jwt_required()
+# def retry_webhook(delivery_id):
+#     # Simulate a successful webhook redelivery
+#     return jsonify({
+#         "success": True,
+#         "message": f"Webhook delivery #{delivery_id} re-enqueued. Dispatching payload...",
+#         "response_code": 200,
+#         "status": "Success",
+#         "latency_ms": 95.4
+#     }), 200
+# [END DEAD CODE: retry_webhook]
+
 
 @integrations_bp.route('/integrations/playground', methods=['POST'])
 @jwt_required()

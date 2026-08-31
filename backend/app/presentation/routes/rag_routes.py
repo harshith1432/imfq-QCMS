@@ -40,19 +40,26 @@ def chat():
         print(f"[RAG ROUTE] Chat error: {e}")
         return jsonify({"error": "An unexpected error occurred while querying the quality assistant."}), 500
 
-@rag_bp.route('/ingest', methods=['POST'])
-@jwt_required()
-@feature_required('ai_assistant')
-def ingest():
-    current_user_id = get_jwt_identity()
-    user = db.session.get(User, current_user_id) if current_user_id else None
-    try:
-        org_id = user.org_id if user else None
-        rag_ingestion.ingest_data(org_id=org_id)
-        return jsonify({"message": "Ingestion completed successfully"}), 200
-    except Exception as e:
-        print(f"[RAG ROUTE] Ingest error: {e}")
-        return jsonify({"error": "Failed to ingest data."}), 500
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: ingest (Lines 43-55)
+# Reason: Unused manual RAG document ingestion endpoint.
+# ==============================================================================
+# @rag_bp.route('/ingest', methods=['POST'])
+# @jwt_required()
+# @feature_required('ai_assistant')
+# def ingest():
+#     current_user_id = get_jwt_identity()
+#     user = db.session.get(User, current_user_id) if current_user_id else None
+#     try:
+#         org_id = user.org_id if user else None
+#         rag_ingestion.ingest_data(org_id=org_id)
+#         return jsonify({"message": "Ingestion completed successfully"}), 200
+#     except Exception as e:
+#         print(f"[RAG ROUTE] Ingest error: {e}")
+#         return jsonify({"error": "Failed to ingest data."}), 500
+# [END DEAD CODE: ingest]
+
 
 @rag_bp.route('/status', methods=['GET'])
 @jwt_required()

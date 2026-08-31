@@ -382,128 +382,142 @@ def get_histogram(project_id):
 # ============================
 # CONTROL CHART
 # ============================
-@qc_tools_bp.route('/<int:project_id>/stage3/control-chart', methods=['POST'])
-@project_member_required
-def save_control_chart(project_id):
-    values = request.json.get('values', [])
-    
-    if not values or len(values) < 3:
-        return jsonify({"msg": "At least 3 data points required"}), 400
-    
-    values = [float(v) for v in values]
-    n = len(values)
-    mean = sum(values) / n
-    std_dev = math.sqrt(sum((x - mean) ** 2 for x in values) / n) if n > 0 else 0
-    
-    ucl = round(mean + 3 * std_dev, 2)
-    lcl = round(mean - 3 * std_dev, 2)
-    
-    out_of_control = [{"index": i, "value": round(v, 2)} for i, v in enumerate(values) if v > ucl or v < lcl]
-    
-    processed = {
-        "values": [round(v, 2) for v in values],
-        "mean": round(mean, 2),
-        "ucl": ucl,
-        "lcl": lcl,
-        "std_dev": round(std_dev, 2),
-        "out_of_control": out_of_control
-    }
-    
-    project = Project.query.get_or_404(project_id)
-    stage_id = project.current_stage
-    
-    # Upsert Control Chart
-    chart = QCControlChart.query.filter_by(project_id=project_id, stage_id=stage_id).first()
-    if not chart:
-        chart = QCControlChart(
-            project_id=project_id,
-            org_id=project.org_id,
-            stage_id=stage_id,
-            title="Control Chart",
-            chart_type="Xbar-R",
-            mean=mean,
-            ucl=ucl,
-            lcl=lcl,
-            std_dev=std_dev
-        )
-        db.session.add(chart)
-        db.session.flush()
-    else:
-        chart.mean = mean
-        chart.ucl = ucl
-        chart.lcl = lcl
-        chart.std_dev = std_dev
-        # Delete old points
-        QCControlPoint.query.filter_by(control_chart_id=chart.id).delete()
-        
-    for i, v in enumerate(values):
-        point = QCControlPoint(
-            control_chart_id=chart.id,
-            sample_index=i,
-            value=v,
-            is_out_of_control=(v > ucl or v < lcl)
-        )
-        db.session.add(point)
-        
-    db.session.commit()
-    return jsonify({"msg": "Control chart processed", "processed": processed})
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: save_control_chart (Lines 385-449)
+# Reason: Control chart removed from stage 3 QC tools in frontend.
+# ==============================================================================
+# @qc_tools_bp.route('/<int:project_id>/stage3/control-chart', methods=['POST'])
+# @project_member_required
+# def save_control_chart(project_id):
+#     values = request.json.get('values', [])
 
-@qc_tools_bp.route('/<int:project_id>/stage3/control', methods=['GET'])
-@qc_tools_bp.route('/<int:project_id>/stage3/control-chart', methods=['GET'])
-@project_member_required
-def get_control_chart(project_id):
-    project = Project.query.get_or_404(project_id)
-    
-    # Try Stage 4 Root Cause Analysis model (data_reconfirmation) first
-    s4 = Stage4RootCauseAnalysisVerification.query.filter_by(project_id=project_id).first()
-    if s4 and s4.data_reconfirmation and isinstance(s4.data_reconfirmation, dict):
-        control_chart = s4.data_reconfirmation.get('control_chart')
-        if control_chart and isinstance(control_chart, dict):
-            points = control_chart.get('points', [])
-            vals = [float(p.get('val', 0)) for p in points if p.get('val') is not None]
-            if vals:
-                n = len(vals)
-                mean = sum(vals) / n
-                if n > 1:
-                    variance = sum((x - mean) ** 2 for x in vals) / (n - 1)
-                    std_dev = math.sqrt(variance)
-                else:
-                    std_dev = 0.0
-                ucl = mean + 3 * std_dev
-                lcl = max(0.0, mean - 3 * std_dev)
-                out_of_control = [{"index": i, "value": round(v, 2)} for i, v in enumerate(vals) if v > ucl or v < lcl]
-                
-                result = {
-                    "values": [round(v, 2) for v in vals],
-                    "mean": round(mean, 2),
-                    "ucl": round(ucl, 2),
-                    "lcl": round(lcl, 2),
-                    "std_dev": round(std_dev, 2),
-                    "out_of_control": out_of_control
-                }
-                return jsonify({"data": result})
+#     if not values or len(values) < 3:
+#         return jsonify({"msg": "At least 3 data points required"}), 400
 
-    # Fallback to legacy Control Chart
-    chart = QCControlChart.query.filter_by(project_id=project_id, stage_id=project.current_stage).first()
-    if not chart:
-        chart = QCControlChart.query.filter_by(project_id=project_id).order_by(QCControlChart.created_at.desc()).first()
-        
-    if not chart:
-        return jsonify({"data": {}})
-        
-    points = QCControlPoint.query.filter_by(control_chart_id=chart.id).order_by(QCControlPoint.sample_index).all()
-    values = [p.value for p in points]
-    out_of_control = [{"index": p.sample_index, "value": p.value} for p in points if p.is_out_of_control]
-    
-    result = {
-        "values": values,
-        "mean": chart.mean,
-        "ucl": chart.ucl,
-        "lcl": chart.lcl,
-        "std_dev": chart.std_dev,
-        "out_of_control": out_of_control
-    }
-    return jsonify({"data": result})
+#     values = [float(v) for v in values]
+#     n = len(values)
+#     mean = sum(values) / n
+#     std_dev = math.sqrt(sum((x - mean) ** 2 for x in values) / n) if n > 0 else 0
+
+#     ucl = round(mean + 3 * std_dev, 2)
+#     lcl = round(mean - 3 * std_dev, 2)
+
+#     out_of_control = [{"index": i, "value": round(v, 2)} for i, v in enumerate(values) if v > ucl or v < lcl]
+
+#     processed = {
+#         "values": [round(v, 2) for v in values],
+#         "mean": round(mean, 2),
+#         "ucl": ucl,
+#         "lcl": lcl,
+#         "std_dev": round(std_dev, 2),
+#         "out_of_control": out_of_control
+#     }
+
+#     project = Project.query.get_or_404(project_id)
+#     stage_id = project.current_stage
+
+#     # Upsert Control Chart
+#     chart = QCControlChart.query.filter_by(project_id=project_id, stage_id=stage_id).first()
+#     if not chart:
+#         chart = QCControlChart(
+#             project_id=project_id,
+#             org_id=project.org_id,
+#             stage_id=stage_id,
+#             title="Control Chart",
+#             chart_type="Xbar-R",
+#             mean=mean,
+#             ucl=ucl,
+#             lcl=lcl,
+#             std_dev=std_dev
+#         )
+#         db.session.add(chart)
+#         db.session.flush()
+#     else:
+#         chart.mean = mean
+#         chart.ucl = ucl
+#         chart.lcl = lcl
+#         chart.std_dev = std_dev
+#         # Delete old points
+#         QCControlPoint.query.filter_by(control_chart_id=chart.id).delete()
+
+#     for i, v in enumerate(values):
+#         point = QCControlPoint(
+#             control_chart_id=chart.id,
+#             sample_index=i,
+#             value=v,
+#             is_out_of_control=(v > ucl or v < lcl)
+#         )
+#         db.session.add(point)
+
+#     db.session.commit()
+#     return jsonify({"msg": "Control chart processed", "processed": processed})
+# [END DEAD CODE: save_control_chart]
+
+
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_control_chart (Lines 451-506)
+# Reason: Control chart getter.
+# ==============================================================================
+# @qc_tools_bp.route('/<int:project_id>/stage3/control', methods=['GET'])
+# @qc_tools_bp.route('/<int:project_id>/stage3/control-chart', methods=['GET'])
+# @project_member_required
+# def get_control_chart(project_id):
+#     project = Project.query.get_or_404(project_id)
+
+#     # Try Stage 4 Root Cause Analysis model (data_reconfirmation) first
+#     s4 = Stage4RootCauseAnalysisVerification.query.filter_by(project_id=project_id).first()
+#     if s4 and s4.data_reconfirmation and isinstance(s4.data_reconfirmation, dict):
+#         control_chart = s4.data_reconfirmation.get('control_chart')
+#         if control_chart and isinstance(control_chart, dict):
+#             points = control_chart.get('points', [])
+#             vals = [float(p.get('val', 0)) for p in points if p.get('val') is not None]
+#             if vals:
+#                 n = len(vals)
+#                 mean = sum(vals) / n
+#                 if n > 1:
+#                     variance = sum((x - mean) ** 2 for x in vals) / (n - 1)
+#                     std_dev = math.sqrt(variance)
+#                 else:
+#                     std_dev = 0.0
+#                 ucl = mean + 3 * std_dev
+#                 lcl = max(0.0, mean - 3 * std_dev)
+#                 out_of_control = [{"index": i, "value": round(v, 2)} for i, v in enumerate(vals) if v > ucl or v < lcl]
+
+#                 result = {
+#                     "values": [round(v, 2) for v in vals],
+#                     "mean": round(mean, 2),
+#                     "ucl": round(ucl, 2),
+#                     "lcl": round(lcl, 2),
+#                     "std_dev": round(std_dev, 2),
+#                     "out_of_control": out_of_control
+#                 }
+#                 return jsonify({"data": result})
+
+#     # Fallback to legacy Control Chart
+#     chart = QCControlChart.query.filter_by(project_id=project_id, stage_id=project.current_stage).first()
+#     if not chart:
+#         chart = QCControlChart.query.filter_by(project_id=project_id).order_by(QCControlChart.created_at.desc()).first()
+
+#     if not chart:
+#         return jsonify({"data": {}})
+
+#     points = QCControlPoint.query.filter_by(control_chart_id=chart.id).order_by(QCControlPoint.sample_index).all()
+#     values = [p.value for p in points]
+#     out_of_control = [{"index": p.sample_index, "value": p.value} for p in points if p.is_out_of_control]
+
+#     result = {
+#         "values": values,
+#         "mean": chart.mean,
+#         "ucl": chart.ucl,
+#         "lcl": chart.lcl,
+#         "std_dev": chart.std_dev,
+#         "out_of_control": out_of_control
+#     }
+#     return jsonify({"data": result})
+# [END DEAD CODE: get_control_chart]
+
 
 # ============================
 # SCATTER DIAGRAM
@@ -782,182 +796,224 @@ def get_checksheet(project_id):
 # ============================
 # FLOWCHART (Process Map)
 # ============================
-@qc_tools_bp.route('/<int:project_id>/stage3/flowchart', methods=['POST'])
-@project_member_required
-def save_flowchart(project_id):
-    steps = request.json.get('steps', [])
-    project = Project.query.get_or_404(project_id)
-    stage_id = project.current_stage
-    
-    # Convert to Mermaid.js format
-    mermaid_lines = ["graph TD"]
-    for i, step in enumerate(steps):
-        node_id = f"S{i}"
-        label = step.get('label', f'Step {i+1}')
-        step_type = step.get('type', 'process')
-        
-        if step_type == 'decision':
-            mermaid_lines.append(f'    {node_id}{{{{{label}}}}}')
-        elif step_type == 'start' or step_type == 'end':
-            mermaid_lines.append(f'    {node_id}([{label}])')
-        else:
-            mermaid_lines.append(f'    {node_id}[{label}]')
-        
-        if i > 0:
-            connector = step.get('connector', '')
-            mermaid_lines.append(f'    S{i-1} -->|{connector}| {node_id}')
-            
-    processed = {
-        "steps": steps,
-        "mermaid": "\n".join(mermaid_lines)
-    }
-    
-    # Upsert QCProcessMap
-    p_map = QCProcessMap.query.filter_by(project_id=project_id, stage_id=stage_id).first()
-    if not p_map:
-        p_map = QCProcessMap(
-            project_id=project_id,
-            org_id=project.org_id,
-            stage_id=stage_id,
-            title="Process Map"
-        )
-        db.session.add(p_map)
-        db.session.flush()
-    else:
-        QCProcessStep.query.filter_by(process_map_id=p_map.id).delete()
-        
-    for i, step in enumerate(steps):
-        p_step = QCProcessStep(
-            process_map_id=p_map.id,
-            step_order=i,
-            name=step.get('label') or f"Step {i+1}",
-            type=step.get('type', 'process'),
-            description=step.get('connector')
-        )
-        db.session.add(p_step)
-        
-    db.session.commit()
-    return jsonify({"msg": "Flowchart saved", "processed": processed})
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: save_flowchart (Lines 785-840)
+# Reason: Flowchart QC tool removed from frontend.
+# ==============================================================================
+# @qc_tools_bp.route('/<int:project_id>/stage3/flowchart', methods=['POST'])
+# @project_member_required
+# def save_flowchart(project_id):
+#     steps = request.json.get('steps', [])
+#     project = Project.query.get_or_404(project_id)
+#     stage_id = project.current_stage
 
-@qc_tools_bp.route('/<int:project_id>/stage3/flowchart', methods=['GET'])
-@project_member_required
-def get_flowchart(project_id):
-    project = Project.query.get_or_404(project_id)
-    p_map = QCProcessMap.query.filter_by(project_id=project_id, stage_id=project.current_stage).first()
-    if not p_map:
-        p_map = QCProcessMap.query.filter_by(project_id=project_id).order_by(QCProcessMap.created_at.desc()).first()
-        
-    if not p_map:
-        return jsonify({"data": {}})
-        
-    steps = QCProcessStep.query.filter_by(process_map_id=p_map.id).order_by(QCProcessStep.step_order).all()
-    
-    steps_list = []
-    mermaid_lines = ["graph TD"]
-    for i, s in enumerate(steps):
-        steps_list.append({
-            "label": s.name,
-            "type": s.type,
-            "connector": s.description
-        })
-        node_id = f"S{i}"
-        if s.type == 'decision':
-            mermaid_lines.append(f'    {node_id}{{{{{s.name}}}}}')
-        elif s.type == 'start' or s.type == 'end':
-            mermaid_lines.append(f'    {node_id}([{s.name}])')
-        else:
-            mermaid_lines.append(f'    {node_id}[{s.name}]')
-        if i > 0:
-            mermaid_lines.append(f'    S{i-1} -->|{s.description or ""}| {node_id}')
-            
-    result = {
-        "steps": steps_list,
-        "mermaid": "\n".join(mermaid_lines)
-    }
-    return jsonify({"data": result})
+#     # Convert to Mermaid.js format
+#     mermaid_lines = ["graph TD"]
+#     for i, step in enumerate(steps):
+#         node_id = f"S{i}"
+#         label = step.get('label', f'Step {i+1}')
+#         step_type = step.get('type', 'process')
+
+#         if step_type == 'decision':
+#             mermaid_lines.append(f'    {node_id}{{{{{label}}}}}')
+#         elif step_type == 'start' or step_type == 'end':
+#             mermaid_lines.append(f'    {node_id}([{label}])')
+#         else:
+#             mermaid_lines.append(f'    {node_id}[{label}]')
+
+#         if i > 0:
+#             connector = step.get('connector', '')
+#             mermaid_lines.append(f'    S{i-1} -->|{connector}| {node_id}')
+
+#     processed = {
+#         "steps": steps,
+#         "mermaid": "\n".join(mermaid_lines)
+#     }
+
+#     # Upsert QCProcessMap
+#     p_map = QCProcessMap.query.filter_by(project_id=project_id, stage_id=stage_id).first()
+#     if not p_map:
+#         p_map = QCProcessMap(
+#             project_id=project_id,
+#             org_id=project.org_id,
+#             stage_id=stage_id,
+#             title="Process Map"
+#         )
+#         db.session.add(p_map)
+#         db.session.flush()
+#     else:
+#         QCProcessStep.query.filter_by(process_map_id=p_map.id).delete()
+
+#     for i, step in enumerate(steps):
+#         p_step = QCProcessStep(
+#             process_map_id=p_map.id,
+#             step_order=i,
+#             name=step.get('label') or f"Step {i+1}",
+#             type=step.get('type', 'process'),
+#             description=step.get('connector')
+#         )
+#         db.session.add(p_step)
+
+#     db.session.commit()
+#     return jsonify({"msg": "Flowchart saved", "processed": processed})
+# [END DEAD CODE: save_flowchart]
+
+
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_flowchart (Lines 842-877)
+# Reason: Flowchart getter.
+# ==============================================================================
+# @qc_tools_bp.route('/<int:project_id>/stage3/flowchart', methods=['GET'])
+# @project_member_required
+# def get_flowchart(project_id):
+#     project = Project.query.get_or_404(project_id)
+#     p_map = QCProcessMap.query.filter_by(project_id=project_id, stage_id=project.current_stage).first()
+#     if not p_map:
+#         p_map = QCProcessMap.query.filter_by(project_id=project_id).order_by(QCProcessMap.created_at.desc()).first()
+
+#     if not p_map:
+#         return jsonify({"data": {}})
+
+#     steps = QCProcessStep.query.filter_by(process_map_id=p_map.id).order_by(QCProcessStep.step_order).all()
+
+#     steps_list = []
+#     mermaid_lines = ["graph TD"]
+#     for i, s in enumerate(steps):
+#         steps_list.append({
+#             "label": s.name,
+#             "type": s.type,
+#             "connector": s.description
+#         })
+#         node_id = f"S{i}"
+#         if s.type == 'decision':
+#             mermaid_lines.append(f'    {node_id}{{{{{s.name}}}}}')
+#         elif s.type == 'start' or s.type == 'end':
+#             mermaid_lines.append(f'    {node_id}([{s.name}])')
+#         else:
+#             mermaid_lines.append(f'    {node_id}[{s.name}]')
+#         if i > 0:
+#             mermaid_lines.append(f'    S{i-1} -->|{s.description or ""}| {node_id}')
+
+#     result = {
+#         "steps": steps_list,
+#         "mermaid": "\n".join(mermaid_lines)
+#     }
+#     return jsonify({"data": result})
+# [END DEAD CODE: get_flowchart]
+
 
 # ============================
 # 5S AUDIT (Radar Chart) - Stored in ProjectWorkflow JSON
 # ============================
-@qc_tools_bp.route('/<int:project_id>/stage3/fives', methods=['POST'])
-@project_member_required
-def save_fives(project_id):
-    scores = request.json.get('scores', {})
-    categories = ['sort', 'set_in_order', 'shine', 'standardize', 'sustain']
-    
-    validated = {}
-    for cat in categories:
-        val = float(scores.get(cat, 0))
-        validated[cat] = min(max(val, 0), 5)  # Clamp 0-5
-    
-    avg_score = round(sum(validated.values()) / len(validated), 2)
-    
-    processed = {
-        "scores": validated,
-        "average": avg_score,
-        "labels": ["Sort", "Set in Order", "Shine", "Standardize", "Sustain"],
-        "values": [validated[c] for c in categories]
-    }
-    
-    project = Project.query.get_or_404(project_id)
-    wf = get_or_create_workflow_data(project_id, project.current_stage, project.org_id)
-    
-    # Store in JSON data
-    wf_data = dict(wf.data or {})
-    wf_data['fives_audit_data'] = processed
-    wf.data = wf_data
-    
-    db.session.commit()
-    return jsonify({"msg": "5S audit saved", "processed": processed})
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: save_fives (Lines 882-911)
+# Reason: 5S methodology tool removed from frontend.
+# ==============================================================================
+# @qc_tools_bp.route('/<int:project_id>/stage3/fives', methods=['POST'])
+# @project_member_required
+# def save_fives(project_id):
+#     scores = request.json.get('scores', {})
+#     categories = ['sort', 'set_in_order', 'shine', 'standardize', 'sustain']
 
-@qc_tools_bp.route('/<int:project_id>/stage3/fives', methods=['GET'])
-@project_member_required
-def get_fives(project_id):
-    project = Project.query.get_or_404(project_id)
-    wf = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=project.current_stage).first()
-    if not wf or 'fives_audit_data' not in (wf.data or {}):
-        wf = ProjectWorkflow.query.filter(
-            ProjectWorkflow.project_id == project_id,
-            ProjectWorkflow.data.op('->>')('fives_audit_data').isnot(None)
-        ).first()
-        
-    return jsonify({"data": wf.data.get('fives_audit_data') if wf and wf.data else {}})
+#     validated = {}
+#     for cat in categories:
+#         val = float(scores.get(cat, 0))
+#         validated[cat] = min(max(val, 0), 5)  # Clamp 0-5
+
+#     avg_score = round(sum(validated.values()) / len(validated), 2)
+
+#     processed = {
+#         "scores": validated,
+#         "average": avg_score,
+#         "labels": ["Sort", "Set in Order", "Shine", "Standardize", "Sustain"],
+#         "values": [validated[c] for c in categories]
+#     }
+
+#     project = Project.query.get_or_404(project_id)
+#     wf = get_or_create_workflow_data(project_id, project.current_stage, project.org_id)
+
+#     # Store in JSON data
+#     wf_data = dict(wf.data or {})
+#     wf_data['fives_audit_data'] = processed
+#     wf.data = wf_data
+
+#     db.session.commit()
+#     return jsonify({"msg": "5S audit saved", "processed": processed})
+# [END DEAD CODE: save_fives]
+
+
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_fives (Lines 913-924)
+# Reason: 5S getter.
+# ==============================================================================
+# @qc_tools_bp.route('/<int:project_id>/stage3/fives', methods=['GET'])
+# @project_member_required
+# def get_fives(project_id):
+#     project = Project.query.get_or_404(project_id)
+#     wf = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=project.current_stage).first()
+#     if not wf or 'fives_audit_data' not in (wf.data or {}):
+#         wf = ProjectWorkflow.query.filter(
+#             ProjectWorkflow.project_id == project_id,
+#             ProjectWorkflow.data.op('->>')('fives_audit_data').isnot(None)
+#         ).first()
+
+#     return jsonify({"data": wf.data.get('fives_audit_data') if wf and wf.data else {}})
+# [END DEAD CODE: get_fives]
+
 
 # ============================
 # POKA-YOKE LOG - Stored in ProjectWorkflow JSON
 # ============================
-@qc_tools_bp.route('/<int:project_id>/stage3/pokayoke', methods=['POST'])
-@project_member_required
-def save_pokayoke(project_id):
-    entries = request.json.get('entries', [])
-    
-    for entry in entries:
-        effectiveness = entry.get('effectiveness', 1)
-        entry['effectiveness'] = min(max(int(effectiveness), 1), 5)
-        
-    project = Project.query.get_or_404(project_id)
-    wf = get_or_create_workflow_data(project_id, project.current_stage, project.org_id)
-    
-    # Store in JSON data
-    wf_data = dict(wf.data or {})
-    wf_data['pokayoke_data'] = entries
-    wf.data = wf_data
-    
-    db.session.commit()
-    return jsonify({"msg": "Poka-Yoke log saved", "entries": entries})
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: save_pokayoke (Lines 929-947)
+# Reason: Poka-Yoke error-proofing tool removed from frontend.
+# ==============================================================================
+# @qc_tools_bp.route('/<int:project_id>/stage3/pokayoke', methods=['POST'])
+# @project_member_required
+# def save_pokayoke(project_id):
+#     entries = request.json.get('entries', [])
 
-@qc_tools_bp.route('/<int:project_id>/stage3/pokayoke', methods=['GET'])
-@project_member_required
-def get_pokayoke(project_id):
-    project = Project.query.get_or_404(project_id)
-    wf = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=project.current_stage).first()
-    if not wf or 'pokayoke_data' not in (wf.data or {}):
-        wf = ProjectWorkflow.query.filter(
-            ProjectWorkflow.project_id == project_id,
-            ProjectWorkflow.data.op('->>')('pokayoke_data').isnot(None)
-        ).first()
-        
-    return jsonify({"data": wf.data.get('pokayoke_data') if wf and wf.data else []})
+#     for entry in entries:
+#         effectiveness = entry.get('effectiveness', 1)
+#         entry['effectiveness'] = min(max(int(effectiveness), 1), 5)
+
+#     project = Project.query.get_or_404(project_id)
+#     wf = get_or_create_workflow_data(project_id, project.current_stage, project.org_id)
+
+#     # Store in JSON data
+#     wf_data = dict(wf.data or {})
+#     wf_data['pokayoke_data'] = entries
+#     wf.data = wf_data
+
+#     db.session.commit()
+#     return jsonify({"msg": "Poka-Yoke log saved", "entries": entries})
+# [END DEAD CODE: save_pokayoke]
+
+
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_pokayoke (Lines 949-960)
+# Reason: Poka-Yoke getter.
+# ==============================================================================
+# @qc_tools_bp.route('/<int:project_id>/stage3/pokayoke', methods=['GET'])
+# @project_member_required
+# def get_pokayoke(project_id):
+#     project = Project.query.get_or_404(project_id)
+#     wf = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=project.current_stage).first()
+#     if not wf or 'pokayoke_data' not in (wf.data or {}):
+#         wf = ProjectWorkflow.query.filter(
+#             ProjectWorkflow.project_id == project_id,
+#             ProjectWorkflow.data.op('->>')('pokayoke_data').isnot(None)
+#         ).first()
+
+#     return jsonify({"data": wf.data.get('pokayoke_data') if wf and wf.data else []})
+# [END DEAD CODE: get_pokayoke]
+
 
 # ============================
 # STRATIFICATION

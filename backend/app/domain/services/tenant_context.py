@@ -149,59 +149,75 @@ def require_permission(permission_key: str):
     return decorator
 
 
-def get_org_project(project_id: int, required_permission: Optional[str] = None) -> Project:
-    """
-    Safely retrieves a Project strictly bounded by the authenticated user's organization.
-    SuperAdmins can access any project.
-    Raises NotFound (404) or Forbidden (403) appropriately.
-    """
-    user = get_current_user()
-    if not user:
-        raise Forbidden("Authentication required.")
-
-    if is_super_admin(user):
-        project = db.session.get(Project, project_id)
-        if not project:
-            raise NotFound("Project not found.")
-        return project
-
-    if not user.org_id:
-        raise Forbidden("User organization context is missing.")
-
-    # Strictly filter by tenant org_id
-    project = Project.query.filter_by(id=project_id, org_id=user.org_id).first()
-    if not project:
-        raise NotFound("Project not found within your organization.")
-
-    if required_permission and not has_permission(user, required_permission):
-        raise Forbidden(f"You do not have '{required_permission}' permission on this project.")
-
-    return project
 
 
-def get_org_user(user_id: int, required_permission: Optional[str] = None) -> User:
-    """
-    Safely retrieves a User bounded by the current organization context.
-    SuperAdmins can access any user.
-    """
-    current_user = get_current_user()
-    if not current_user:
-        raise Forbidden("Authentication required.")
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_org_project (Lines 152-179)
+# Reason: Unused helper function in tenant_context.
+# ==============================================================================
+# def get_org_project(project_id: int, required_permission: Optional[str] = None) -> Project:
+#     """
+#     Safely retrieves a Project strictly bounded by the authenticated user's organization.
+#     SuperAdmins can access any project.
+#     Raises NotFound (404) or Forbidden (403) appropriately.
+#     """
+#     user = get_current_user()
+#     if not user:
+#         raise Forbidden("Authentication required.")
 
-    if is_super_admin(current_user):
-        target_user = db.session.get(User, user_id)
-        if not target_user:
-            raise NotFound("User not found.")
-        return target_user
+#     if is_super_admin(user):
+#         project = db.session.get(Project, project_id)
+#         if not project:
+#             raise NotFound("Project not found.")
+#         return project
 
-    if not current_user.org_id:
-        raise Forbidden("User organization context is missing.")
+#     if not user.org_id:
+#         raise Forbidden("User organization context is missing.")
 
-    target_user = User.query.filter_by(id=user_id, org_id=current_user.org_id, is_deleted=False).first()
-    if not target_user:
-        raise NotFound("User not found within your organization.")
+#     # Strictly filter by tenant org_id
+#     project = Project.query.filter_by(id=project_id, org_id=user.org_id).first()
+#     if not project:
+#         raise NotFound("Project not found within your organization.")
 
-    if required_permission and not has_permission(current_user, required_permission):
-        raise Forbidden(f"You do not have '{required_permission}' permission for this user.")
+#     if required_permission and not has_permission(user, required_permission):
+#         raise Forbidden(f"You do not have '{required_permission}' permission on this project.")
 
-    return target_user
+#     return project
+# [END DEAD CODE: get_org_project]
+
+
+
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_org_user (Lines 182-207)
+# Reason: Unused helper function in tenant_context.
+# ==============================================================================
+# def get_org_user(user_id: int, required_permission: Optional[str] = None) -> User:
+#     """
+#     Safely retrieves a User bounded by the current organization context.
+#     SuperAdmins can access any user.
+#     """
+#     current_user = get_current_user()
+#     if not current_user:
+#         raise Forbidden("Authentication required.")
+
+#     if is_super_admin(current_user):
+#         target_user = db.session.get(User, user_id)
+#         if not target_user:
+#             raise NotFound("User not found.")
+#         return target_user
+
+#     if not current_user.org_id:
+#         raise Forbidden("User organization context is missing.")
+
+#     target_user = User.query.filter_by(id=user_id, org_id=current_user.org_id, is_deleted=False).first()
+#     if not target_user:
+#         raise NotFound("User not found within your organization.")
+
+#     if required_permission and not has_permission(current_user, required_permission):
+#         raise Forbidden(f"You do not have '{required_permission}' permission for this user.")
+
+#     return target_user
+# [END DEAD CODE: get_org_user]
+

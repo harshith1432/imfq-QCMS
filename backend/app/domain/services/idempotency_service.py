@@ -27,7 +27,7 @@ class IdempotencyService:
     @classmethod
     def get(cls, key: str, payload: Any = None) -> Tuple[Optional[Dict[str, Any]], Optional[int]]:
         """Retrieve cached idempotent result if payload hash matches.
-        
+
         Returns:
             (cached_data, status_code) or (None, 422) on payload mismatch.
         """
@@ -63,3 +63,5 @@ class IdempotencyService:
             'data': data
         }
         return cache.set(key, record, timeout=ttl)
+
+

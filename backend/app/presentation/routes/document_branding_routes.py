@@ -25,19 +25,26 @@ def _get_user_and_org_id():
         db.session.rollback()
         return None, None
 
-@document_branding_bp.route('/public-context', methods=['GET'])
-@document_branding_bp.route('/context', methods=['GET'])
-def get_public_document_branding_context():
-    """Public endpoint to fetch current global Document Identity & Branding context without requiring JWT auth."""
-    try:
-        ctx = DocumentBrandingService.get_branding_context(org_id=None)
-        return jsonify({
-            "status": "success",
-            "branding_context": ctx,
-            "branding": ctx
-        }), 200
-    except Exception as e:
-        return internal_server_error(e, "Document branding operation failed.")
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_public_document_branding_context (Lines 28-40)
+# Reason: Redundant public branding context endpoint. Frontend uses /all and /settings/branding.
+# ==============================================================================
+# @document_branding_bp.route('/public-context', methods=['GET'])
+# @document_branding_bp.route('/context', methods=['GET'])
+# def get_public_document_branding_context():
+#     """Public endpoint to fetch current global Document Identity & Branding context without requiring JWT auth."""
+#     try:
+#         ctx = DocumentBrandingService.get_branding_context(org_id=None)
+#         return jsonify({
+#             "status": "success",
+#             "branding_context": ctx,
+#             "branding": ctx
+#         }), 200
+#     except Exception as e:
+#         return internal_server_error(e, "Document branding operation failed.")
+# [END DEAD CODE: get_public_document_branding_context]
+
 
 @document_branding_bp.route('/all', methods=['GET'])
 @jwt_required()

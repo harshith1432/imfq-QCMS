@@ -45,26 +45,33 @@ def get_user_flags():
     }), 200
 
 
-@feature_engine_bp.route('/flags/<module_code>', methods=['GET'])
-def check_single_flag(module_code):
-    """Checks a single feature module flag."""
-    user = None
-    try:
-        verify_jwt_in_request(optional=True)
-        user_id = get_jwt_identity()
-        if user_id:
-            user = db.session.get(User, int(user_id))
-    except Exception:
-        pass
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: check_single_flag (Lines 48-67)
+# Reason: Single flag check; frontend client evaluates flags in-memory from /flags dictionary.
+# ==============================================================================
+# @feature_engine_bp.route('/flags/<module_code>', methods=['GET'])
+# def check_single_flag(module_code):
+#     """Checks a single feature module flag."""
+#     user = None
+#     try:
+#         verify_jwt_in_request(optional=True)
+#         user_id = get_jwt_identity()
+#         if user_id:
+#             user = db.session.get(User, int(user_id))
+#     except Exception:
+#         pass
 
-    org_id = user.org_id if user else None
-    enabled = FeatureEngine.is_enabled(org_id, module_code)
+#     org_id = user.org_id if user else None
+#     enabled = FeatureEngine.is_enabled(org_id, module_code)
 
-    return jsonify({
-        "status": "success",
-        "module_code": module_code,
-        "enabled": enabled
-    }), 200
+#     return jsonify({
+#         "status": "success",
+#         "module_code": module_code,
+#         "enabled": enabled
+#     }), 200
+# [END DEAD CODE: check_single_flag]
+
 
 
 @feature_engine_bp.route('/invalidate', methods=['POST'])
@@ -109,33 +116,40 @@ def sse_stream():
     return jsonify({"status": "disabled", "message": "SSE stream is disabled to optimize performance."}), 501
 
 
-@feature_engine_bp.route('/coverage-report', methods=['GET'])
-@jwt_required()
-@super_admin_required()
-def get_coverage_report():
-    """Generates an audit report of feature modules and their mapping status across the platform."""
-    all_modules = Module.query.filter_by(is_archived=False).all()
-    total = len(all_modules)
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_coverage_report (Lines 112-141)
+# Reason: Unused module coverage diagnostics.
+# ==============================================================================
+# @feature_engine_bp.route('/coverage-report', methods=['GET'])
+# @jwt_required()
+# @super_admin_required()
+# def get_coverage_report():
+#     """Generates an audit report of feature modules and their mapping status across the platform."""
+#     all_modules = Module.query.filter_by(is_archived=False).all()
+#     total = len(all_modules)
 
-    active_count = sum(1 for m in all_modules if m.status == 'Active')
-    inactive_count = sum(1 for m in all_modules if m.status in ('Inactive', 'Disabled'))
-    beta_count = sum(1 for m in all_modules if m.beta_feature)
-    ai_count = sum(1 for m in all_modules if m.ai_enabled)
-    system_count = sum(1 for m in all_modules if m.system_module)
+#     active_count = sum(1 for m in all_modules if m.status == 'Active')
+#     inactive_count = sum(1 for m in all_modules if m.status in ('Inactive', 'Disabled'))
+#     beta_count = sum(1 for m in all_modules if m.beta_feature)
+#     ai_count = sum(1 for m in all_modules if m.ai_enabled)
+#     system_count = sum(1 for m in all_modules if m.system_module)
 
-    categories = {}
-    for m in all_modules:
-        categories[m.category] = categories.get(m.category, 0) + 1
+#     categories = {}
+#     for m in all_modules:
+#         categories[m.category] = categories.get(m.category, 0) + 1
 
-    return jsonify({
-        "status": "success",
-        "total_modules": total,
-        "active_modules": active_count,
-        "inactive_modules": inactive_count,
-        "beta_modules": beta_count,
-        "ai_modules": ai_count,
-        "system_core_modules": system_count,
-        "categories_breakdown": categories,
-        "mapped_coverage_pct": 100.0,
-        "message": "All 144 modules are connected to the central FeatureEngine."
-    }), 200
+#     return jsonify({
+#         "status": "success",
+#         "total_modules": total,
+#         "active_modules": active_count,
+#         "inactive_modules": inactive_count,
+#         "beta_modules": beta_count,
+#         "ai_modules": ai_count,
+#         "system_core_modules": system_count,
+#         "categories_breakdown": categories,
+#         "mapped_coverage_pct": 100.0,
+#         "message": "All 144 modules are connected to the central FeatureEngine."
+#     }), 200
+# [END DEAD CODE: get_coverage_report]
+

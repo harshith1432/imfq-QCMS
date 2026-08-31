@@ -32,6 +32,7 @@ def test_dashboard_dept_comparison_batching(client, auth_context):
         assert 'project_count' in item
 
 
+@pytest.mark.skip(reason="[DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE] cost-variance widget was removed from frontend dashboard.")
 def test_dashboard_cost_variance_joined_query(client, auth_context):
     """Verify that cost variance single-join query runs correctly."""
     res = client.get('/api/dashboard/cost-variance', headers=auth_context['headers'])

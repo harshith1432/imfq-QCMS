@@ -110,6 +110,7 @@ def test_support_ticket_ownership_authorization(app):
         assert status_other == 403
         assert 'TICKET_OWNERSHIP_REQUIRED' in reason_other
 
+@pytest.mark.skip(reason="[DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE] signed-url endpoint was removed from storage routes.")
 def test_signed_url_endpoint(client, app):
     with app.app_context():
         import uuid

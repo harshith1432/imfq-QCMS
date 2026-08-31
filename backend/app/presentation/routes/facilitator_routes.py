@@ -419,25 +419,32 @@ def get_closure_projects():
 
 
 # ─── 6. Facilitator Notes (Read) ──────────────────────────────
-@facilitator_bp.route('/notes/<int:project_id>', methods=['GET'])
-@jwt_required()
-def get_notes(project_id):
-    user_id = get_jwt_identity()
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
-    project = db.session.get(Project, project_id)
-    if not project or (user.role.name != 'SuperAdmin' and project.org_id != user.org_id):
-        return jsonify({"msg": "Project not found"}), 404
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_notes (Lines 422-440)
+# Reason: Unused notes fetch. Frontend loads project notes inside get_project_details.
+# ==============================================================================
+# @facilitator_bp.route('/notes/<int:project_id>', methods=['GET'])
+# @jwt_required()
+# def get_notes(project_id):
+#     user_id = get_jwt_identity()
+#     user = db.session.get(User, user_id)
+#     if not user:
+#         return jsonify({"msg": "User not found"}), 404
+#     project = db.session.get(Project, project_id)
+#     if not project or (user.role.name != 'SuperAdmin' and project.org_id != user.org_id):
+#         return jsonify({"msg": "Project not found"}), 404
 
-    notes = FacilitatorNote.query.filter_by(project_id=project_id).order_by(FacilitatorNote.created_at.desc()).all()
-    return jsonify([{
-        "id": n.id,
-        "stage_number": n.stage_number,
-        "note_text": n.note_text,
-        "created_by": db.session.get(User, n.created_by).full_name if db.session.get(User, n.created_by) else "Unknown",
-        "created_at": n.created_at.isoformat() + "Z"
-    } for n in notes]), 200
+#     notes = FacilitatorNote.query.filter_by(project_id=project_id).order_by(FacilitatorNote.created_at.desc()).all()
+#     return jsonify([{
+#         "id": n.id,
+#         "stage_number": n.stage_number,
+#         "note_text": n.note_text,
+#         "created_by": db.session.get(User, n.created_by).full_name if db.session.get(User, n.created_by) else "Unknown",
+#         "created_at": n.created_at.isoformat() + "Z"
+#     } for n in notes]), 200
+# [END DEAD CODE: get_notes]
+
 
 
 # ─── 7. Facilitator Notes (Add) ───────────────────────────────

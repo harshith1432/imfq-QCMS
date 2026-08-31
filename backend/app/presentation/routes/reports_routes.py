@@ -225,78 +225,85 @@ def export_all_pdfs():
     )
 
 
-@reports_bp.route('/export/pdf/all-async', methods=['POST', 'GET'])
-@reports_bp.route('/projects/export-pdf-all-async', methods=['POST', 'GET'])
-@jwt_required()
-@feature_module_required('reports.pdf')
-def export_all_pdfs_async():
-    """
-    Spawns bulk project PDF generation & ZIP packaging in Celery background queue.
-    Returns HTTP 202 Accepted with a polling job_id immediately.
-    """
-    user_id = int(get_jwt_identity())
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: export_all_pdfs_async (Lines 228-299)
+# Reason: Celery async bulk PDF generation. Frontend uses synchronous /export/pdf/all.
+# ==============================================================================
+# @reports_bp.route('/export/pdf/all-async', methods=['POST', 'GET'])
+# @reports_bp.route('/projects/export-pdf-all-async', methods=['POST', 'GET'])
+# @jwt_required()
+# @feature_module_required('reports.pdf')
+# def export_all_pdfs_async():
+#     """
+#     Spawns bulk project PDF generation & ZIP packaging in Celery background queue.
+#     Returns HTTP 202 Accepted with a polling job_id immediately.
+#     """
+#     user_id = int(get_jwt_identity())
+#     user = db.session.get(User, user_id)
+#     if not user:
+#         return jsonify({"msg": "User not found"}), 404
 
-    is_super_admin = bool(user.role and user.role.name == 'SuperAdmin')
-    job_id = f"job_bulk_zip_{user.org_id or 'sa'}_{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}_{uuid.uuid4().hex[:6]}"
+#     is_super_admin = bool(user.role and user.role.name == 'SuperAdmin')
+#     job_id = f"job_bulk_zip_{user.org_id or 'sa'}_{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}_{uuid.uuid4().hex[:6]}"
 
-    job_data = {
-        "job_id": job_id,
-        "org_id": user.org_id,
-        "status": "processing",
-        "progress": 10,
-        "created_at": datetime.now(timezone.utc).replace(tzinfo=None).timestamp(),
-        "completed_at": None,
-        "download_url": None,
-        "filename": None,
-        "error": None
-    }
-    _set_pdf_job(job_id, job_data)
+#     job_data = {
+#         "job_id": job_id,
+#         "org_id": user.org_id,
+#         "status": "processing",
+#         "progress": 10,
+#         "created_at": datetime.now(timezone.utc).replace(tzinfo=None).timestamp(),
+#         "completed_at": None,
+#         "download_url": None,
+#         "filename": None,
+#         "error": None
+#     }
+#     _set_pdf_job(job_id, job_data)
 
-    try:
-        from app.infrastructure.tasks.report_tasks import generate_async_bulk_pdf_zip
-        generate_async_bulk_pdf_zip.apply_async(
-            args=[user.id, user.org_id, is_super_admin],
-            task_id=job_id,
-            retry=False
-        )
-    except Exception as celery_err:
-        current_app.logger.warning(f"[Async Bulk PDF] Celery dispatch fallback: {celery_err}")
-        app_obj = current_app._get_current_object()
-        def _bg_bulk_worker(app_inst, u_id, o_id, is_sa, jid):
-            with app_inst.app_context():
-                try:
-                    from app.infrastructure.tasks.report_tasks import generate_async_bulk_pdf_zip
-                    res = generate_async_bulk_pdf_zip.run(user_id=u_id, org_id=o_id, is_super_admin=is_sa)
-                    j = _get_pdf_job(jid) or {}
-                    if res.get("status") == "completed":
-                        j["status"] = "completed"
-                        j["progress"] = 100
-                        j["download_url"] = res.get("download_url")
-                        j["filename"] = res.get("filename")
-                        j["completed_at"] = res.get("completed_at")
-                    else:
-                        j["status"] = "failed"
-                        j["error"] = res.get("error", "Failed to generate bulk PDF zip")
-                    _set_pdf_job(jid, j)
-                except Exception as err:
-                    j = _get_pdf_job(jid) or {}
-                    j["status"] = "failed"
-                    j["error"] = str(err)
-                    _set_pdf_job(jid, j)
+#     try:
+#         from app.infrastructure.tasks.report_tasks import generate_async_bulk_pdf_zip
+#         generate_async_bulk_pdf_zip.apply_async(
+#             args=[user.id, user.org_id, is_super_admin],
+#             task_id=job_id,
+#             retry=False
+#         )
+#     except Exception as celery_err:
+#         current_app.logger.warning(f"[Async Bulk PDF] Celery dispatch fallback: {celery_err}")
+#         app_obj = current_app._get_current_object()
+#         def _bg_bulk_worker(app_inst, u_id, o_id, is_sa, jid):
+#             with app_inst.app_context():
+#                 try:
+#                     from app.infrastructure.tasks.report_tasks import generate_async_bulk_pdf_zip
+#                     res = generate_async_bulk_pdf_zip.run(user_id=u_id, org_id=o_id, is_super_admin=is_sa)
+#                     j = _get_pdf_job(jid) or {}
+#                     if res.get("status") == "completed":
+#                         j["status"] = "completed"
+#                         j["progress"] = 100
+#                         j["download_url"] = res.get("download_url")
+#                         j["filename"] = res.get("filename")
+#                         j["completed_at"] = res.get("completed_at")
+#                     else:
+#                         j["status"] = "failed"
+#                         j["error"] = res.get("error", "Failed to generate bulk PDF zip")
+#                     _set_pdf_job(jid, j)
+#                 except Exception as err:
+#                     j = _get_pdf_job(jid) or {}
+#                     j["status"] = "failed"
+#                     j["error"] = str(err)
+#                     _set_pdf_job(jid, j)
 
-        t = threading.Thread(target=_bg_bulk_worker, args=(app_obj, user.id, user.org_id, is_super_admin, job_id))
-        t.daemon = True
-        t.start()
+#         t = threading.Thread(target=_bg_bulk_worker, args=(app_obj, user.id, user.org_id, is_super_admin, job_id))
+#         t.daemon = True
+#         t.start()
 
-    return jsonify({
-        "status": "processing",
-        "job_id": job_id,
-        "message": "Bulk project PDF generation & ZIP packaging started in background.",
-        "poll_url": f"/api/reports/jobs/{job_id}"
-    }), 202
+#     return jsonify({
+#         "status": "processing",
+#         "job_id": job_id,
+#         "message": "Bulk project PDF generation & ZIP packaging started in background.",
+#         "poll_url": f"/api/reports/jobs/{job_id}"
+#     }), 202
+# [END DEAD CODE: export_all_pdfs_async]
+
 
 
 @reports_bp.route('/export/pdf/<int:project_id>', methods=['GET'])
@@ -427,189 +434,203 @@ def _set_pdf_job(job_id: str, data: dict):
 def _get_pdf_job(job_id: str) -> dict:
     return cache.get(f"pdf_job:{job_id}")
 
-@reports_bp.route('/projects/<int:project_id>/export-pdf-async', methods=['POST'])
-@reports_bp.route('/export/pdf/<int:project_id>/async', methods=['POST'])
-@jwt_required()
-@feature_module_required('reports.pdf')
-def export_pdf_async(project_id):
-    """
-    Spawns complete project PDF report generation in a background daemon thread.
-    Returns immediately with 202 Accepted and a polling job_id.
-    """
-    user_id = int(get_jwt_identity())
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: export_pdf_async (Lines 430-571)
+# Reason: Celery async single PDF export. Frontend uses synchronous /export/pdf/<id>.
+# ==============================================================================
+# @reports_bp.route('/projects/<int:project_id>/export-pdf-async', methods=['POST'])
+# @reports_bp.route('/export/pdf/<int:project_id>/async', methods=['POST'])
+# @jwt_required()
+# @feature_module_required('reports.pdf')
+# def export_pdf_async(project_id):
+#     """
+#     Spawns complete project PDF report generation in a background daemon thread.
+#     Returns immediately with 202 Accepted and a polling job_id.
+#     """
+#     user_id = int(get_jwt_identity())
+#     user = db.session.get(User, user_id)
+#     if not user:
+#         return jsonify({"msg": "User not found"}), 404
 
-    is_super_admin = bool(user.role and user.role.name == 'SuperAdmin')
-    if is_super_admin:
-        project = Project.query.filter_by(id=project_id).first()
-    else:
-        project = Project.query.filter_by(id=project_id, org_id=user.org_id).first()
+#     is_super_admin = bool(user.role and user.role.name == 'SuperAdmin')
+#     if is_super_admin:
+#         project = Project.query.filter_by(id=project_id).first()
+#     else:
+#         project = Project.query.filter_by(id=project_id, org_id=user.org_id).first()
 
-    if not project:
-        return jsonify({"msg": "Project not found"}), 404
+#     if not project:
+#         return jsonify({"msg": "Project not found"}), 404
 
-    job_id = f"job_pdf_{project_id}_{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}_{uuid.uuid4().hex[:6]}"
-    tool_name = request.args.get('tool') or (request.get_json(silent=True) or {}).get('tool')
+#     job_id = f"job_pdf_{project_id}_{int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())}_{uuid.uuid4().hex[:6]}"
+#     tool_name = request.args.get('tool') or (request.get_json(silent=True) or {}).get('tool')
 
-    job_data = {
-        "job_id": job_id,
-        "project_id": project_id,
-        "project_uid": project.project_uid,
-        "tool_name": tool_name,
-        "status": "processing",
-        "progress": 10,
-        "created_at": datetime.now(timezone.utc).replace(tzinfo=None).timestamp(),
-        "completed_at": None,
-        "download_url": None,
-        "filename": None,
-        "error": None
-    }
-    _set_pdf_job(job_id, job_data)
+#     job_data = {
+#         "job_id": job_id,
+#         "project_id": project_id,
+#         "project_uid": project.project_uid,
+#         "tool_name": tool_name,
+#         "status": "processing",
+#         "progress": 10,
+#         "created_at": datetime.now(timezone.utc).replace(tzinfo=None).timestamp(),
+#         "completed_at": None,
+#         "download_url": None,
+#         "filename": None,
+#         "error": None
+#     }
+#     _set_pdf_job(job_id, job_data)
 
-    app = current_app._get_current_object()
+#     app = current_app._get_current_object()
 
-    def _async_pdf_worker(target_app, pid, jid, tool, u_id, o_id):
-        with target_app.app_context():
-            from app.infrastructure.database.models.models import Project, KPIMetric, AuditLog, db
-            from app.infrastructure.storage import storage
-            try:
-                p = db.session.get(Project, pid)
-                if not p:
-                    j = _get_pdf_job(jid) or {}
-                    j["status"] = "failed"
-                    j["error"] = "Project not found"
-                    _set_pdf_job(jid, j)
-                    return
+#     def _async_pdf_worker(target_app, pid, jid, tool, u_id, o_id):
+#         with target_app.app_context():
+#             from app.infrastructure.database.models.models import Project, KPIMetric, AuditLog, db
+#             from app.infrastructure.storage import storage
+#             try:
+#                 p = db.session.get(Project, pid)
+#                 if not p:
+#                     j = _get_pdf_job(jid) or {}
+#                     j["status"] = "failed"
+#                     j["error"] = "Project not found"
+#                     _set_pdf_job(jid, j)
+#                     return
 
-                j = _get_pdf_job(jid) or {}
-                j["progress"] = 40
-                _set_pdf_job(jid, j)
+#                 j = _get_pdf_job(jid) or {}
+#                 j["progress"] = 40
+#                 _set_pdf_job(jid, j)
 
-                pdf_data = None
-                filename = f"{p.project_uid}_QC_Story_Report.pdf"
+#                 pdf_data = None
+#                 filename = f"{p.project_uid}_QC_Story_Report.pdf"
 
-                if tool:
-                    from app.utils.report_gen import generate_qc_tool_report
-                    pdf_data = generate_qc_tool_report(p.id, tool)
-                    filename = f"{p.project_uid}_{tool}_report.pdf"
-                else:
-                    from app.utils.pdf_filler import generate_qc_story_closure_summary_pdf
-                    try:
-                        pdf_data = generate_qc_story_closure_summary_pdf(p.id)
-                    except Exception as gen_err:
-                        print(f"[Async PDF] Primary filler error: {gen_err}")
+#                 if tool:
+#                     from app.utils.report_gen import generate_qc_tool_report
+#                     pdf_data = generate_qc_tool_report(p.id, tool)
+#                     filename = f"{p.project_uid}_{tool}_report.pdf"
+#                 else:
+#                     from app.utils.pdf_filler import generate_qc_story_closure_summary_pdf
+#                     try:
+#                         pdf_data = generate_qc_story_closure_summary_pdf(p.id)
+#                     except Exception as gen_err:
+#                         print(f"[Async PDF] Primary filler error: {gen_err}")
 
-                    if not pdf_data:
-                        from app.utils.report_gen import generate_pdf_summary
-                        kpi = KPIMetric.query.filter_by(project_id=p.id).first()
-                        pdf_out = generate_pdf_summary(p, kpi, p.org_id)
-                        if pdf_out:
-                            pdf_data = pdf_out.encode('latin-1') if isinstance(pdf_out, str) else bytes(pdf_out)
+#                     if not pdf_data:
+#                         from app.utils.report_gen import generate_pdf_summary
+#                         kpi = KPIMetric.query.filter_by(project_id=p.id).first()
+#                         pdf_out = generate_pdf_summary(p, kpi, p.org_id)
+#                         if pdf_out:
+#                             pdf_data = pdf_out.encode('latin-1') if isinstance(pdf_out, str) else bytes(pdf_out)
 
-                if not pdf_data:
-                    j = _get_pdf_job(jid) or {}
-                    j["status"] = "failed"
-                    j["error"] = "Could not generate PDF content"
-                    _set_pdf_job(jid, j)
-                    return
+#                 if not pdf_data:
+#                     j = _get_pdf_job(jid) or {}
+#                     j["status"] = "failed"
+#                     j["error"] = "Could not generate PDF content"
+#                     _set_pdf_job(jid, j)
+#                     return
 
-                j = _get_pdf_job(jid) or {}
-                j["progress"] = 80
-                _set_pdf_job(jid, j)
+#                 j = _get_pdf_job(jid) or {}
+#                 j["progress"] = 80
+#                 _set_pdf_job(jid, j)
 
-                saved = storage.save_file(
-                    pdf_data,
-                    filename=filename,
-                    subfolder="reports",
-                    content_type="application/pdf"
-                )
+#                 saved = storage.save_file(
+#                     pdf_data,
+#                     filename=filename,
+#                     subfolder="reports",
+#                     content_type="application/pdf"
+#                 )
 
-                j = _get_pdf_job(jid) or {}
-                j["status"] = "completed"
-                j["progress"] = 100
-                j["completed_at"] = datetime.now(timezone.utc).replace(tzinfo=None).timestamp()
-                j["download_url"] = saved.get("url")
-                j["filename"] = saved.get("filename")
-                _set_pdf_job(jid, j)
+#                 j = _get_pdf_job(jid) or {}
+#                 j["status"] = "completed"
+#                 j["progress"] = 100
+#                 j["completed_at"] = datetime.now(timezone.utc).replace(tzinfo=None).timestamp()
+#                 j["download_url"] = saved.get("url")
+#                 j["filename"] = saved.get("filename")
+#                 _set_pdf_job(jid, j)
 
-                db.session.add(AuditLog(
-                    org_id=o_id,
-                    user_id=u_id,
-                    project_id=p.id,
-                    action=f"ASYNC_EXPORT_PDF_{tool.upper()}" if tool else "ASYNC_EXPORT_PDF_8D",
-                    target_table="projects",
-                    target_id=p.id,
-                    details={"job_id": jid, "url": saved.get("url")}
-                ))
-                db.session.commit()
-            except Exception as e:
-                print(f"[Async PDF Worker Error] {e}")
-    # Dispatch to Celery distributed worker queue with local fallback
-    try:
-        from app.infrastructure.tasks.report_tasks import generate_async_pdf_report
-        generate_async_pdf_report.apply_async(
-            args=[project_id, tool_name, user.id, user.org_id],
-            task_id=job_id,
-            retry=False
-        )
-    except Exception as celery_err:
-        current_app.logger.warning(f"[Async Reports] Celery dispatch fallback to direct worker: {celery_err}")
-        thread = threading.Thread(
-            target=_async_pdf_worker,
-            args=(app, project_id, job_id, tool_name, user.id, user.org_id)
-        )
-        thread.daemon = True
-        thread.start()
+#                 db.session.add(AuditLog(
+#                     org_id=o_id,
+#                     user_id=u_id,
+#                     project_id=p.id,
+#                     action=f"ASYNC_EXPORT_PDF_{tool.upper()}" if tool else "ASYNC_EXPORT_PDF_8D",
+#                     target_table="projects",
+#                     target_id=p.id,
+#                     details={"job_id": jid, "url": saved.get("url")}
+#                 ))
+#                 db.session.commit()
+#             except Exception as e:
+#                 print(f"[Async PDF Worker Error] {e}")
+#     # Dispatch to Celery distributed worker queue with local fallback
+#     try:
+#         from app.infrastructure.tasks.report_tasks import generate_async_pdf_report
+#         generate_async_pdf_report.apply_async(
+#             args=[project_id, tool_name, user.id, user.org_id],
+#             task_id=job_id,
+#             retry=False
+#         )
+#     except Exception as celery_err:
+#         current_app.logger.warning(f"[Async Reports] Celery dispatch fallback to direct worker: {celery_err}")
+#         thread = threading.Thread(
+#             target=_async_pdf_worker,
+#             args=(app, project_id, job_id, tool_name, user.id, user.org_id)
+#         )
+#         thread.daemon = True
+#         thread.start()
 
-    return jsonify({
-        "status": "processing",
-        "job_id": job_id,
-        "message": "Report generation started in background.",
-        "poll_url": f"/api/reports/jobs/{job_id}"
-    }), 202
+#     return jsonify({
+#         "status": "processing",
+#         "job_id": job_id,
+#         "message": "Report generation started in background.",
+#         "poll_url": f"/api/reports/jobs/{job_id}"
+#     }), 202
+# [END DEAD CODE: export_pdf_async]
 
-@reports_bp.route('/jobs/<string:job_id>', methods=['GET'])
-@reports_bp.route('/task-status/<string:job_id>', methods=['GET'])
-@jwt_required()
-def get_pdf_job_status(job_id):
-    """Poll the status of a background report generation job from Celery / Redis."""
-    try:
-        from celery.result import AsyncResult
-        task_res = AsyncResult(job_id)
-        if task_res.state == 'SUCCESS':
-            data = task_res.result or {}
-            return jsonify({
-                "job_id": job_id,
-                "status": "completed",
-                "progress": 100,
-                "download_url": data.get("download_url"),
-                "filename": data.get("filename"),
-                "completed_at": data.get("completed_at")
-            }), 200
-        elif task_res.state == 'PROGRESS':
-            meta = task_res.info or {}
-            return jsonify({
-                "job_id": job_id,
-                "status": "processing",
-                "progress": meta.get("progress", 50),
-                "message": meta.get("status", "Generating report in background...")
-            }), 200
-        elif task_res.state == 'FAILURE':
-            return jsonify({
-                "job_id": job_id,
-                "status": "failed",
-                "error": "Report generation failed. Please try again."
-            }), 200
-    except Exception:
-        pass
 
-    # Fallback to direct Redis job cache
-    job = _get_pdf_job(job_id)
-    if not job:
-        return jsonify({"status": "not_found", "message": "Job not found or expired"}), 404
-    return jsonify(job), 200
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_pdf_job_status (Lines 573-612)
+# Reason: Async Celery task poller endpoint.
+# ==============================================================================
+# @reports_bp.route('/jobs/<string:job_id>', methods=['GET'])
+# @reports_bp.route('/task-status/<string:job_id>', methods=['GET'])
+# @jwt_required()
+# def get_pdf_job_status(job_id):
+#     """Poll the status of a background report generation job from Celery / Redis."""
+#     try:
+#         from celery.result import AsyncResult
+#         task_res = AsyncResult(job_id)
+#         if task_res.state == 'SUCCESS':
+#             data = task_res.result or {}
+#             return jsonify({
+#                 "job_id": job_id,
+#                 "status": "completed",
+#                 "progress": 100,
+#                 "download_url": data.get("download_url"),
+#                 "filename": data.get("filename"),
+#                 "completed_at": data.get("completed_at")
+#             }), 200
+#         elif task_res.state == 'PROGRESS':
+#             meta = task_res.info or {}
+#             return jsonify({
+#                 "job_id": job_id,
+#                 "status": "processing",
+#                 "progress": meta.get("progress", 50),
+#                 "message": meta.get("status", "Generating report in background...")
+#             }), 200
+#         elif task_res.state == 'FAILURE':
+#             return jsonify({
+#                 "job_id": job_id,
+#                 "status": "failed",
+#                 "error": "Report generation failed. Please try again."
+#             }), 200
+#     except Exception:
+#         pass
+
+#     # Fallback to direct Redis job cache
+#     job = _get_pdf_job(job_id)
+#     if not job:
+#         return jsonify({"status": "not_found", "message": "Job not found or expired"}), 404
+#     return jsonify(job), 200
+# [END DEAD CODE: get_pdf_job_status]
+
 
 
 @reports_bp.route('/download-mock', methods=['GET'])

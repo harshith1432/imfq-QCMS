@@ -650,39 +650,46 @@ def escalate_ticket(ticket_id):
     return jsonify({"status": "success", "message": f"Ticket escalated to Level {ticket.escalation_level}"})
 
 # --- 8. CSAT RATINGS ---
-@support_bp.route('/tickets/<int:ticket_id>/rate', methods=['POST'])
-@jwt_required()
-def rate_ticket(ticket_id):
-    user, err = get_current_user_and_check_rbac()
-    if err:
-        return jsonify({"status": "error", "message": err}), 403
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: rate_ticket (Lines 653-685)
+# Reason: CSAT rating submission removed from frontend support desk.
+# ==============================================================================
+# @support_bp.route('/tickets/<int:ticket_id>/rate', methods=['POST'])
+# @jwt_required()
+# def rate_ticket(ticket_id):
+#     user, err = get_current_user_and_check_rbac()
+#     if err:
+#         return jsonify({"status": "error", "message": err}), 403
 
-    ticket = SupportTicket.query.get_or_404(ticket_id)
-    if ticket.org_id != user.org_id:
-        return jsonify({"status": "error", "message": "Tenant scope mismatch"}), 403
+#     ticket = SupportTicket.query.get_or_404(ticket_id)
+#     if ticket.org_id != user.org_id:
+#         return jsonify({"status": "error", "message": "Tenant scope mismatch"}), 403
 
-    data = request.get_json() or {}
-    rating = data.get('rating') # 1-5
-    feedback = data.get('feedback', '')
+#     data = request.get_json() or {}
+#     rating = data.get('rating') # 1-5
+#     feedback = data.get('feedback', '')
 
-    if not rating or not (1 <= rating <= 5):
-        return jsonify({"status": "error", "message": "Rating must be an integer between 1 and 5"}), 400
+#     if not rating or not (1 <= rating <= 5):
+#         return jsonify({"status": "error", "message": "Rating must be an integer between 1 and 5"}), 400
 
-    # Ensure rating is unique per ticket
-    existing_rating = SupportRating.query.filter_by(ticket_id=ticket_id).first()
-    if existing_rating:
-        existing_rating.rating = rating
-        existing_rating.feedback = feedback
-    else:
-        new_rating = SupportRating(
-            ticket_id=ticket.id,
-            rating=rating,
-            feedback=feedback
-        )
-        db.session.add(new_rating)
+#     # Ensure rating is unique per ticket
+#     existing_rating = SupportRating.query.filter_by(ticket_id=ticket_id).first()
+#     if existing_rating:
+#         existing_rating.rating = rating
+#         existing_rating.feedback = feedback
+#     else:
+#         new_rating = SupportRating(
+#             ticket_id=ticket.id,
+#             rating=rating,
+#             feedback=feedback
+#         )
+#         db.session.add(new_rating)
 
-    db.session.commit()
-    return jsonify({"status": "success", "message": "CSAT rating submitted successfully"})
+#     db.session.commit()
+#     return jsonify({"status": "success", "message": "CSAT rating submitted successfully"})
+# [END DEAD CODE: rate_ticket]
+
 
 # --- 9. KNOWLEDGE BASE SEARCH ---
 @support_bp.route('/knowledge', methods=['GET', 'POST'])

@@ -23,6 +23,7 @@ def test_list_licenses(client, super_admin_context):
     assert isinstance(data['data'], list)
 
 
+@pytest.mark.skip(reason="[DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE] /api/licenses/<org_id> single license fetch was removed.")
 def test_get_license_details(client, super_admin_context, auth_context):
     org_id = auth_context['org_id']
     res = client.get(f'/api/licenses/{org_id}', headers=super_admin_context['headers'])

@@ -19,58 +19,65 @@ points_bp = Blueprint('points', __name__)
 
 
 # ─── 1. POST /api/points/add ──────────────────────────────────────────────────
-@points_bp.route('/points/add', methods=['POST'])
-@jwt_required()
-def add_points():
-    current_user_id = get_jwt_identity()
-    current_user = db.session.get(User, current_user_id)
-    if not current_user:
-        return jsonify({"message": "User not found"}), 404
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: add_points (Lines 22-73)
+# Reason: Manual points injection endpoint. Points are computed automatically by point_engine_service on stage approvals.
+# ==============================================================================
+# @points_bp.route('/points/add', methods=['POST'])
+# @jwt_required()
+# def add_points():
+#     current_user_id = get_jwt_identity()
+#     current_user = db.session.get(User, current_user_id)
+#     if not current_user:
+#         return jsonify({"message": "User not found"}), 404
 
-    data = request.get_json() or {}
-    employee_id = data.get('employee_id') or current_user_id
-    activity_type = data.get('activity_type')
-    points = data.get('points')
-    description = data.get('description')
-    ref_id = data.get('activity_reference_id') or data.get('ref_id')
-    project_id = data.get('project_id')
+#     data = request.get_json() or {}
+#     employee_id = data.get('employee_id') or current_user_id
+#     activity_type = data.get('activity_type')
+#     points = data.get('points')
+#     description = data.get('description')
+#     ref_id = data.get('activity_reference_id') or data.get('ref_id')
+#     project_id = data.get('project_id')
 
-    if not activity_type:
-        return jsonify({"message": "activity_type is required"}), 400
+#     if not activity_type:
+#         return jsonify({"message": "activity_type is required"}), 400
 
-    # Ensure security — non-admins can only earn points for themselves unless triggered by system
-    if employee_id != current_user_id and current_user.role.name not in ['Admin', 'SuperAdmin', 'CEO', 'Team Leader']:
-        return jsonify({"message": "Unauthorized to award points to other employees"}), 433
+#     # Ensure security — non-admins can only earn points for themselves unless triggered by system
+#     if employee_id != current_user_id and current_user.role.name not in ['Admin', 'SuperAdmin', 'CEO', 'Team Leader']:
+#         return jsonify({"message": "Unauthorized to award points to other employees"}), 433
 
-    res = PointEngineService.award_points(
-        employee_id=int(employee_id),
-        org_id=current_user.org_id,
-        activity_type=activity_type,
-        points=points,
-        description=description,
-        ref_id=ref_id,
-        project_id=project_id,
-        created_by=current_user_id
-    )
+#     res = PointEngineService.award_points(
+#         employee_id=int(employee_id),
+#         org_id=current_user.org_id,
+#         activity_type=activity_type,
+#         points=points,
+#         description=description,
+#         ref_id=ref_id,
+#         project_id=project_id,
+#         created_by=current_user_id
+#     )
 
-    if not res:
-        return jsonify({"message": "Failed to award points"}), 400
+#     if not res:
+#         return jsonify({"message": "Failed to award points"}), 400
 
-    if res.get("status") == "duplicate":
-        return jsonify({
-            "message": "Duplicate points transaction blocked",
-            "earned_points": 0,
-            "duplicate": True
-        }), 200
+#     if res.get("status") == "duplicate":
+#         return jsonify({
+#             "message": "Duplicate points transaction blocked",
+#             "earned_points": 0,
+#             "duplicate": True
+#         }), 200
 
-    return jsonify({
-        "message": f"+{res['earned_points']} Points Earned!",
-        "earned_points": res['earned_points'],
-        "total_points": res['total_points'],
-        "badge": res['badge'],
-        "badge_upgraded": res['badge_upgraded'],
-        "description": res['description']
-    }), 201
+#     return jsonify({
+#         "message": f"+{res['earned_points']} Points Earned!",
+#         "earned_points": res['earned_points'],
+#         "total_points": res['total_points'],
+#         "badge": res['badge'],
+#         "badge_upgraded": res['badge_upgraded'],
+#         "description": res['description']
+#     }), 201
+# [END DEAD CODE: add_points]
+
 
 
 # ─── 2. GET /api/points/history ──────────────────────────────────────────────

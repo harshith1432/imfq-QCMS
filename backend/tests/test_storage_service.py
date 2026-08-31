@@ -219,6 +219,7 @@ class TestStorageRoutesIntegration:
         yield
         storage.set_provider(orig_provider, orig_backend)
 
+    @pytest.mark.skip(reason="[DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE] /api/storage/info was removed.")
     def test_storage_info_endpoint(self, client, app):
         with app.app_context():
             import uuid
@@ -230,6 +231,7 @@ class TestStorageRoutesIntegration:
             data = res.get_json()
             assert "backend" in data
 
+    @pytest.mark.skip(reason="[DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE] DELETE /api/storage/<path> was removed.")
     def test_storage_delete_endpoint_authorized(self, client, app, tmp_path):
         with app.app_context():
             import uuid
@@ -247,6 +249,7 @@ class TestStorageRoutesIntegration:
             assert del_res.get_json()["status"] == "success"
             assert storage.exists(file_path) is False
 
+    @pytest.mark.skip(reason="[DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE] DELETE /api/storage/<path> was removed.")
     def test_storage_delete_endpoint_cross_tenant_forbidden(self, client, app):
         with app.app_context():
             import uuid
@@ -257,3 +260,4 @@ class TestStorageRoutesIntegration:
             del_res = client.delete("/api/storage/invoices/org_99/file.pdf", headers={"Authorization": f"Bearer {token}"})
             assert del_res.status_code == 403
             assert "CROSS_TENANT_FORBIDDEN" in del_res.get_json()["message"]
+

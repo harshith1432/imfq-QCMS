@@ -88,45 +88,52 @@ def kpi_summary():
     return jsonify(cached_res)
 
 
-@dashboard_bp.route('/trends', methods=['GET'])
-@jwt_required()
-def kpi_trends():
-    """Monthly KPI growth trend data."""
-    user = db.session.get(User, get_jwt_identity())
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: kpi_trends (Lines 91-129)
+# Reason: Unused legacy trend endpoint. Replaced by /analytics/drilldown.
+# ==============================================================================
+# @dashboard_bp.route('/trends', methods=['GET'])
+# @jwt_required()
+# def kpi_trends():
+#     """Monthly KPI growth trend data."""
+#     user = db.session.get(User, get_jwt_identity())
+#     if not user:
+#         return jsonify({"msg": "User not found"}), 404
 
-    impacts = (
-        db.session.query(
-            Stage7Impact.created_at,
-            func.coalesce(Stage7Impact.cost_savings, 0),
-            func.coalesce(Stage7Impact.kpi_improvement_pct, 0)
-        )
-        .join(Project, Stage7Impact.project_id == Project.id)
-        .filter(
-            Project.org_id == user.org_id,
-            Project.status.in_(['In Progress', 'Closed'])
-        )
-        .all()
-    )
+#     impacts = (
+#         db.session.query(
+#             Stage7Impact.created_at,
+#             func.coalesce(Stage7Impact.cost_savings, 0),
+#             func.coalesce(Stage7Impact.kpi_improvement_pct, 0)
+#         )
+#         .join(Project, Stage7Impact.project_id == Project.id)
+#         .filter(
+#             Project.org_id == user.org_id,
+#             Project.status.in_(['In Progress', 'Closed'])
+#         )
+#         .all()
+#     )
 
-    monthly = {}
-    for created_at, savings, improvement in impacts:
-        month_key = created_at.strftime('%Y-%m') if created_at else 'Unknown'
-        if month_key not in monthly:
-            monthly[month_key] = {"savings": 0, "improvement": 0, "count": 0}
-        monthly[month_key]["savings"] += savings
-        monthly[month_key]["improvement"] += improvement
-        monthly[month_key]["count"] += 1
+#     monthly = {}
+#     for created_at, savings, improvement in impacts:
+#         month_key = created_at.strftime('%Y-%m') if created_at else 'Unknown'
+#         if month_key not in monthly:
+#             monthly[month_key] = {"savings": 0, "improvement": 0, "count": 0}
+#         monthly[month_key]["savings"] += savings
+#         monthly[month_key]["improvement"] += improvement
+#         monthly[month_key]["count"] += 1
 
-    sorted_months = sorted(monthly.keys())
-    trend_data = {
-        "labels": sorted_months,
-        "savings": [monthly[m]["savings"] for m in sorted_months],
-        "improvement": [round(monthly[m]["improvement"] / max(monthly[m]["count"], 1), 1) for m in sorted_months]
-    }
+#     sorted_months = sorted(monthly.keys())
+#     trend_data = {
+#         "labels": sorted_months,
+#         "savings": [monthly[m]["savings"] for m in sorted_months],
+#         "improvement": [round(monthly[m]["improvement"] / max(monthly[m]["count"], 1), 1) for m in sorted_months]
+#     }
 
-    return jsonify(trend_data)
+#     return jsonify(trend_data)
+# [END DEAD CODE: kpi_trends]
+
 
 
 @dashboard_bp.route('/dept-comparison', methods=['GET'])
@@ -188,75 +195,89 @@ def dept_comparison():
     return jsonify(cached_res)
 
 
-@dashboard_bp.route('/top-projects', methods=['GET'])
-@jwt_required()
-def top_projects():
-    """Top 5 projects by impact with eager loaded project references."""
-    user = db.session.get(User, get_jwt_identity())
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: top_projects (Lines 191-216)
+# Reason: Unused top projects widget endpoint.
+# ==============================================================================
+# @dashboard_bp.route('/top-projects', methods=['GET'])
+# @jwt_required()
+# def top_projects():
+#     """Top 5 projects by impact with eager loaded project references."""
+#     user = db.session.get(User, get_jwt_identity())
+#     if not user:
+#         return jsonify({"msg": "User not found"}), 404
 
-    impacts = (
-        Stage7Impact.query
-        .options(joinedload(Stage7Impact.project_ref))
-        .join(Project, Stage7Impact.project_id == Project.id)
-        .filter(Project.org_id == user.org_id)
-        .order_by(Stage7Impact.cost_savings.desc().nullslast())
-        .limit(5)
-        .all()
-    )
+#     impacts = (
+#         Stage7Impact.query
+#         .options(joinedload(Stage7Impact.project_ref))
+#         .join(Project, Stage7Impact.project_id == Project.id)
+#         .filter(Project.org_id == user.org_id)
+#         .order_by(Stage7Impact.cost_savings.desc().nullslast())
+#         .limit(5)
+#         .all()
+#     )
 
-    return jsonify([{
-        "project_id": i.project_id,
-        "title": i.project_ref.title if i.project_ref else "Unknown",
-        "uid": i.project_ref.project_uid if i.project_ref else "",
-        "cost_savings": i.cost_savings or 0,
-        "kpi_improvement": i.kpi_improvement_pct or 0,
-        "productivity_gain": i.productivity_gain or 0
-    } for i in impacts])
+#     return jsonify([{
+#         "project_id": i.project_id,
+#         "title": i.project_ref.title if i.project_ref else "Unknown",
+#         "uid": i.project_ref.project_uid if i.project_ref else "",
+#         "cost_savings": i.cost_savings or 0,
+#         "kpi_improvement": i.kpi_improvement_pct or 0,
+#         "productivity_gain": i.productivity_gain or 0
+#     } for i in impacts])
+# [END DEAD CODE: top_projects]
 
 
-@dashboard_bp.route('/cost-variance', methods=['GET'])
-@jwt_required()
-def cost_variance():
-    """Cost variance analysis: single joined query replacing N+1 sequential loops."""
-    user = db.session.get(User, get_jwt_identity())
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
 
-    rows = (
-        db.session.query(
-            Stage8Standardization.project_id,
-            Project.title,
-            func.coalesce(Stage8Standardization.actual_cost, 0).label('actual_cost'),
-            func.coalesce(Stage8Standardization.cost_savings, 0).label('cost_savings')
-        )
-        .join(Project, Stage8Standardization.project_id == Project.id)
-        .filter(
-            Stage8Standardization.org_id == user.org_id,
-            Project.org_id == user.org_id
-        )
-        .all()
-    )
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: cost_variance (Lines 219-259)
+# Reason: Unused cost variance widget.
+# ==============================================================================
+# @dashboard_bp.route('/cost-variance', methods=['GET'])
+# @jwt_required()
+# def cost_variance():
+#     """Cost variance analysis: single joined query replacing N+1 sequential loops."""
+#     user = db.session.get(User, get_jwt_identity())
+#     if not user:
+#         return jsonify({"msg": "User not found"}), 404
 
-    result = []
-    for project_id, title, actual, savings in rows:
-        actual_val = float(actual or 0)
-        estimated_val = float(savings or 0)
-        variance = actual_val - estimated_val
-        variance_pct = round((variance / estimated_val) * 100, 1) if estimated_val > 0 else 0
+#     rows = (
+#         db.session.query(
+#             Stage8Standardization.project_id,
+#             Project.title,
+#             func.coalesce(Stage8Standardization.actual_cost, 0).label('actual_cost'),
+#             func.coalesce(Stage8Standardization.cost_savings, 0).label('cost_savings')
+#         )
+#         .join(Project, Stage8Standardization.project_id == Project.id)
+#         .filter(
+#             Stage8Standardization.org_id == user.org_id,
+#             Project.org_id == user.org_id
+#         )
+#         .all()
+#     )
 
-        result.append({
-            "project_id": project_id,
-            "title": title or "Unknown",
-            "estimated_cost": estimated_val,
-            "actual_cost": actual_val,
-            "variance": variance,
-            "variance_pct": variance_pct,
-            "over_budget": actual_val > estimated_val
-        })
+#     result = []
+#     for project_id, title, actual, savings in rows:
+#         actual_val = float(actual or 0)
+#         estimated_val = float(savings or 0)
+#         variance = actual_val - estimated_val
+#         variance_pct = round((variance / estimated_val) * 100, 1) if estimated_val > 0 else 0
 
-    return jsonify(result)
+#         result.append({
+#             "project_id": project_id,
+#             "title": title or "Unknown",
+#             "estimated_cost": estimated_val,
+#             "actual_cost": actual_val,
+#             "variance": variance,
+#             "variance_pct": variance_pct,
+#             "over_budget": actual_val > estimated_val
+#         })
+
+#     return jsonify(result)
+# [END DEAD CODE: cost_variance]
+
 
 
 @dashboard_bp.route('/activity', methods=['GET'])

@@ -2140,108 +2140,115 @@ def handle_support_tickets():
         }), 201
 
 
-@auth_bp.route('/sso/<provider>', methods=['POST'])
-def sso_login(provider):
-    data = request.get_json() or {}
-    email = data.get('email')
-    token = data.get('token')
-    
-    if not email:
-        return jsonify({"msg": "Email is required for SSO"}), 400
-        
-    from app.infrastructure.database.models.models import PlatformSettings
-    settings = PlatformSettings.query.first()
-    auth_settings = (settings.authentication_settings or {}) if settings else {}
-    
-    # Verify provider configuration
-    if provider == 'google':
-        if not auth_settings.get('oauth_google_enabled'):
-            return jsonify({"msg": "Google OAuth is disabled"}), 403
-        client_id = auth_settings.get('oauth_google_client_id')
-        if not client_id:
-            return jsonify({"msg": "Google OAuth is not configured properly"}), 400
-    elif provider == 'microsoft':
-        if not auth_settings.get('oauth_microsoft_enabled') and not auth_settings.get('azure_ad_enabled'):
-            return jsonify({"msg": "Azure AD / Microsoft login is disabled"}), 403
-        client_id = auth_settings.get('oauth_microsoft_client_id')
-        if not client_id:
-            return jsonify({"msg": "Microsoft login is not configured properly"}), 400
-    elif provider == 'saml':
-        if not auth_settings.get('saml_enabled'):
-            return jsonify({"msg": "SAML SSO is disabled"}), 403
-        metadata_url = auth_settings.get('saml_metadata_url')
-        if not metadata_url:
-            return jsonify({"msg": "SAML SSO is not configured properly"}), 400
-    else:
-        return jsonify({"msg": "Invalid SSO provider"}), 400
-        
-    # Authenticate the user by email
-    user = User.query.filter(User.email.ilike(email)).first()
-    if not user:
-        if settings.registration_open:
-            # Find or create a default organization for SSO users
-            from app.infrastructure.database.models.models import Organization, Role
-            org = Organization.query.first()
-            if not org:
-                from app.domain.services.subscription_service import SubscriptionManager
-                sso_trial_plan = SubscriptionManager.get_default_trial_plan()
-                sso_plan_name = sso_trial_plan.name if sso_trial_plan else 'Trial'
-                org = Organization(name="Default Organization", email=email, subscription_plan=sso_plan_name)
-                db.session.add(org)
-                db.session.flush()
-                
-            role = Role.query.filter_by(name='Team Member').first()
-            
-            # Generate a random username from email
-            username = email.split('@')[0]
-            base_username = username
-            counter = 1
-            while User.query.filter_by(username=username).first():
-                username = f"{base_username}{counter}"
-                counter += 1
-                
-            user = User(
-                org_id=org.id,
-                username=username,
-                email=email,
-                hashed_password=bcrypt.generate_password_hash("SSO_TEMP_PASSWORD").decode('utf-8'),
-                role_id=role.id,
-                is_verified=True,
-                status='Active'
-            )
-            db.session.add(user)
-            db.session.flush()
-        else:
-            return jsonify({"msg": "SSO user not registered on this platform. Please contact your admin."}), 404
-            
-    # Generate token
-    from datetime import datetime, timedelta
-    access_token = create_access_token(
-        identity=str(user.id),
-        additional_claims={
-            "org_id": user.org_id,
-            "role": user.role.name,
-            "dept_id": user.department_id
-        },
-        expires_delta=timedelta(hours=int(auth_settings.get('jwt_expiry_hours', 24)))
-    )
-    
-    # Update last login
-    user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
-    db.session.commit()
-    
-    resp = jsonify({
-        "access_token": access_token,
-        "org_id": user.org_id,
-        "org_name": user.organization.name if user.organization else None,
-        "role": user.role.name,
-        "username": user.username,
-        "id": user.id,
-        "org_primary_color": user.organization.primary_color if user.organization else None,
-        "org_logo_url": user.organization.logo_url if user.organization else None
-    })
-    set_access_cookies(resp, access_token)
-    return resp, 200
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: sso_login (Lines 2143-2244)
+# Reason: SSO login endpoint (OAuth/SAML mock provider). Feature was removed/never enabled in frontend login.
+# ==============================================================================
+# @auth_bp.route('/sso/<provider>', methods=['POST'])
+# def sso_login(provider):
+#     data = request.get_json() or {}
+#     email = data.get('email')
+#     token = data.get('token')
+
+#     if not email:
+#         return jsonify({"msg": "Email is required for SSO"}), 400
+
+#     from app.infrastructure.database.models.models import PlatformSettings
+#     settings = PlatformSettings.query.first()
+#     auth_settings = (settings.authentication_settings or {}) if settings else {}
+
+#     # Verify provider configuration
+#     if provider == 'google':
+#         if not auth_settings.get('oauth_google_enabled'):
+#             return jsonify({"msg": "Google OAuth is disabled"}), 403
+#         client_id = auth_settings.get('oauth_google_client_id')
+#         if not client_id:
+#             return jsonify({"msg": "Google OAuth is not configured properly"}), 400
+#     elif provider == 'microsoft':
+#         if not auth_settings.get('oauth_microsoft_enabled') and not auth_settings.get('azure_ad_enabled'):
+#             return jsonify({"msg": "Azure AD / Microsoft login is disabled"}), 403
+#         client_id = auth_settings.get('oauth_microsoft_client_id')
+#         if not client_id:
+#             return jsonify({"msg": "Microsoft login is not configured properly"}), 400
+#     elif provider == 'saml':
+#         if not auth_settings.get('saml_enabled'):
+#             return jsonify({"msg": "SAML SSO is disabled"}), 403
+#         metadata_url = auth_settings.get('saml_metadata_url')
+#         if not metadata_url:
+#             return jsonify({"msg": "SAML SSO is not configured properly"}), 400
+#     else:
+#         return jsonify({"msg": "Invalid SSO provider"}), 400
+
+#     # Authenticate the user by email
+#     user = User.query.filter(User.email.ilike(email)).first()
+#     if not user:
+#         if settings.registration_open:
+#             # Find or create a default organization for SSO users
+#             from app.infrastructure.database.models.models import Organization, Role
+#             org = Organization.query.first()
+#             if not org:
+#                 from app.domain.services.subscription_service import SubscriptionManager
+#                 sso_trial_plan = SubscriptionManager.get_default_trial_plan()
+#                 sso_plan_name = sso_trial_plan.name if sso_trial_plan else 'Trial'
+#                 org = Organization(name="Default Organization", email=email, subscription_plan=sso_plan_name)
+#                 db.session.add(org)
+#                 db.session.flush()
+
+#             role = Role.query.filter_by(name='Team Member').first()
+
+#             # Generate a random username from email
+#             username = email.split('@')[0]
+#             base_username = username
+#             counter = 1
+#             while User.query.filter_by(username=username).first():
+#                 username = f"{base_username}{counter}"
+#                 counter += 1
+
+#             user = User(
+#                 org_id=org.id,
+#                 username=username,
+#                 email=email,
+#                 hashed_password=bcrypt.generate_password_hash("SSO_TEMP_PASSWORD").decode('utf-8'),
+#                 role_id=role.id,
+#                 is_verified=True,
+#                 status='Active'
+#             )
+#             db.session.add(user)
+#             db.session.flush()
+#         else:
+#             return jsonify({"msg": "SSO user not registered on this platform. Please contact your admin."}), 404
+
+#     # Generate token
+#     from datetime import datetime, timedelta
+#     access_token = create_access_token(
+#         identity=str(user.id),
+#         additional_claims={
+#             "org_id": user.org_id,
+#             "role": user.role.name,
+#             "dept_id": user.department_id
+#         },
+#         expires_delta=timedelta(hours=int(auth_settings.get('jwt_expiry_hours', 24)))
+#     )
+
+#     # Update last login
+#     user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
+#     db.session.commit()
+
+#     resp = jsonify({
+#         "access_token": access_token,
+#         "org_id": user.org_id,
+#         "org_name": user.organization.name if user.organization else None,
+#         "role": user.role.name,
+#         "username": user.username,
+#         "id": user.id,
+#         "org_primary_color": user.organization.primary_color if user.organization else None,
+#         "org_logo_url": user.organization.logo_url if user.organization else None
+#     })
+#     set_access_cookies(resp, access_token)
+#     return resp, 200
+# [END DEAD CODE: sso_login]
+
 
 
 @auth_bp.route('/maintenance-status', methods=['GET'])

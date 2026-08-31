@@ -54,50 +54,64 @@ def get_notifications():
 
     return jsonify(result), 200
 
-@notification_bp.route('/notifications/<int:notif_id>/star', methods=['POST'])
-@jwt_required()
-def toggle_star_notification(notif_id):
-    user_id = int(get_jwt_identity())
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: toggle_star_notification (Lines 57-85)
+# Reason: Star/favorite notification feature was removed from frontend bell dropdown.
+# ==============================================================================
+# @notification_bp.route('/notifications/<int:notif_id>/star', methods=['POST'])
+# @jwt_required()
+# def toggle_star_notification(notif_id):
+#     user_id = int(get_jwt_identity())
+#     user = db.session.get(User, user_id)
+#     if not user:
+#         return jsonify({"msg": "User not found"}), 404
 
-    # Ensure column exists
-    try:
-        db.session.execute(db.text("ALTER TABLE notifications ADD COLUMN is_starred BOOLEAN DEFAULT FALSE;"))
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
+#     # Ensure column exists
+#     try:
+#         db.session.execute(db.text("ALTER TABLE notifications ADD COLUMN is_starred BOOLEAN DEFAULT FALSE;"))
+#         db.session.commit()
+#     except Exception:
+#         db.session.rollback()
 
-    notif = db.session.get(Notification, notif_id)
-    if not notif or (notif.user_id != user.id and notif.org_id != user.org_id):
-        return jsonify({"msg": "Notification not found"}), 404
+#     notif = db.session.get(Notification, notif_id)
+#     if not notif or (notif.user_id != user.id and notif.org_id != user.org_id):
+#         return jsonify({"msg": "Notification not found"}), 404
 
-    current_starred = bool(getattr(notif, 'is_starred', False))
-    notif.is_starred = not current_starred
-    db.session.commit()
+#     current_starred = bool(getattr(notif, 'is_starred', False))
+#     notif.is_starred = not current_starred
+#     db.session.commit()
 
-    return jsonify({
-        "status": "success",
-        "id": notif.id,
-        "is_starred": notif.is_starred,
-        "msg": f"Notification {'starred' if notif.is_starred else 'unstarred'}"
-    }), 200
+#     return jsonify({
+#         "status": "success",
+#         "id": notif.id,
+#         "is_starred": notif.is_starred,
+#         "msg": f"Notification {'starred' if notif.is_starred else 'unstarred'}"
+#     }), 200
+# [END DEAD CODE: toggle_star_notification]
 
-@notification_bp.route('/notifications/<int:notif_id>/read', methods=['POST'])
-@jwt_required()
-def mark_single_read(notif_id):
-    user_id = int(get_jwt_identity())
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
 
-    notif = db.session.get(Notification, notif_id)
-    if notif and (notif.user_id == user.id or notif.org_id == user.org_id):
-        notif.is_read = True
-        db.session.commit()
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: mark_single_read (Lines 87-100)
+# Reason: Single notification mark read. Frontend marks all read via /read.
+# ==============================================================================
+# @notification_bp.route('/notifications/<int:notif_id>/read', methods=['POST'])
+# @jwt_required()
+# def mark_single_read(notif_id):
+#     user_id = int(get_jwt_identity())
+#     user = db.session.get(User, user_id)
+#     if not user:
+#         return jsonify({"msg": "User not found"}), 404
 
-    return jsonify({"msg": "Notification marked as read", "id": notif_id}), 200
+#     notif = db.session.get(Notification, notif_id)
+#     if notif and (notif.user_id == user.id or notif.org_id == user.org_id):
+#         notif.is_read = True
+#         db.session.commit()
+
+#     return jsonify({"msg": "Notification marked as read", "id": notif_id}), 200
+# [END DEAD CODE: mark_single_read]
+
 
 @notification_bp.route('/notifications/read', methods=['POST'])
 @jwt_required()
