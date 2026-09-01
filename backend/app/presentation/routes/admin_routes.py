@@ -169,12 +169,19 @@ def admin_required(f):
             mod_key = 'departments'
         elif '/audit' in path or '/logs' in path:
             mod_key = 'audit_logs'
-        elif '/stage-template' in path or '/stage-templates' in path:
+        elif '/stage-template' in path or '/stage-templates' in path or '/stages-template' in path or '/stages-templates' in path:
             mod_key = 'stage_template'
-        elif '/settings' in path or '/branding' in path or '/security' in path or '/subscription' in path or '/compliance' in path:
+        elif (
+            '/settings' in path or '/branding' in path or '/security' in path or
+            '/subscription' in path or '/compliance' in path or '/signoff-hierarchy' in path or
+            '/rejected-projects' in path or '/storage' in path or '/upload-evidence' in path or
+            '/stats' in path or '/api-key' in path or '/billing' in path or
+            '/pending-payg' in path or '/upgrade-plan' in path or '/role-permissions' in path or
+            '/integrations' in path
+        ):
             mod_key = 'settings'
             
-        if check_user_module_permission(user, mod_key):
+        if mod_key and check_user_module_permission(user, mod_key):
             return f(*args, **kwargs)
             
         return jsonify({"message": "Access denied: insufficient module permissions"}), 403
@@ -449,6 +456,8 @@ def create_user():
         return jsonify({"message": f"Username  / Display Name '{username}' is already taken."}), 400
     
     role_name = data.get('role')
+    if role_name == 'SuperAdmin' and not getattr(current_user, 'is_super_admin', False) and (not current_user.role or current_user.role.name != 'SuperAdmin'):
+        return jsonify({"message": "Forbidden: Organization administrators cannot create SuperAdmin accounts"}), 403
     role = Role.query.filter_by(name=role_name).first() if role_name else None
     if not role:
         return jsonify({"message": f"Invalid role: {role_name}"}), 400
@@ -544,11 +553,9 @@ def create_user():
         db.session.commit()
         
         if custom_values:
-            update_cols = ", ".join(f"{k} = :val_{k}" for k in custom_values.keys())
-            params = {f"val_{k}": v for k, v in custom_values.items()}
-            params["user_id"] = new_user.id
-            from sqlalchemy import text
-            db.session.execute(text(f"UPDATE users SET {update_cols} WHERE id = :user_id"), params)
+            for k, v in custom_values.items():
+                if hasattr(new_user, k):
+                    setattr(new_user, k, v)
             db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -1143,6 +1150,9 @@ def bulk_upload_users():
         if not role:
             reject(f"Invalid role: '{role_name}'.")
             continue
+        if role.name == 'SuperAdmin' and not getattr(current_user, 'is_super_admin', False) and (not current_user.role or current_user.role.name != 'SuperAdmin'):
+            reject("Cannot assign SuperAdmin role through bulk user upload.")
+            continue
 
         # ── 5. Duplicate phone, email, and username check ──────────────────────────────
         import re
@@ -1229,11 +1239,9 @@ def bulk_upload_users():
             db.session.commit()
 
             if custom_values:
-                from sqlalchemy import text
-                update_cols = ", ".join(f"{k} = :val_{k}" for k in custom_values.keys())
-                params = {f"val_{k}": v for k, v in custom_values.items()}
-                params["user_id"] = new_user.id
-                db.session.execute(text(f"UPDATE users SET {update_cols} WHERE id = :user_id"), params)
+                for k, v in custom_values.items():
+                    if hasattr(new_user, k):
+                        setattr(new_user, k, v)
                 db.session.commit()
 
             added_count += 1
@@ -2196,6 +2204,10 @@ def create_department():
 
     plant_id = data.get('plant_id')
     plant_id_val = int(plant_id) if plant_id and str(plant_id).isdigit() else None
+    if plant_id_val is not None:
+        plant_obj = Plant.query.filter_by(id=plant_id_val, org_id=current_user.org_id).first()
+        if not plant_obj:
+            return jsonify({"message": "Invalid plant_id: plant not found in this organization"}), 400
 
     # ── Case-insensitive duplicate check within the same plant + org ──
     from sqlalchemy import func as sqlfunc
@@ -2704,6 +2716,7 @@ DEFAULT_ROLE_PERMISSIONS = {
 
 @admin_bp.route('/role-permissions', methods=['GET'])
 @jwt_required()
+@admin_required
 def get_role_permissions():
     current_user_id = get_jwt_identity()
     user = db.session.get(User, current_user_id)
@@ -2758,6 +2771,11 @@ def reset_role_permissions_defaults():
     if not user:
         return jsonify({"message": "User not found"}), 404
         
+    role_name = user.role.name if user.role else ''
+    is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
+    if role_name not in ('Admin', 'SuperAdmin', 'CEO') and not is_sa_custom:
+        return jsonify({"message": "Admin role required to modify role permissions"}), 403
+
     org_id = user.org_id or 1
     org = db.session.get(Organization, org_id) if org_id else None
     if not org:
@@ -2798,6 +2816,11 @@ def update_role_permissions():
     if not user:
         return jsonify({"message": "User not found"}), 404
         
+    role_name = user.role.name if user.role else ''
+    is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
+    if role_name not in ('Admin', 'SuperAdmin', 'CEO') and not is_sa_custom:
+        return jsonify({"message": "Admin role required to modify role permissions"}), 403
+
     org_id = user.org_id or 1
     org = db.session.get(Organization, org_id) if org_id else None
     if not org:
@@ -3677,6 +3700,7 @@ def _hash_api_key(key: str) -> str:
 
 @admin_bp.route('/integrations/api-key', methods=['GET'])
 @jwt_required()
+@admin_required
 def get_org_api_key():
     identity = get_jwt_identity()
     try:
@@ -3727,6 +3751,7 @@ def get_org_api_key():
 
 @admin_bp.route('/integrations/api-key/generate', methods=['POST'])
 @jwt_required()
+@admin_required
 def generate_org_api_key():
     identity = get_jwt_identity()
     try:
@@ -3779,6 +3804,7 @@ def generate_org_api_key():
 
 @admin_bp.route('/integrations/api-key/regenerate', methods=['POST'])
 @jwt_required()
+@admin_required
 def regenerate_org_api_key():
     identity = get_jwt_identity()
     try:
@@ -3828,6 +3854,7 @@ def regenerate_org_api_key():
 
 @admin_bp.route('/integrations/api-key/toggle-status', methods=['POST'])
 @jwt_required()
+@admin_required
 def toggle_org_api_key_status():
     identity = get_jwt_identity()
     try:
@@ -3864,6 +3891,7 @@ def toggle_org_api_key_status():
 
 @admin_bp.route('/integrations/api-key', methods=['DELETE'])
 @jwt_required()
+@admin_required
 def delete_org_api_key():
     identity = get_jwt_identity()
     try:

@@ -18,7 +18,7 @@ def chat():
         return jsonify({"error": "Unauthorized"}), 401
 
     org_id = user.org_id
-    if not org_id:
+    if not org_id and user.role and user.role.name == 'SuperAdmin':
         first_org = Organization.query.first()
         if first_org:
             org_id = first_org.id

@@ -503,19 +503,21 @@ window.printElementContent = function(elementId, title = 'Document') {
         </head>
         <body>
             ${area.innerHTML}
-            <script>
-                window.onload = function() {
-                    window.focus();
-                    window.print();
-                    setTimeout(() => {
-                        window.parent.document.body.removeChild(window.frameElement);
-                    }, 500);
-                };
-            <\/script>
         </body>
         </html>
     `);
     doc.close();
+    try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => {
+            if (iframe && iframe.parentNode) {
+                iframe.parentNode.removeChild(iframe);
+            }
+        }, 1000);
+    } catch (printErr) {
+        console.warn('[PrintArea] Error printing iframe:', printErr);
+    }
 };
 
 /**

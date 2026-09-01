@@ -24,10 +24,10 @@ jobs:
 
     steps:
       - name: 📥 Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: 🟢 Set up Node.js 22.x
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: 22
           cache: 'npm'
@@ -68,10 +68,10 @@ jobs:
 
     steps:
       - name: 📥 Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: 🐍 Set up Python 3.13
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0a5c61591373683505ea898e09a6ea1c78b59a68 # v5.0.0
         with:
           python-version: '3.13'
           cache: 'pip'
@@ -107,7 +107,7 @@ jobs:
 
       # ── NPM Vulnerability Audit ─────────────────────────────────────────────
       - name: 🟢 Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: 22
 
@@ -119,7 +119,7 @@ jobs:
 
       # ── Python pip-audit ────────────────────────────────────────────────────
       - name: 🐍 Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0a5c61591373683505ea898e09a6ea1c78b59a68 # v5.0.0
         with:
           python-version: '3.13'
 
@@ -131,14 +131,14 @@ jobs:
 
       # ── Secret Scanning (Gitleaks) ──────────────────────────────────────────
       - name: 🔑 Run Gitleaks Secret Scanner
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@e4d0752ff90333246eb4a0558f62f3a611130d2d # v2.3.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: false
 
       # ── Trivy Vulnerability & Misconfiguration Scanner ──────────────────────
       - name: 🔍 Run Trivy Security Scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # v0.29.0
         with:
           scan-type: 'fs'
           scan-ref: '.'

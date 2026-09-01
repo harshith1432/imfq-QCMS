@@ -179,10 +179,11 @@ class ThemeManager {
         this.applyModePalette(theme);
 
         // Broadcast theme change to all child iframes (e.g. Global Stage Templates)
+        const targetOrigin = window.location.origin && window.location.origin !== 'null' ? window.location.origin : '*';
         document.querySelectorAll('iframe').forEach(iframe => {
             try {
                 if (iframe.contentWindow) {
-                    iframe.contentWindow.postMessage({ type: 'THEME_CHANGED', theme: theme }, '*');
+                    iframe.contentWindow.postMessage({ type: 'THEME_CHANGED', theme: theme }, targetOrigin);
                 }
                 if (iframe.contentDocument && iframe.contentDocument.documentElement) {
                     iframe.contentDocument.documentElement.setAttribute('data-theme', theme);

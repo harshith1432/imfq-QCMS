@@ -19,7 +19,7 @@ from app.infrastructure.database.models.models import (
     SaaSPlan, SaaSPlanPricing, SaaSPlanLimits, SaaSPlanModules, SaaSPlanVersion, SaaSPlanAnalytics, PlatformSettings
 )
 
-from app.presentation.middleware.middleware import super_admin_required
+from app.presentation.middleware.middleware import super_admin_required, _is_super_admin
 
 import threading
 from sqlalchemy.orm.attributes import flag_modified
@@ -94,13 +94,9 @@ def _get_current_user():
 
 
 def _require_super_admin(user):
-    if not user:
+    if not user or not _is_super_admin(user):
         return jsonify({'error': 'Unauthorized — Super Admin required'}), 403
-    role_name = user.role.name if user.role else ''
-    is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
-    if role_name in ('SuperAdmin', 'Admin') or is_sa_custom:
-        return None
-    return jsonify({'error': 'Unauthorized — Super Admin required'}), 403
+    return None
 
 
 def _sub_uid():

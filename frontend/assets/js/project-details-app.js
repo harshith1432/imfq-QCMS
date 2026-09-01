@@ -1133,7 +1133,7 @@ const ProjectApp = {
                 const parent = el.closest('.ds-field');
                 if (parent && !parent.querySelector('.is-invalid-feedback')) {
                     const label = parent.querySelector('.ds-label');
-                    const labelText = label ? label.textContent.replace('*', '').trim() : 'This field';
+                    const labelText = label ? label.textContent.replace(/\*/g, '').trim() : 'This field';
                     const feedback = document.createElement('div');
                     feedback.className = 'is-invalid-feedback';
                     feedback.textContent = `${labelText} is required.`;

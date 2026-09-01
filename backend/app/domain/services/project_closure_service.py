@@ -178,6 +178,9 @@ class ProjectClosureService:
         if not project:
             raise ValueError("Project not found")
 
+        if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+            raise PermissionError("Unauthorized access to project")
+
         if project.status == 'Closed':
             raise ValueError("Cannot reject an already closed project")
 

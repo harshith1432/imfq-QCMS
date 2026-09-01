@@ -280,7 +280,18 @@ def save_histogram(project_id):
     if not values or len(values) < 2:
         return jsonify({"msg": "At least 2 data points required"}), 400
     
-    values = [float(v) for v in values]
+    safe_vals = []
+    for v in values:
+        if isinstance(v, str) and v.strip().lower() in ('nan', 'inf', '-inf', '+inf'):
+            return jsonify({"msg": "Invalid numerical value"}), 400
+        try:
+            fv = float(v)
+            if math.isnan(fv) or math.isinf(fv):
+                return jsonify({"msg": "Invalid numerical value"}), 400
+            safe_vals.append(fv)
+        except (ValueError, TypeError):
+            return jsonify({"msg": "Invalid numerical format"}), 400
+    values = safe_vals
     n = len(values)
     mean = sum(values) / n
     variance = sum((x - mean) ** 2 for x in values) / n

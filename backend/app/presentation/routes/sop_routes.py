@@ -32,8 +32,11 @@ def parse_int(val):
         return None
 
 def scope_sop_query(query, user):
-    role_name = user.role.name
+    role_name = user.role.name if user.role else 'Team Member'
     
+    if role_name != 'SuperAdmin':
+        query = query.filter(SOP.org_id == user.org_id)
+        
     if role_name in ('SuperAdmin', 'Admin', 'CEO'):
         return query
         

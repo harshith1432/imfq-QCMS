@@ -66,11 +66,6 @@ def get_super_admin_user():
                 pass
 
     if not user:
-        sa_email = (request.headers.get('X-User-Email') or '').strip().lower()
-        if sa_email:
-            user = User.query.filter_by(email=sa_email).first()
-
-    if not user:
         return None
 
     # Safely resolve role name string
@@ -88,11 +83,11 @@ def get_super_admin_user():
     sys_role = str(getattr(user, 'system_role', '') or '').strip().lower().replace(' ', '').replace('_', '')
     
     is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
-    is_sa_flag = getattr(user, 'is_super_admin', False) or sys_role in ('superadmin', 'admin') or user.org_id is None
+    is_sa_flag = getattr(user, 'is_super_admin', False) or sys_role == 'superadmin'
     sa_env_email = (os.getenv('SUPER_ADMIN_USERNAME') or '').strip().lower()
     is_sa_email = bool(sa_env_email and getattr(user, 'email', '').lower() == sa_env_email)
 
-    if role_clean in ('superadmin', 'admin') or is_sa_custom or is_sa_flag or is_sa_email:
+    if role_clean == 'superadmin' or is_sa_flag or is_sa_email or (is_sa_custom and (role_clean in ('superadmin', '') or user.org_id is None)):
         return user
     return None
 
@@ -964,10 +959,11 @@ def get_dashboard_orgs():
     if sort == 'license_expiry':
         sort = 'license_expiry_date'
         
+    sort_col = getattr(Organization, sort, Organization.name)
     if sort_dir == 'desc':
-        query = query.order_by(text(f"organizations.{sort} DESC"))
+        query = query.order_by(sort_col.desc())
     else:
-        query = query.order_by(text(f"organizations.{sort} ASC"))
+        query = query.order_by(sort_col.asc())
         
     def _serializer(row):
         o, u_cnt = row[0], row[1]

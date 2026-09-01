@@ -195,7 +195,10 @@ class LanguageManager {
         const keys = key.split('.');
         let result = this.translations;
         for (const k of keys) {
-            if (result && typeof result === 'object' && k in result) {
+            if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+                return key;
+            }
+            if (result && typeof result === 'object' && Object.prototype.hasOwnProperty.call(result, k)) {
                 result = result[k];
             } else {
                 return key; // Fallback: display the key

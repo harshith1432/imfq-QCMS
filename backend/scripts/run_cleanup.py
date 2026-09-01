@@ -1,8 +1,12 @@
+import os
 import psycopg2
 
 conn = psycopg2.connect(
-    host='127.0.0.1', port=5432, dbname='ifqmm',
-    user='postgres', password='Harshith@1432'
+    host=os.getenv('DB_HOST', '127.0.0.1'),
+    port=int(os.getenv('DB_PORT', '5432')),
+    dbname=os.getenv('DB_NAME', 'ifqmm'),
+    user=os.getenv('DB_USER', 'postgres'),
+    password=os.getenv('DB_PASSWORD', '')
 )
 conn.autocommit = True
 cur = conn.cursor()

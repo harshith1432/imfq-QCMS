@@ -2,7 +2,10 @@ import os
 from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token, set_access_cookies
 from app.infrastructure.database.models.models import db, Organization, User, SupportTicket, Subscription, SubscriptionPayment, SubscriptionInvoice, PlatformSettings, SuperAdminLog, Role, AuditLog, SaaSPlan
-from app.presentation.middleware.middleware import super_admin_required, sub_role_write_required, sub_role_required, get_sa_permissions, _get_sa_sub_role
+from app.presentation.middleware.middleware import (
+    super_admin_required, sub_role_write_required, sub_role_required,
+    get_sa_permissions, _get_sa_sub_role, SA_OWNER, SA_READ_PERMISSIONS, SA_WRITE_PERMISSIONS
+)
 from app import bcrypt
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, text, or_
@@ -892,173 +895,213 @@ def _hard_delete_organization(org):
       → custom fields → imported ideas → org identity/settings → analytics
       → users (reassign or delete) → organization
     """
-    org_id = org.id
+    org_id = int(org.id)
     try:
-        user_ids = [u.id for u in org.users]
-        u_clause = None
-        if user_ids:
-            u_clause = f"({user_ids[0]})" if len(user_ids) == 1 else str(tuple(user_ids))
+        user_ids = [int(u.id) for u in org.users]
+        from sqlalchemy import bindparam
 
         # ── STEP 1: Nullify cross-org/global FK references on non-org tables ──
-        if u_clause:
-            db.session.execute(text(f"UPDATE subscriptions SET created_by_id = NULL WHERE created_by_id IN {u_clause};"))
-            db.session.execute(text(f"UPDATE feature_versions SET created_by_id = NULL WHERE created_by_id IN {u_clause};"))
-            db.session.execute(text(f"UPDATE modules SET created_by_id = NULL WHERE created_by_id IN {u_clause};"))
-            db.session.execute(text(f"UPDATE saas_plan_versions SET created_by_id = NULL WHERE created_by_id IN {u_clause};"))
-            db.session.execute(text(f"UPDATE support_knowledge SET created_by_id = NULL WHERE created_by_id IN {u_clause};"))
+        if user_ids:
+            db.session.execute(
+                text("UPDATE subscriptions SET created_by_id = NULL WHERE created_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
+            db.session.execute(
+                text("UPDATE feature_versions SET created_by_id = NULL WHERE created_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
+            db.session.execute(
+                text("UPDATE modules SET created_by_id = NULL WHERE created_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
+            db.session.execute(
+                text("UPDATE saas_plan_versions SET created_by_id = NULL WHERE created_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
+            db.session.execute(
+                text("UPDATE support_knowledge SET created_by_id = NULL WHERE created_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
 
         # ── STEP 2: Subscription & billing ───────────────────────────────────
-        db.session.execute(text(f"DELETE FROM subscription_payments WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM subscription_invoices WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM subscription_credit_notes WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM offline_payment_proofs WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM subscriptions WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM subscription_payments WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM subscription_invoices WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM subscription_credit_notes WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM offline_payment_proofs WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM subscriptions WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 3: Sessions & audit logs ────────────────────────────────────
-        db.session.execute(text(f"DELETE FROM saas_user_sessions WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM audit_export_logs WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM audit_logs WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM audit_risk_alerts WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM billing_audits WHERE org_id = {org_id};"))
-        if u_clause:
-            db.session.execute(text(f"DELETE FROM super_admin_logs WHERE admin_id IN {u_clause};"))
+        db.session.execute(text("DELETE FROM saas_user_sessions WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM audit_export_logs WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM audit_logs WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM audit_risk_alerts WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM billing_audits WHERE org_id = :org_id"), {"org_id": org_id})
+        if user_ids:
+            db.session.execute(
+                text("DELETE FROM super_admin_logs WHERE admin_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
 
         # ── STEP 4: Announcements (children before parent) ───────────────────
-        db.session.execute(text(f"DELETE FROM announcement_delivery WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM announcement_reads WHERE org_id = {org_id};"))
-        if u_clause:
-            db.session.execute(text(f"DELETE FROM announcement_attachments WHERE uploaded_by IN {u_clause};"))
-            db.session.execute(text(f"DELETE FROM announcement_audit WHERE user_id IN {u_clause};"))
-        db.session.execute(text(f"DELETE FROM announcements WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM announcement_delivery WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM announcement_reads WHERE org_id = :org_id"), {"org_id": org_id})
+        if user_ids:
+            db.session.execute(
+                text("DELETE FROM announcement_attachments WHERE uploaded_by IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
+            db.session.execute(
+                text("DELETE FROM announcement_audit WHERE user_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
+        db.session.execute(text("DELETE FROM announcements WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 5: Notifications ─────────────────────────────────────────────
-        db.session.execute(text(f"DELETE FROM notifications WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM notifications WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 6: Support tickets (CASCADE handles sub-records) ─────────────
-        db.session.execute(text(f"DELETE FROM support_tickets WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM support_tickets WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 7: Employee & facilitator ────────────────────────────────────
-        db.session.execute(text(f"DELETE FROM employee_points WHERE organization_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM employee_leaderboard WHERE organization_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM facilitator_notes WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM facilitator_assistance_requests WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM employee_points WHERE organization_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM employee_leaderboard WHERE organization_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM facilitator_notes WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM facilitator_assistance_requests WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 8: Assessment results (user-scoped, no org_id) ───────────────
-        if u_clause:
-            db.session.execute(text(f"DELETE FROM assessment_results WHERE user_id IN {u_clause};"))
+        if user_ids:
+            db.session.execute(
+                text("DELETE FROM assessment_results WHERE user_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
 
         # ── STEP 9: NULL plant_id on users & departments BEFORE deleting plants
-        db.session.execute(text(f"UPDATE users SET plant_id = NULL WHERE org_id = {org_id};"))
-        db.session.execute(text(f"UPDATE departments SET plant_id = NULL WHERE org_id = {org_id};"))
+        db.session.execute(text("UPDATE users SET plant_id = NULL WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("UPDATE departments SET plant_id = NULL WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 10: Plants ───────────────────────────────────────────────────
-        db.session.execute(text(f"DELETE FROM plants WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM plants WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 11: Project members (before deleting projects) ───────────────
-        db.session.execute(text(f"""
+        db.session.execute(text("""
             DELETE FROM project_members
-            WHERE project_id IN (SELECT id FROM projects WHERE org_id = {org_id});
-        """))
+            WHERE project_id IN (SELECT id FROM projects WHERE org_id = :org_id)
+        """), {"org_id": org_id})
 
         # ── STEP 12: Project stage trackers ───────────────────────────────────
-        db.session.execute(text(f"DELETE FROM stage_1_problem_definition_project_initiation WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM stage_2_observation_data_collection WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM stage_3_cause_identification WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM stage_4_root_cause_analysis_verification WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM stage_5_countermeasure_planning_solution_development WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM stage_6_implementation_change_management WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM stage_7_performance_verification_benefits_realization WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM stage_8_standardization_knowledge_sharing_project_closure WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM project_stage_tracker WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM stage_1_problem_definition_project_initiation WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM stage_2_observation_data_collection WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM stage_3_cause_identification WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM stage_4_root_cause_analysis_verification WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM stage_5_countermeasure_planning_solution_development WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM stage_6_implementation_change_management WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM stage_7_performance_verification_benefits_realization WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM stage_8_standardization_knowledge_sharing_project_closure WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM project_stage_tracker WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 13: QC tools ─────────────────────────────────────────────────
-        db.session.execute(text(f"DELETE FROM qc_check_sheets WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM qc_control_charts WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM qc_fishbone_diagrams WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM qc_pareto_charts WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM qc_process_maps WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM qc_scatter_diagrams WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM qc_stratifications WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM qc_check_sheets WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM qc_control_charts WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM qc_fishbone_diagrams WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM qc_pareto_charts WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM qc_process_maps WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM qc_scatter_diagrams WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM qc_stratifications WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 14: Project meetings, reviews, workflow ───────────────────────
-        db.session.execute(text(f"DELETE FROM project_meetings WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM project_reviews WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM project_workflow WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM project_meetings WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM project_reviews WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM project_workflow WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 15: KPI ──────────────────────────────────────────────────────
-        db.session.execute(text(f"DELETE FROM kpi_metrics WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM kpi_dashboard_cache WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM kpi_metrics WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM kpi_dashboard_cache WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 16: Training (user-scoped, most have no org_id) ──────────────
-        if u_clause:
-            db.session.execute(text(f"DELETE FROM training_acknowledgements WHERE user_id IN {u_clause};"))
-            db.session.execute(text(f"DELETE FROM training_archive WHERE archived_by_id IN {u_clause};"))
-            db.session.execute(text(f"DELETE FROM training_assignments WHERE user_id IN {u_clause} OR assigned_by_id IN {u_clause};"))
-            db.session.execute(text(f"DELETE FROM training_notifications WHERE user_id IN {u_clause};"))
-        db.session.execute(text(f"DELETE FROM training_audit_reports WHERE org_id = {org_id};"))
+        if user_ids:
+            db.session.execute(
+                text("DELETE FROM training_acknowledgements WHERE user_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
+            db.session.execute(
+                text("DELETE FROM training_archive WHERE archived_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
+            db.session.execute(
+                text("DELETE FROM training_assignments WHERE user_id IN :u_ids OR assigned_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
+            db.session.execute(
+                text("DELETE FROM training_notifications WHERE user_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
+        db.session.execute(text("DELETE FROM training_audit_reports WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 17: SOP children BEFORE sop_master ───────────────────────────
-        db.session.execute(text(f"""
+        db.session.execute(text("""
             DELETE FROM sop_approvals
-            WHERE sop_id IN (SELECT id FROM sop_master WHERE org_id = {org_id});
-        """))
-        db.session.execute(text(f"""
+            WHERE sop_id IN (SELECT id FROM sop_master WHERE org_id = :org_id)
+        """), {"org_id": org_id})
+        db.session.execute(text("""
             DELETE FROM sop_comments
-            WHERE sop_id IN (SELECT id FROM sop_master WHERE org_id = {org_id});
-        """))
-        db.session.execute(text(f"""
+            WHERE sop_id IN (SELECT id FROM sop_master WHERE org_id = :org_id)
+        """), {"org_id": org_id})
+        db.session.execute(text("""
             DELETE FROM sop_versions
-            WHERE sop_id IN (SELECT id FROM sop_master WHERE org_id = {org_id});
-        """))
-        db.session.execute(text(f"DELETE FROM sop_master WHERE org_id = {org_id};"))
+            WHERE sop_id IN (SELECT id FROM sop_master WHERE org_id = :org_id)
+        """), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM sop_master WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 18: Knowledge & compliance ───────────────────────────────────
-        db.session.execute(text(f"DELETE FROM knowledge_repository WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM compliance_standard_records WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM knowledge_repository WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM compliance_standard_records WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 19: NULL department_id on users BEFORE deleting departments ──
-        db.session.execute(text(f"UPDATE users SET department_id = NULL WHERE org_id = {org_id};"))
+        db.session.execute(text("UPDATE users SET department_id = NULL WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 20: Projects (all child tables already gone) ─────────────────
-        db.session.execute(text(f"DELETE FROM projects WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM projects WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 21: Departments (after projects deleted, users dept-nulled) ──
-        db.session.execute(text(f"DELETE FROM departments WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM departments WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 22: User custom fields & imported ideas ───────────────────────
-        db.session.execute(text(f"DELETE FROM user_custom_fields WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM imported_ideas WHERE organization_id = {org_id};"))
+        db.session.execute(text("DELETE FROM user_custom_fields WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM imported_ideas WHERE organization_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 23: Org identity & settings ──────────────────────────────────
-        db.session.execute(text(f"DELETE FROM platform_identity WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM company_information WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM company_addresses WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM company_contacts WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM branding_assets WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM document_templates WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM organization_features WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM billing_settings WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM org_api_keys WHERE organization_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM integration_api_logs WHERE organization_id = {org_id};"))
+        db.session.execute(text("DELETE FROM platform_identity WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM company_information WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM company_addresses WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM company_contacts WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM branding_assets WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM document_templates WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM organization_features WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM billing_settings WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM org_api_keys WHERE organization_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM integration_api_logs WHERE organization_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 24: Analytics ─────────────────────────────────────────────────
-        db.session.execute(text(f"DELETE FROM analytics_ai_insights WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM analytics_exports WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM analytics_reports WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM analytics_schedules WHERE org_id = {org_id};"))
-        db.session.execute(text(f"DELETE FROM analytics_usage WHERE org_id = {org_id};"))
-        db.session.execute(text(f"UPDATE module_analytics SET org_id = NULL WHERE org_id = {org_id};"))
+        db.session.execute(text("DELETE FROM analytics_ai_insights WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM analytics_exports WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM analytics_reports WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM analytics_schedules WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("DELETE FROM analytics_usage WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text("UPDATE module_analytics SET org_id = NULL WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 25: Delete all users belonging to this organization ──────────
         # NOTE: We do NOT reassign users to another org — all org users are
         # permanently removed. SuperAdmin users (org_id IS NULL) are unaffected.
         # First null-out any FK refs in global tables pointing to these users.
         if user_ids:
-            db.session.execute(text(f"DELETE FROM saas_user_sessions WHERE user_id IN {u_clause};"))
-        db.session.execute(text(f"DELETE FROM users WHERE org_id = {org_id};"))
+            db.session.execute(
+                text("DELETE FROM saas_user_sessions WHERE user_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
+                {"u_ids": user_ids}
+            )
+        db.session.execute(text("DELETE FROM users WHERE org_id = :org_id"), {"org_id": org_id})
 
         # ── STEP 26: Delete the organization itself ───────────────────────────
-        db.session.execute(text(f"DELETE FROM organizations WHERE id = {org_id};"))
+        db.session.execute(text("DELETE FROM organizations WHERE id = :org_id"), {"org_id": org_id})
 
         db.session.commit()
         print(f"[HARD DELETE] Organization ID {org_id} permanently purged.")
@@ -1125,6 +1168,7 @@ def delete_company(org_id):
 @super_admin_bp.route('/companies/<int:org_id>/restore', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('organizations')
 def restore_company(org_id):
     """Restore a soft-deleted organization from Recycle Bin"""
     org = Organization.query.get_or_404(org_id)
@@ -1268,6 +1312,7 @@ def empty_recycle_bin():
 @super_admin_bp.route('/companies/<int:org_id>/reset-admin-password', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('organizations')
 def reset_admin_password(org_id):
     """Resets password of the main Admin user(s) of this organization to Welcome@123"""
     org = db.session.get(Organization, org_id) if hasattr(db.session, 'get') else db.session.get(Organization, org_id)
@@ -1336,6 +1381,7 @@ def reset_admin_password(org_id):
 @super_admin_bp.route('/companies/<int:org_id>/impersonate', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('organizations')
 def impersonate_company_admin(org_id):
     """Generate a JWT token for the admin user of this organization to impersonate them"""
     org = Organization.query.get_or_404(org_id)
@@ -1392,6 +1438,7 @@ def impersonate_company_admin(org_id):
 @super_admin_bp.route('/companies/bulk-action', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('organizations')
 def bulk_action_companies():
     """Bulk suspend, activate, delete, or assign settings to multiple organizations"""
     data = request.json or {}
@@ -1693,52 +1740,6 @@ def get_trial_extension_requests():
 #     data = request.json or {}
 
 #     days = data.get('days')
-#     new_date_str = data.get('trial_ends_at')
-
-#     if days is not None:
-#         try:
-#             days = int(days)
-#             new_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=days)
-#         except ValueError:
-#             return jsonify({"msg": "Invalid days value"}), 400
-#     elif new_date_str:
-#         try:
-#             new_date = datetime.fromisoformat(new_date_str.replace('Z', '+00:00')).replace(tzinfo=None)
-#         except (ValueError, AttributeError):
-#             return jsonify({"msg": "Invalid date format. Use ISO format (YYYY-MM-DD)"}), 400
-#     else:
-#         return jsonify({"msg": "Either 'days' or 'trial_ends_at' date is required"}), 400
-
-#     old_date = org.trial_ends_at.isoformat() if org.trial_ends_at else 'None'
-#     org.trial_ends_at = new_date
-#     org.license_expiry_date = new_date
-#     org.subscription_status = 'Trialing'
-
-#     # Update trial extension metrics in security_settings
-#     sec_settings = dict(getattr(org, 'security_settings', {}) or {})
-#     manual_count = sec_settings.get('manual_approved_trial_extensions', 0) + 1
-#     sec_settings['manual_approved_trial_extensions'] = manual_count
-
-#     pending = sec_settings.get('pending_trial_extension')
-#     if pending and pending.get('status') == 'Pending':
-#         pending['status'] = 'Approved'
-#         pending['approved_at'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
-#         pending['approved_by'] = 'SuperAdmin'
-#         sec_settings['pending_trial_extension'] = pending
-
-#     total_reqs = sec_settings.get('total_trial_requests', 0)
-#     sec_settings['total_trial_requests'] = max(total_reqs, sec_settings.get('auto_approved_trial_extensions', 0) + manual_count)
-
-#     org.security_settings = sec_settings
-#     from sqlalchemy.orm.attributes import flag_modified
-#     flag_modified(org, 'security_settings')
-
-#     # Also sync subscription model if present
-#     sub = Subscription.query.filter_by(org_id=org.id).first()
-#     if not sub:
-#         sub = Subscription.query.filter_by(organization_id=org.id).first()
-#     if sub:
-#         sub.trial_end_date = org.trial_ends_at
 #         sub.end_date = org.trial_ends_at
 #         sub.subscription_status = 'Trial'
 
@@ -1757,6 +1758,7 @@ def get_trial_extension_requests():
 @super_admin_bp.route('/companies/<int:org_id>/status', methods=['PUT'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('organizations')
 def update_company_status(org_id):
     org = Organization.query.get_or_404(org_id)
     data = request.json
@@ -1784,6 +1786,7 @@ def update_company_status(org_id):
 @super_admin_bp.route('/companies/<int:org_id>/activate-subscription', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('organizations')
 def activate_company_subscription(org_id):
     org = Organization.query.get_or_404(org_id)
     
@@ -2834,6 +2837,25 @@ def integration_health_check():
 @jwt_required()
 @super_admin_required()
 def manage_api_keys(key_id=None):
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    sub_role = _get_sa_sub_role(user)
+    
+    if request.method in ('POST', 'DELETE'):
+        if sub_role != SA_OWNER and sub_role not in SA_WRITE_PERMISSIONS.get('settings', []):
+            return jsonify({
+                "status": "error",
+                "message": f"Your sub-role '{sub_role}' does not have write access to the 'settings' section.",
+                "error_code": "SUB_ROLE_WRITE_DENIED"
+            }), 403
+    else:
+        if sub_role != SA_OWNER and sub_role not in SA_READ_PERMISSIONS.get('settings', []):
+            return jsonify({
+                "status": "error",
+                "message": f"Your sub-role '{sub_role}' does not have access to the 'settings' section.",
+                "error_code": "SUB_ROLE_ACCESS_DENIED"
+            }), 403
+
     s = _get_settings()
     api_cfg = _get_category(s, 'api_settings')
     keys = api_cfg.get('api_keys_active', [])
@@ -2947,6 +2969,7 @@ def super_admin_profile():
 @super_admin_bp.route('/logs', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('logs')
 def get_admin_logs():
     logs = SuperAdminLog.query.order_by(SuperAdminLog.created_at.desc()).limit(100).all()
     output = []
@@ -2964,6 +2987,7 @@ def get_admin_logs():
 @super_admin_bp.route('/tickets', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('support')
 def list_tickets():
     tickets = SupportTicket.query.order_by(SupportTicket.created_at.desc()).all()
     output = []
@@ -2984,6 +3008,24 @@ def list_tickets():
 @jwt_required()
 @super_admin_required()
 def manage_ticket(ticket_id):
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    sub_role = _get_sa_sub_role(user)
+    if request.method == 'PUT':
+        if sub_role != SA_OWNER and sub_role not in SA_WRITE_PERMISSIONS.get('support', []):
+            return jsonify({
+                "status": "error",
+                "message": f"Your sub-role '{sub_role}' does not have write access to the 'support' section.",
+                "error_code": "SUB_ROLE_WRITE_DENIED"
+            }), 403
+    else:
+        if sub_role != SA_OWNER and sub_role not in SA_READ_PERMISSIONS.get('support', []):
+            return jsonify({
+                "status": "error",
+                "message": f"Your sub-role '{sub_role}' does not have access to the 'support' section.",
+                "error_code": "SUB_ROLE_ACCESS_DENIED"
+            }), 403
+
     ticket = SupportTicket.query.get_or_404(ticket_id)
     if request.method == 'GET':
         return jsonify({
@@ -3015,6 +3057,7 @@ def manage_ticket(ticket_id):
 @super_admin_bp.route('/payments', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('billing')
 def list_payments():
     payments = SubscriptionPayment.query.order_by(SubscriptionPayment.created_at.desc()).all()
     output = []
@@ -3158,6 +3201,7 @@ def get_system_health():
 @super_admin_bp.route('/admin-logins', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('admin-logins')
 def list_admin_logins():
     """Returns list of all Super Admin accounts and credentials info"""
     sa_role = Role.query.filter_by(name='SuperAdmin').first()
@@ -3238,6 +3282,7 @@ def update_own_admin_credentials():
 @super_admin_bp.route('/admin-logins', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('admin-logins')
 def create_new_admin_login():
     """Creates a new Super Admin login account"""
     data = request.get_json() or {}
@@ -3301,6 +3346,7 @@ def create_new_admin_login():
 @super_admin_bp.route('/admin-logins/<int:admin_id>', methods=['PUT'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('admin-logins')
 def update_admin_login(admin_id):
     """Updates an existing Super Admin account details or password"""
     target = db.session.get(User, admin_id)
@@ -3342,6 +3388,7 @@ def update_admin_login(admin_id):
 @super_admin_bp.route('/admin-logins/<int:admin_id>', methods=['DELETE'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('admin-logins')
 def delete_admin_login(admin_id):
     """Deletes or removes a Super Admin account"""
     current_user_id = get_jwt_identity()
@@ -3393,6 +3440,8 @@ def delete_admin_login(admin_id):
 
 @super_admin_bp.route('/storage/breakdown', methods=['GET'])
 @jwt_required()
+@super_admin_required()
+@sub_role_required('analytics')
 def get_storage_breakdown_sa():
     from app.presentation.routes.super_admin_v1_routes import get_super_admin_user
     user = get_super_admin_user()
@@ -3410,14 +3459,9 @@ def get_storage_breakdown_sa():
 
 @super_admin_bp.route('/storage/update-limit', methods=['POST'])
 @jwt_required()
+@super_admin_required()
+@sub_role_write_required('organizations')
 def update_org_storage_limit_sa():
-    user_id = get_jwt_identity()
-    user = db.session.get(User, user_id) if user_id else None
-    role_name = user.role.name if user and user.role else ''
-    is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role')) if user else False
-    if not user or (role_name not in ('SuperAdmin', 'Admin') and not is_sa_custom):
-        return jsonify({"error": "Unauthorized"}), 403
-
     data = request.get_json() or {}
     org_id = data.get('org_id')
     storage_limit_gb = data.get('storage_limit_gb')
@@ -3448,6 +3492,7 @@ def update_org_storage_limit_sa():
 @super_admin_bp.route('/global-stages-template', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('settings')
 def get_global_stages_template():
     """Return the global 8-stage workflow template designed by Super Admin."""
     ps = PlatformSettings.query.first()
@@ -3462,6 +3507,7 @@ def get_global_stages_template():
 @super_admin_bp.route('/global-stages-template', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('settings')
 def save_global_stages_template():
     """Save or reset the Super Admin global 8-stage workflow template."""
     import base64, secrets, os
@@ -3587,21 +3633,22 @@ def save_global_stages_template():
             ps.stage_weightage_config = new_weights
 
     # Compute structured change highlights
+    import html as html_lib
     change_highlights = []
     default_map = {d["stage_id"]: d for d in Organization.DEFAULT_STAGES_CONFIG}
     for s in stages:
         sid = s.get('stage_id')
-        stitle = s.get('title', f'Stage {sid}')
+        stitle = html_lib.escape(str(s.get('title', f'Stage {sid}')))
         d_stage = default_map.get(sid, {})
         d_sec_ids = {sec.get('id') for sec in d_stage.get('sections', [])}
         
         s_secs = s.get('sections', [])
         for sec in s_secs:
             sec_id = str(sec.get('id', ''))
-            sec_label = sec.get('label') or sec.get('title') or 'Section'
+            sec_label = html_lib.escape(str(sec.get('label') or sec.get('title') or 'Section'))
             if sec_id not in d_sec_ids or '_custom_sec_' in sec_id or sec_id.startswith('sec_') or sec.get('type') == 'custom':
                 fields_count = len(sec.get('fields', []))
-                field_names = [f.get('label') or f.get('type') or 'Field' for f in (sec.get('fields') or [])]
+                field_names = [html_lib.escape(str(f.get('label') or f.get('type') or 'Field')) for f in (sec.get('fields') or [])]
                 field_str = f" ({len(field_names)} input elements: {', '.join(field_names)})" if field_names else ""
                 change_highlights.append(f"<strong>Stage {sid} ({stitle})</strong> &rarr; New Section: <strong>{sec_label}</strong>{field_str}")
             else:
@@ -3609,7 +3656,9 @@ def save_global_stages_template():
                 d_fields = {f.get('id') for f in (d_sec.get('fields') or [])} if d_sec else set()
                 for f in (sec.get('fields') or []):
                     if f.get('id') not in d_fields:
-                        change_highlights.append(f"<strong>Stage {sid} ({stitle}) &rarr; {sec_label}</strong> &rarr; New element: <strong>{f.get('label', 'Field')}</strong> ({f.get('type', 'text')})")
+                        f_label = html_lib.escape(str(f.get('label', 'Field')))
+                        f_type = html_lib.escape(str(f.get('type', 'text')))
+                        change_highlights.append(f"<strong>Stage {sid} ({stitle}) &rarr; {sec_label}</strong> &rarr; New element: <strong>{f_label}</strong> ({f_type})")
 
     # Mark all active organizations as having a pending template update
     Organization.query.filter_by(is_deleted=False).update({"has_pending_template_update": True})
@@ -3855,6 +3904,7 @@ def _get_configured_stages_list(ps=None):
 @super_admin_bp.route('/stage-weightage', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('settings')
 def get_stage_weightage():
     """Return the current per-stage progress weightage configuration matching global stage templates."""
     ps = PlatformSettings.query.first()
@@ -3868,9 +3918,9 @@ def get_stage_weightage():
         # Re-balance equal weights across all configured stages
         base_w = round(100.0 / num_stages, 1)
         weights = [base_w] * num_stages
-        diff = round(100.0 - sum(weights), 1)
+        diff = round(100.0 - sum(default_weights) if 'default_weights' in locals() else sum(weights))
         if diff != 0:
-            weights[-1] = round(weights[-1] + diff, 1)
+            weights[-1] = round(weights[-1] + (100.0 - sum(weights)), 1)
 
     stages = []
     for i, info in enumerate(stages_info):
@@ -3897,6 +3947,7 @@ def get_stage_weightage():
 @super_admin_bp.route('/stage-weightage', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('settings')
 def save_stage_weightage():
     """Save or reset the per-stage progress weightage configuration."""
     ps = PlatformSettings.query.first()

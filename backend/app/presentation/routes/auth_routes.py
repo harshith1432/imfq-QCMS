@@ -720,7 +720,10 @@ def register():
     if User.query.filter_by(email=data['email']).first():
         return jsonify({"msg": "A user with this email already exists"}), 400
         
-    role = Role.query.filter_by(name=data.get('role', 'Team Member')).first()
+    req_role = data.get('role', 'Team Member')
+    if req_role == 'SuperAdmin':
+        return jsonify({"msg": "Forbidden: Cannot create SuperAdmin account"}), 403
+    role = Role.query.filter_by(name=req_role).first()
     if not role:
         return jsonify({"msg": "Invalid role"}), 400
         
@@ -829,21 +832,27 @@ def get_login_config():
             Organization.login_options.isnot(None)
         ).all()
         checked_keys = set()
+        import re
         for org in all_orgs_with_custom_login:
             opts = org.login_options or []
             for key in opts:
+                if not isinstance(key, str) or not re.match(r'^[a-zA-Z0-9_]{1,64}$', key):
+                    continue
                 if key in ('email', 'username') or key in checked_keys:
                     continue
                 checked_keys.add(key)
                 try:
-                    from sqlalchemy import text
-                    result = db.session.execute(
-                        text(f"SELECT id FROM users WHERE LOWER({key}::text) = LOWER(:val) LIMIT 1"),
-                        {"val": identifier}
-                    ).fetchone()
-                    if result:
-                        user = db.session.get(User, result[0])
-                        break
+                    if hasattr(User, key):
+                        col = getattr(User, key)
+                        u_match = User.query.filter(func.lower(col.cast(db.String)) == identifier.lower()).first()
+                        if u_match:
+                            user = u_match
+                            break
+                    else:
+                        u_match = User.query.filter(func.lower(func.json_extract_path_text(User.custom_fields, key)) == identifier.lower()).first()
+                        if u_match:
+                            user = u_match
+                            break
                 except Exception:
                     continue
             if user:
@@ -1019,21 +1028,27 @@ def login():
             Organization.login_options.isnot(None)
         ).all()
         checked_keys = set()
+        import re
         for org in all_orgs_with_custom_login:
             options = org.login_options or []
             for key in options:
+                if not isinstance(key, str) or not re.match(r'^[a-zA-Z0-9_]{1,64}$', key):
+                    continue
                 if key in ('email', 'username') or key in checked_keys:
                     continue
                 checked_keys.add(key)
-                # Check if this column exists in users table and search it
                 try:
-                    result = db.session.execute(
-                        text(f"SELECT id FROM users WHERE LOWER({key}::text) = LOWER(:val) LIMIT 1"),
-                        {"val": identifier}
-                    ).fetchone()
-                    if result:
-                        user = db.session.get(User, result[0])
-                        break
+                    if hasattr(User, key):
+                        col = getattr(User, key)
+                        u_match = User.query.filter(func.lower(col.cast(db.String)) == identifier.lower()).first()
+                        if u_match:
+                            user = u_match
+                            break
+                    else:
+                        u_match = User.query.filter(func.lower(func.json_extract_path_text(User.custom_fields, key)) == identifier.lower()).first()
+                        if u_match:
+                            user = u_match
+                            break
                 except Exception:
                     continue
             if user:
@@ -1497,15 +1512,24 @@ def update_profile():
 @auth_bp.route('/public-profile/<int:user_id>', methods=['GET'])
 @jwt_required()
 def get_public_profile(user_id):
+    current_user_id = int(get_jwt_identity())
+    current_user = db.session.get(User, current_user_id)
+    if not current_user:
+        return jsonify({"msg": "Current user not found"}), 404
+
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"msg": "User not found"}), 404
         
+    is_sa = getattr(current_user, 'is_super_admin', False) or (current_user.role and current_user.role.name == 'SuperAdmin')
+    if not is_sa and current_user.org_id != user.org_id:
+        return jsonify({"msg": "Unauthorized: Access denied to user profile from another organization"}), 403
+
     return jsonify({
         "id": user.id,
         "username": user.username,
         "full_name": user.full_name or user.username,
-        "role_name": user.role.name,
+        "role_name": user.role.name if user.role else 'Team Member',
         "department": user.dept.name if user.dept else None,
         "profile_picture": get_profile_picture_url(user),
         "banner_image": user.banner_image

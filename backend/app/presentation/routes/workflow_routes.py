@@ -126,8 +126,21 @@ def update_stage_data(project_id, stage_id):
     project = Project.query.get_or_404(project_id)
     
     user = db.session.get(User, user_id)
-    if user.role.name not in ('Admin', 'SuperAdmin', 'Team Leader', 'Team Member'):
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+        
+    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
+
+    role_name = user.role.name if user.role else 'Team Member'
+    if role_name not in ('Admin', 'SuperAdmin', 'CEO', 'Team Leader', 'Team Member', 'Facilitator'):
         return jsonify({"msg": "Access denied. You do not have permission to edit stage details."}), 403
+
+    if role_name == 'Team Member':
+        from app.infrastructure.database.models.models import ProjectMember
+        is_mem = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
+        if not is_mem and project.creator_id != user.id and project.team_leader_id != user.id:
+            return jsonify({"msg": "Access denied. You are not assigned to this project."}), 403
     
     # Check if stage is valid to update (current or past)
     if stage_id > project.current_stage:
@@ -270,6 +283,11 @@ def stage1_decision(project_id):
     data = request.get_json() # {status: 'Approved'/'Rejected', 'comments': '...'}
     user_id = get_jwt_identity()
     project = Project.query.get_or_404(project_id)
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
     
     s1 = Stage1ProblemDefinitionProjectInitiation.query.filter_by(project_id=project_id).first()
     if not s1:
@@ -297,6 +315,12 @@ def approve_project(project_id):
     data = request.get_json() # {status: 'Approved'/'Rejected', 'comments': '...', 'stage': 7}
     user_id = get_jwt_identity()
     project = Project.query.get_or_404(project_id)
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
+
     target_stage = data.get('stage', project.current_stage)
     
     review = ProjectReview.query.filter_by(project_id=project_id, stage_number=target_stage, status='Pending').first()
@@ -331,6 +355,11 @@ def approve_stage_disciplines(project_id, stage_id):
     comments = data.get('comments', '')
     user_id = get_jwt_identity()
     project = Project.query.get_or_404(project_id)
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
     
     model = STAGE_MODEL_MAP.get(stage_id)
     if not model:
@@ -427,6 +456,11 @@ def advance_stage(project_id):
         user_id = user_id.get('id') or user_id.get('user_id')
 
     project = Project.query.get_or_404(project_id)
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
     
     if not new_stage:
         new_stage = project.current_stage + 1
@@ -684,6 +718,12 @@ def stage_presence_heartbeat(project_id, stage_id):
     if not user:
         return jsonify({"msg": "User not found"}), 404
     
+    project = db.session.get(Project, project_id)
+    if not project:
+        return jsonify({"msg": "Project not found"}), 404
+    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
+
     data = request.get_json() or {}
     is_editing = bool(data.get('is_editing', False))
     
@@ -729,6 +769,12 @@ def stage_presence_stream(project_id, stage_id):
     user = db.session.get(User, int(user_id)) if user_id else None
     if not user:
         return jsonify({"msg": "User not found"}), 404
+
+    project = db.session.get(Project, project_id)
+    if not project:
+        return jsonify({"msg": "Project not found"}), 404
+    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
 
     # Extract user profile data while DB session is open and active
     user_data = _extract_user_presence_data(user)

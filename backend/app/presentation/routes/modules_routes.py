@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func
 from app import db
-from app.presentation.middleware.middleware import super_admin_required
+from app.presentation.middleware.middleware import super_admin_required, sub_role_required, sub_role_write_required
 from app.infrastructure.database.models.models import (
     Module, ModuleDependency, ModuleAssignment, ModulePermission,
     ModuleUsageAnalytics, ModuleAuditLog, User, Organization, SaaSPlan, SaaSPlanModules
@@ -155,6 +155,7 @@ def get_active_features():
 @modules_bp.route('', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('modules')
 def list_modules():
     """Lists all modules with search, sort, filter and pagination support (Tier 1 Redis cached)"""
     q = request.args.get('q', '').strip()
@@ -305,6 +306,7 @@ def list_modules():
 @modules_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('modules')
 def get_dashboard_kpis():
     """Calculates KPI counts for modules registry dashboard"""
     total = Module.query.filter_by(is_archived=False).count()
@@ -333,29 +335,32 @@ def get_dashboard_kpis():
 
 # ==============================================================================
 # [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
-# Function: get_module_details (Lines 320-425)
-# Reason: Unused single module inspector.
+# Function: get_module_details (Lines 339-445)
+# Reason: Unused module details endpoint. Details are retrieved via list endpoint.
 # ==============================================================================
 # @modules_bp.route('/<int:module_id>', methods=['GET'])
 # @jwt_required()
 # @super_admin_required()
 # def get_module_details(module_id):
-#     """Retrieves detailed module metadata, configurations, assignments, dependencies, and audit logs"""
+#     """Returns complete module payload with dependencies, plans and audit logs"""
 #     m = Module.query.get_or_404(module_id)
-
+#     
+#     # Dependencies
+#     deps = [
+#         {
+#             "id": d.id,
+#             "dependency_module_id": d.dependency_module_id,
+#             "dependency_name": db.session.get(Module, d.dependency_module_id).name if db.session.get(Module, d.dependency_module_id) else "Unknown",
+#             "dependency_type": d.dependency_type
+#         } for d in m.dependencies
+#     ]
+#     
 #     # Assignments
 #     plans = [a.assigned_target for a in m.assignments if a.assigned_type == 'Plan']
-#     orgs = [int(a.assigned_target) for a in m.assignments if a.assigned_type == 'Organization']
+#     orgs = [a.assigned_target for a in m.assignments if a.assigned_type == 'Organization']
 #     industries = [a.assigned_target for a in m.assignments if a.assigned_type == 'Industry']
 #     regions = [a.assigned_target for a in m.assignments if a.assigned_type == 'Region']
 #     customer_types = [a.assigned_target for a in m.assignments if a.assigned_type == 'CustomerType']
-
-#     # Dependencies
-#     required_ids = [d.dependency_module_id for d in m.dependencies if d.dependency_type == 'Required']
-#     blocked_ids = [d.dependency_module_id for d in m.dependencies if d.dependency_type == 'Blocked']
-#     parent_ids = [d.dependency_module_id for d in m.dependencies if d.dependency_type == 'Parent']
-#     child_ids = [d.dependency_module_id for d in m.dependencies if d.dependency_type == 'Child']
-
 #     required_mods = [{"id": dm.id, "name": dm.name, "code": dm.code} for dm in Module.query.filter(Module.id.in_(required_ids)).all()] if required_ids else []
 #     blocked_mods = [{"id": dm.id, "name": dm.name, "code": dm.code} for dm in Module.query.filter(Module.id.in_(blocked_ids)).all()] if blocked_ids else []
 #     parent_mods = [{"id": dm.id, "name": dm.name, "code": dm.code} for dm in Module.query.filter(Module.id.in_(parent_ids)).all()] if parent_ids else []
@@ -449,6 +454,7 @@ def get_dashboard_kpis():
 @modules_bp.route('', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('modules')
 def create_module():
     """Creates a new module from the multi-step Onboarding Wizard"""
     data = request.json or {}
@@ -605,6 +611,7 @@ def create_module():
 @modules_bp.route('/<int:module_id>/enable', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('modules')
 def enable_module(module_id):
     """Enables a module"""
     m = Module.query.get_or_404(module_id)
@@ -640,6 +647,7 @@ def enable_module(module_id):
 @modules_bp.route('/<int:module_id>/disable', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('modules')
 def disable_module(module_id):
     """Disables a module"""
     m = Module.query.get_or_404(module_id)
@@ -678,6 +686,7 @@ def disable_module(module_id):
 @modules_bp.route('/<int:module_id>/plan-assignment', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('modules')
 def assign_plans(module_id):
     """Updates the list of plans that have access to this module"""
     m = Module.query.get_or_404(module_id)
@@ -700,6 +709,7 @@ def assign_plans(module_id):
 @modules_bp.route('/<int:module_id>/org-assignment', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('modules')
 def assign_organizations(module_id):
     """Updates explicit organization / industry / region assignments for pilot/beta targets"""
     m = Module.query.get_or_404(module_id)
@@ -762,6 +772,7 @@ def assign_organizations(module_id):
 @modules_bp.route('/<int:module_id>/duplicate', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('modules')
 def duplicate_module(module_id):
     """Creates a copy of an existing module definition"""
     m = Module.query.get_or_404(module_id)

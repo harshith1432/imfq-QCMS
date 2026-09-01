@@ -32,7 +32,7 @@ def _is_admin_user(user):
         return False
     role_name = user.role.name if user.role else ''
     is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
-    is_sa_flag = getattr(user, 'is_super_admin', False) or user.org_id is None
+    is_sa_flag = getattr(user, 'is_super_admin', False) or (user.role and user.role.name == 'SuperAdmin')
     return role_name in ALLOWED_ROLES or is_sa_custom or is_sa_flag
 
 def _can_read(user):
@@ -40,7 +40,7 @@ def _can_read(user):
         return False
     role_name = user.role.name if user.role else ''
     is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
-    is_sa_flag = getattr(user, 'is_super_admin', False) or user.org_id is None
+    is_sa_flag = getattr(user, 'is_super_admin', False) or (user.role and user.role.name == 'SuperAdmin')
     return role_name in READ_ROLES or is_sa_custom or is_sa_flag
 
 def require_admin(user):

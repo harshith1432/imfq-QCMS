@@ -7,15 +7,32 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
-    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.f853ac88a083.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.86d6542b6d44.min.js" as="script">
+    <script src="/assets/dist/auth-guard.86d6542b6d44.min.js"></script>
 
     <title>Redirecting...</title>
 </head>
 
 <body>
     <p>Please wait, redirecting to your dashboard...</p>
+    <script>
+        (function() {
+            try {
+                const user = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+                const role = user.role || user.role_name || '';
+                const clean = String(role).trim().toLowerCase();
+                if (clean.includes('super')) window.location.replace('/admin/super-admin.html');
+                else if (clean === 'admin') window.location.replace('/dashboard/dashboard-admin.html');
+                else if (clean === 'reviewer') window.location.replace('/dashboard/dashboard-reviewer.html');
+                else if (clean === 'facilitator') window.location.replace('/dashboard/dashboard-facilitator.html');
+                else if (clean === 'ceo') window.location.replace('/dashboard/dashboard-ceo.html');
+                else window.location.replace('/dashboard/dashboard-team-member.html');
+            } catch (_) {
+                window.location.replace('/auth/login.html');
+            }
+        })();
+    </script>
 </body>
 
 </html>

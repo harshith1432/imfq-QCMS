@@ -2207,65 +2207,60 @@ def delete_project(id):
         import logging
 
         # ── DELETE order: grandchild tables first, then child tables, then projects ──
-        # Ordered so that tables referencing other child tables come before the parent child
-        tables_to_clean = [
-            # ── Grandchild rows (rows that reference child table PKs) ──
-            'qc_check_sheet_entries',   # -> qc_check_sheet_rows -> qc_check_sheets -> projects
-            'qc_check_sheet_rows',      # -> qc_check_sheets -> projects
-            'qc_pareto_items',          # -> qc_pareto_charts -> projects
-            'qc_stratification_items',  # -> qc_stratifications -> projects
-            'qc_process_steps',         # -> qc_process_maps -> projects
-            'qc_fishbone_branches',     # -> qc_fishbone_diagrams -> projects
-            'qc_scatter_points',        # -> qc_scatter_diagrams -> projects
-            'qc_control_points',        # -> qc_control_charts -> projects
+        cleanup_queries = [
+            # Grandchild rows
+            text("DELETE FROM qc_check_sheet_entries WHERE qc_check_sheet_row_id IN (SELECT id FROM qc_check_sheet_rows WHERE qc_check_sheet_id IN (SELECT id FROM qc_check_sheets WHERE project_id = :pid))"),
+            text("DELETE FROM qc_check_sheet_rows WHERE qc_check_sheet_id IN (SELECT id FROM qc_check_sheets WHERE project_id = :pid)"),
+            text("DELETE FROM qc_pareto_items WHERE qc_pareto_id IN (SELECT id FROM qc_pareto_charts WHERE project_id = :pid)"),
+            text("DELETE FROM qc_stratification_items WHERE stratification_id IN (SELECT id FROM qc_stratifications WHERE project_id = :pid)"),
+            text("DELETE FROM qc_process_steps WHERE process_map_id IN (SELECT id FROM qc_process_maps WHERE project_id = :pid)"),
+            text("DELETE FROM qc_fishbone_branches WHERE diagram_id IN (SELECT id FROM qc_fishbone_diagrams WHERE project_id = :pid)"),
+            text("DELETE FROM qc_scatter_points WHERE scatter_id IN (SELECT id FROM qc_scatter_diagrams WHERE project_id = :pid)"),
+            text("DELETE FROM qc_control_points WHERE control_chart_id IN (SELECT id FROM qc_control_charts WHERE project_id = :pid)"),
 
-            # ── Direct child tables (FK -> projects.id) ──
-            'audit_logs',
-            'facilitator_notes',
-            'facilitator_assistance_requests',
-            'project_reviews',
-            'project_workflow',
-            'project_meetings',
-            'project_members',
-            'kpi_metrics',
-            'kpi_dashboard_cache',
-            'project_stage_tracker',
-            'knowledge_repository',
-            'employee_points',
+            # Direct child tables
+            text("DELETE FROM audit_logs WHERE project_id = :pid"),
+            text("DELETE FROM facilitator_notes WHERE project_id = :pid"),
+            text("DELETE FROM facilitator_assistance_requests WHERE project_id = :pid"),
+            text("DELETE FROM project_reviews WHERE project_id = :pid"),
+            text("DELETE FROM project_workflow WHERE project_id = :pid"),
+            text("DELETE FROM project_meetings WHERE project_id = :pid"),
+            text("DELETE FROM project_members WHERE project_id = :pid"),
+            text("DELETE FROM kpi_metrics WHERE project_id = :pid"),
+            text("DELETE FROM kpi_dashboard_cache WHERE project_id = :pid"),
+            text("DELETE FROM project_stage_tracker WHERE project_id = :pid"),
+            text("DELETE FROM knowledge_repository WHERE project_id = :pid"),
+            text("DELETE FROM employee_points WHERE project_id = :pid"),
 
-            # ── QC tool parent tables ──
-            'qc_check_sheets',
-            'qc_pareto_charts',
-            'qc_stratifications',
-            'qc_process_maps',
-            'qc_fishbone_diagrams',
-            'qc_scatter_diagrams',
-            'qc_control_charts',
+            # QC tool parent tables
+            text("DELETE FROM qc_check_sheets WHERE project_id = :pid"),
+            text("DELETE FROM qc_pareto_charts WHERE project_id = :pid"),
+            text("DELETE FROM qc_stratifications WHERE project_id = :pid"),
+            text("DELETE FROM qc_process_maps WHERE project_id = :pid"),
+            text("DELETE FROM qc_fishbone_diagrams WHERE project_id = :pid"),
+            text("DELETE FROM qc_scatter_diagrams WHERE project_id = :pid"),
+            text("DELETE FROM qc_control_charts WHERE project_id = :pid"),
 
-            # ── Stage data tables ──
-            'stage_1_problem_definition_project_initiation',
-            'stage_2_observation_data_collection',
-            'stage_3_cause_identification',
-            'stage_4_root_cause_analysis_verification',
-            'stage_5_countermeasure_planning_solution_development',
-            'stage_6_implementation_change_management',
-            'stage_7_performance_verification_benefits_realization',
-            'stage_8_standardization_knowledge_sharing_project_closure',
+            # Stage data tables
+            text("DELETE FROM stage_1_problem_definition_project_initiation WHERE project_id = :pid"),
+            text("DELETE FROM stage_2_observation_data_collection WHERE project_id = :pid"),
+            text("DELETE FROM stage_3_cause_identification WHERE project_id = :pid"),
+            text("DELETE FROM stage_4_root_cause_analysis_verification WHERE project_id = :pid"),
+            text("DELETE FROM stage_5_countermeasure_planning_solution_development WHERE project_id = :pid"),
+            text("DELETE FROM stage_6_implementation_change_management WHERE project_id = :pid"),
+            text("DELETE FROM stage_7_performance_verification_benefits_realization WHERE project_id = :pid"),
+            text("DELETE FROM stage_8_standardization_knowledge_sharing_project_closure WHERE project_id = :pid"),
         ]
         
-        for table in tables_to_clean:
+        for stmt in cleanup_queries:
             try:
                 with db.session.begin_nested():
-                    db.session.execute(
-                        text(f"DELETE FROM {table} WHERE project_id = :pid"),
-                        {"pid": id}
-                    )
+                    db.session.execute(stmt, {"pid": id})
             except Exception as e:
                 err_str = str(e).lower()
-                # Ignore if table doesn't exist yet (feature not used by this org)
                 if "does not exist" not in err_str and "no such table" not in err_str and "undefined" not in err_str:
                     import logging
-                    logging.warning(f"[delete_project] Failed to delete from '{table}': {e}")
+                    logging.warning(f"[delete_project] Failed to clean child table data: {e}")
         
         # Finally delete the project row itself
         db.session.execute(text("DELETE FROM projects WHERE id = :pid"), {"pid": id})

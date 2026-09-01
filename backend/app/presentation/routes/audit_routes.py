@@ -69,12 +69,16 @@ def get_real_client_ip(req=None):
         if 'server_public_ip' in _geo_cache:
             return _geo_cache['server_public_ip']
         try:
-            url_req = urllib.request.urlopen('http://ip-api.com/json/', timeout=1.5)
-            res_data = json.loads(url_req.read().decode('utf-8'))
-            if res_data.get('status') == 'success' and res_data.get('query'):
-                wan_ip = res_data['query']
-                _geo_cache['server_public_ip'] = wan_ip
-                return wan_ip
+            req_obj = urllib.request.Request(
+                'https://api.ipify.org?format=json',
+                headers={'User-Agent': 'QCMS-Audit/1.0'}
+            )
+            with urllib.request.urlopen(req_obj, timeout=1.5) as url_req:
+                res_data = json.loads(url_req.read().decode('utf-8'))
+                if res_data.get('ip'):
+                    wan_ip = res_data['ip']
+                    _geo_cache['server_public_ip'] = wan_ip
+                    return wan_ip
         except Exception:
             pass
         return '127.0.0.1'
@@ -103,12 +107,16 @@ def get_real_client_ip(req=None):
         return _geo_cache['server_public_ip']
     
     try:
-        url_req = urllib.request.urlopen('http://ip-api.com/json/', timeout=1.5)
-        res_data = json.loads(url_req.read().decode('utf-8'))
-        if res_data.get('status') == 'success' and res_data.get('query'):
-            wan_ip = res_data['query']
-            _geo_cache['server_public_ip'] = wan_ip
-            return wan_ip
+        req_obj = urllib.request.Request(
+            'https://api.ipify.org?format=json',
+            headers={'User-Agent': 'QCMS-Audit/1.0'}
+        )
+        with urllib.request.urlopen(req_obj, timeout=1.5) as url_req:
+            res_data = json.loads(url_req.read().decode('utf-8'))
+            if res_data.get('ip'):
+                wan_ip = res_data['ip']
+                _geo_cache['server_public_ip'] = wan_ip
+                return wan_ip
     except Exception:
         pass
 
@@ -157,20 +165,21 @@ def get_geo_location(ip, user=None, req=None):
         return loc_str
 
     # 3. IP Geolocation API Lookup
-    url = f"http://ip-api.com/json/{ip}"
     loc_str = None
-    try:
-        req_obj = urllib.request.urlopen(url, timeout=1.5)
-        data = json.loads(req_obj.read().decode('utf-8'))
-        if data.get('status') == 'success':
-            city = data.get('city') or ''
-            region = data.get('regionName') or data.get('region') or ''
-            country = data.get('countryCode') or data.get('country') or ''
-            
-            parts = [p for p in [city, region, country] if p]
-            loc_str = ", ".join(parts) if parts else None
-    except Exception:
-        pass
+    import re
+    if ip and re.match(r'^[0-9a-fA-F:.]+$', ip):
+        url = f"https://ipapi.co/{ip}/json/"
+        try:
+            req_obj = urllib.request.Request(url, headers={'User-Agent': 'QCMS-Audit/1.0'})
+            with urllib.request.urlopen(req_obj, timeout=1.5) as response_obj:
+                data = json.loads(response_obj.read().decode('utf-8'))
+                city = data.get('city') or ''
+                region = data.get('region') or data.get('region_code') or ''
+                country = data.get('country_name') or data.get('country') or ''
+                parts = [p for p in [city, region, country] if p]
+                loc_str = ", ".join(parts) if parts else None
+        except Exception:
+            pass
 
     # 4. Correct ISP / Cloud Gateway mismatch: If IP geolocation returned Mumbai (common for Indian cloud/ISP gateways)
     # but the user is working in Bengaluru, display Bengaluru, Karnataka, IN!

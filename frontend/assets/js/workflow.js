@@ -50,10 +50,12 @@ async function loadStageContent() {
     const stageData = await api.get(`/workflow/${projectId}/stage/${currentStageId}`);
     const data = stageData.data || {};
     
+    const esc = (s) => (window.OctaQube && OctaQube.escapeHtml) ? OctaQube.escapeHtml(String(s || '')) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const stageObj = stages[currentStageId-1] || {};
     const container = document.getElementById('stageBody');
     container.innerHTML = `
-        <h2 style="margin-bottom: 0.5rem;">${stages[currentStageId-1].title}</h2>
-        <p class="text-muted" style="margin-bottom: 2rem;">${stages[currentStageId-1].description}</p>
+        <h2 style="margin-bottom: 0.5rem;">${esc(stageObj.title)}</h2>
+        <p class="text-muted" style="margin-bottom: 2rem;">${esc(stageObj.description)}</p>
         
         <div id="stageForm">
             ${getStageFields(currentStageId, data)}

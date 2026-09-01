@@ -88,6 +88,12 @@ def update_document_identity():
     """Save & update document identity configuration sections."""
     try:
         user, org_id = _get_user_and_org_id()
+        if not user:
+            return jsonify({"status": "error", "message": "User not found"}), 404
+            
+        role_name = user.role.name if user.role else ''
+        if role_name not in ('SuperAdmin', 'Admin', 'CEO'):
+            return jsonify({"status": "error", "message": "Admin privileges required to update branding configuration"}), 403
 
         data = request.json or {}
         section = data.get('section', 'platform')
