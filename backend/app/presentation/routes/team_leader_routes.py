@@ -22,7 +22,7 @@ def team_leader_or_admin_required(f):
     def decorated_function(*args, **kwargs):
         current_user_id = get_jwt_identity()
         user = db.session.get(User, current_user_id)
-        if not user or not user.role or user.role.name not in ['Team Leader', 'Team Member', 'Admin']:
+        if not user or not user.role or user.role.name not in ['Team Leader', 'Admin', 'SuperAdmin', 'CEO']:
             return jsonify({"msg": "Team Leader or Admin access required"}), 403
         return f(*args, **kwargs)
     return decorated_function

@@ -1,5 +1,5 @@
 (function () {
-    const isAuthed = (sessionStorage.getItem('octaqube_authenticated') === 'true') || (localStorage.getItem('octaqube_authenticated') === 'true') || (sessionStorage.getItem('qcms_authenticated') === 'true') || (localStorage.getItem('qcms_authenticated') === 'true');
+    const isAuthed = (sessionStorage.getItem('octaqube_authenticated') === 'true') || (sessionStorage.getItem('qcms_authenticated') === 'true') || (localStorage.getItem('octaqube_authenticated') === 'true');
     const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
     const token = sessionStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
 
@@ -119,24 +119,19 @@
             sessionCheckInProgress = true;
             lastCheckTime = Date.now();
             try {
-                const currentToken = sessionStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+                const currentToken = sessionStorage.getItem('token') || sessionStorage.getItem('access_token') || '';
                 if (!currentToken) return;
                 const headers = {
                     'Authorization': `Bearer ${currentToken}`
                 };
                 const res = await fetch('/api/auth/me', {
-                    headers,
-                    credentials: 'same-origin'
+                    headers
                 });
                 if (res.status === 401) {
                     const data = await res.json().catch(() => ({}));
                     if (data && (data.session_terminated || data.message?.includes('deactivated') || data.message?.includes('expired') || data.message?.includes('Invalid token') || data.message?.includes('User account not found'))) {
                         console.warn('[AuthGuard] 401 received during session check:', data);
                         sessionStorage.clear();
-                        localStorage.removeItem('octaqube_authenticated');
-                        localStorage.removeItem('user');
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('access_token');
                         if (!window.location.pathname.includes('login.html')) {
                             window.location.href = '/auth/login.html?reason=' + (data.session_terminated ? 'session_terminated' : 'expired');
                         }
@@ -510,11 +505,6 @@
             sessionStorage.removeItem('user');
             sessionStorage.removeItem('role_permissions');
             sessionStorage.removeItem('octaqube_authenticated');
-            localStorage.removeItem('token');
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('role_permissions');
-            localStorage.removeItem('octaqube_authenticated');
             // Clear remembered credentials only on explicit logout or administrative session termination
             if (urlParams.get('logout') === 'true' || urlParams.get('reason') === 'session_terminated') {
                 sessionStorage.clear();
@@ -582,10 +572,6 @@
                     if (data && (data.session_terminated || data.message?.includes('deactivated') || data.message?.includes('expired') || data.message?.includes('Invalid token') || data.message?.includes('User account not found'))) {
                         console.warn('[Auth Check] 401 Unauthorized session. Clearing token and redirecting to login...');
                         sessionStorage.clear();
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('access_token');
-                        localStorage.removeItem('user');
-                        localStorage.removeItem('octaqube_authenticated');
                         window.location.replace('/auth/login.html' + (data.session_terminated ? '?reason=session_terminated' : ''));
                     }
                 }).catch(() => {});
@@ -1341,31 +1327,19 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionStorage.removeItem('access_token');
         sessionStorage.removeItem('user');
         sessionStorage.removeItem('octaqube_last_activity');
-        localStorage.removeItem('token');
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('octaqube_last_activity');
+        sessionStorage.removeItem('octaqube_authenticated');
 
         const currentPath = window.location.pathname;
         if (!currentPath.includes('login.html') && !currentPath.includes('index.html') && currentPath !== '/') {
             alert('Your session has automatically terminated due to 2 hours of inactivity.');
-            window.location.href = '/login.html?reason=inactivity_timeout';
+            window.location.href = '/auth/login.html?reason=inactivity_timeout';
         }
     }
 
     async function sendHeartbeat() {
         if (isTerminating) return;
-        const isAuthed = sessionStorage.getItem('octaqube_authenticated') === 'true' || localStorage.getItem('octaqube_authenticated') === 'true';
+        const isAuthed = sessionStorage.getItem('octaqube_authenticated') === 'true';
         if (!isAuthed) return;
-
-        // Check latest cross-tab activity from localStorage
-        const latestStored = localStorage.getItem('octaqube_last_activity');
-        if (latestStored && !isNaN(Number(latestStored))) {
-            const remoteTime = Number(latestStored);
-            if (remoteTime > lastUserMovementTime) {
-                lastUserMovementTime = remoteTime;
-            }
-        }
 
         const currentTime = Date.now();
         const timeSinceMovement = currentTime - lastUserMovementTime;
@@ -1380,7 +1354,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (timeSinceMovement < INACTIVITY_TIMEOUT_MS && (currentTime - lastHeartbeatSentTime) >= HEARTBEAT_INTERVAL_MS) {
             lastHeartbeatSentTime = currentTime;
             try {
-                const currentToken = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+                const currentToken = sessionStorage.getItem('token') || sessionStorage.getItem('access_token') || '';
                 const headers = {
                     'Content-Type': 'application/json'
                 };
@@ -1389,8 +1363,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 const res = await fetch('/api/auth/heartbeat', {
                     method: 'POST',
-                    headers,
-                    credentials: 'same-origin'
+                    headers
                 });
 
                 if (res.status === 401) {

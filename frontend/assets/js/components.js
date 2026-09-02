@@ -568,8 +568,15 @@ const OctaQube = {
             this.renderSidebar();
             this.renderNavbar();
             this.renderMobileBottomNav();
-            const isSuperAdminPage = window.location.pathname.includes('super-admin.html') || window.location.href.includes('super-admin.html');
-            if (!isSuperAdminPage) {
+            const userRoleName = this.normalizeRole(this.user.role?.name || this.user.role || this.user.role_name);
+            document.body.setAttribute('data-user-role', userRoleName);
+            const isSuperAdmin = userRoleName === 'SuperAdmin' || 
+                                 window.location.pathname.includes('super-admin') || 
+                                 window.location.href.includes('super-admin');
+            if (isSuperAdmin) {
+                document.body.classList.add('role-superadmin');
+            }
+            if (!isSuperAdmin) {
                 this.renderAIChatWidget();
                 this.renderHelpdeskWidget();
             } else {
@@ -907,15 +914,19 @@ const OctaQube = {
             if (logoUrl && logoUrl !== 'null' && logoUrl !== 'None') {
                 let img = sidebarBrand.querySelector('img');
                 if (!img) {
-                    sidebarBrand.innerHTML = `<img src="${logoUrl}" alt="Logo" style="width: 32px; height: 32px; object-fit: contain; border-radius: 8px;">
+                    sidebarBrand.innerHTML = `<img src="${logoUrl}" alt="Logo" style="height: 32px; max-width: 140px; object-fit: contain; background: transparent;">
                                               <div class="brand-text">${OctaQube.escapeHtml(orgName)} <small style="color:var(--ds-accent); opacity:1;">Workspace</small></div>`;
                 } else {
                     img.src = logoUrl;
+                    img.style.height = '32px';
+                    img.style.maxWidth = '140px';
+                    img.style.objectFit = 'contain';
+                    img.style.background = 'transparent';
                     const bt = sidebarBrand.querySelector('.brand-text');
                     if (bt) bt.innerHTML = `${OctaQube.escapeHtml(orgName)} <small style="color:var(--ds-accent); opacity:1;">Workspace</small>`;
                 }
             } else {
-                sidebarBrand.innerHTML = `<div class="brand-icon" style="background: var(--ds-accent);">
+                sidebarBrand.innerHTML = `<div class="brand-icon" style="background: rgba(255,255,255,0.1);">
                                             <i data-lucide="shield-check" style="color:white;"></i>
                                           </div>
                                           <div class="brand-text">${OctaQube.escapeHtml(orgName)} <small style="color:var(--ds-accent); opacity:1;">Enterprise OS</small></div>`;
@@ -1294,12 +1305,13 @@ const OctaQube = {
             });
         }
 
+        const esc = (s) => (this.escapeHtml ? this.escapeHtml(s) : String(s || ''));
         const navHtml = navItems.map(item => `
-            <a href="${item.url}" class="app-bottom-nav-item ${item.isActive ? 'active' : ''}">
+            <a href="${esc(item.url)}" class="app-bottom-nav-item ${item.isActive ? 'active' : ''}">
                 <div class="app-bottom-nav-icon">
-                    <i data-lucide="${item.icon}"></i>
+                    <i data-lucide="${esc(item.icon)}"></i>
                 </div>
-                <span class="app-bottom-nav-label">${item.label}</span>
+                <span class="app-bottom-nav-label">${esc(item.label)}</span>
             </a>
         `).join('');
 
@@ -1816,14 +1828,14 @@ const OctaQube = {
             : (user.org_logo_url);
 
         let logoIconHtml = `
-            <div class="brand-icon" style="background: var(--ds-accent);">
+            <div class="brand-icon" style="background: rgba(255,255,255,0.1);">
                 <i data-lucide="${isSuperAdmin ? 'shield-check' : 'building-2'}" style="color:white;"></i>
             </div>
         `;
         let brandNameHtml = `${OctaQube.escapeHtml(shortName)} <small style="color:var(--ds-accent); opacity:1;">${OctaQube.escapeHtml(displaySub)}</small>`;
 
         if (logoUrl && logoUrl !== 'null' && logoUrl !== 'None' && !logoUrl.includes('/assets/img/logo.png')) {
-            logoIconHtml = `<img src="${logoUrl}" alt="Logo" style="width: 32px; height: 32px; object-fit: contain; border-radius: 8px;">`;
+            logoIconHtml = `<img src="${logoUrl}" alt="Logo" style="height: 32px; max-width: 140px; object-fit: contain; background: transparent;">`;
         }
 
         const brandHtml = `
@@ -2391,7 +2403,16 @@ const OctaQube = {
      * AI Chat Assistant Widget
      */
     renderAIChatWidget() {
-        if (window.location.pathname.includes('super-admin.html') || window.location.href.includes('super-admin.html')) return;
+        const user = this.user || JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+        const roleName = this.normalizeRole(user.role?.name || user.role || user.role_name);
+        const isSuperAdmin = roleName === 'SuperAdmin' || 
+                             window.location.pathname.includes('super-admin') || 
+                             window.location.href.includes('super-admin');
+        if (isSuperAdmin) {
+            const aiW = document.getElementById('ai-chat-widget');
+            if (aiW) aiW.remove();
+            return;
+        }
         if (document.getElementById('ai-chat-widget')) return;
 
         const widget = document.createElement('div');
@@ -2587,7 +2608,16 @@ const OctaQube = {
      * Floating Helpdesk Support Ticket Widget
      */
     renderHelpdeskWidget() {
-        if (window.location.pathname.includes('super-admin.html') || window.location.href.includes('super-admin.html')) return;
+        const user = this.user || JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+        const roleName = this.normalizeRole(user.role?.name || user.role || user.role_name);
+        const isSuperAdmin = roleName === 'SuperAdmin' || 
+                             window.location.pathname.includes('super-admin') || 
+                             window.location.href.includes('super-admin');
+        if (isSuperAdmin) {
+            const hdW = document.getElementById('helpdesk-widget');
+            if (hdW) hdW.remove();
+            return;
+        }
         if (document.getElementById('helpdesk-widget')) return;
 
         const widget = document.createElement('div');

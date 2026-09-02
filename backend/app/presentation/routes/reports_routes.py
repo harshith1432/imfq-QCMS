@@ -1,6 +1,6 @@
 from flask import Blueprint, send_file, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.infrastructure.database.models.models import Project, KPIMetric, db, User, AuditLog, KnowledgeRepository
+from app.infrastructure.database.models.models import Project, KPIMetric, db, User, AuditLog, KnowledgeRepository, ProjectMember
 from app.utils.report_gen import generate_excel_report, generate_pdf_summary
 import io
 import csv
@@ -334,6 +334,12 @@ def export_pdf(project_id):
     if not project:
         return jsonify({"msg": "Project not found"}), 404
 
+    is_admin = user.role and user.role.name in ('Admin', 'CEO', 'SuperAdmin')
+    is_assigned = (project.creator_id == user.id) or (project.team_leader_id == user.id) or (project.facilitator_id == user.id) or (project.reviewer_id == user.id) or (ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first() is not None)
+    is_archived = KnowledgeRepository.query.filter_by(project_id=project.id, org_id=user.org_id).first() is not None
+    if not (is_admin or is_assigned or is_archived):
+        return jsonify({"msg": "Unauthorized to export report for this project."}), 403
+
     closed_statuses = ('Closed', 'Completed', 'Archived', 'Stage 8 Approved', 'Stage 8 Submitted', 'Pending Closure', 'SOP Created')
     is_closed = (project.status in closed_statuses) or is_super_admin or (user.role and user.role.name in ('Admin', 'CEO'))
 
@@ -352,12 +358,10 @@ def export_pdf(project_id):
             if project.reviewer_id != user.id:
                 return jsonify({"msg": "Unauthorized"}), 403
         elif role == 'Team Leader':
-            from app.infrastructure.database.models.models import ProjectMember
             is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
             if project.team_leader_id != user.id and project.creator_id != user.id and not is_member:
                 return jsonify({"msg": "Unauthorized"}), 403
         elif role == 'Team Member':
-            from app.infrastructure.database.models.models import ProjectMember
             is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
             if not is_member:
                 return jsonify({"msg": "Unauthorized"}), 403

@@ -103,6 +103,167 @@ def reviewer_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def _get_reviewer_approved_projects_data(user):
+    is_admin = (user.role and user.role.name == 'Admin')
+    user_dept_id = user.department_id if (user.dept and user.dept.name not in ['All', 'N/A']) else None
+    
+    from sqlalchemy import or_
+    q = ProjectReview.query.join(Project, ProjectReview.project_id == Project.id).filter(
+        Project.org_id == user.org_id,
+        ProjectReview.decision == 'Approved'
+    )
+    if not is_admin:
+        if user_dept_id:
+            q = q.filter(or_(ProjectReview.reviewer_id == user.id, Project.reviewer_id == user.id, Project.department_id == user_dept_id))
+        else:
+            q = q.filter(or_(ProjectReview.reviewer_id == user.id, Project.reviewer_id == user.id))
+            
+    approved_reviews = q.order_by(ProjectReview.decided_at.desc(), ProjectReview.id.desc()).all()
+    result = []
+    reviewed_proj_ids = set()
+    
+    for r in approved_reviews:
+        p = Project.query.filter_by(id=r.project_id, org_id=user.org_id).first()
+        if not p or p.id in reviewed_proj_ids:
+            continue
+        reviewed_proj_ids.add(p.id)
+        tl = p.team_leader
+        tl_name = (tl.full_name or tl.username) if tl else "Unassigned"
+        approved_at = r.decided_at.isoformat() + "Z" if r.decided_at else (p.created_at.isoformat() + "Z" if p.created_at else "")
+        stage_num = r.stage_number or 1
+        comments = (r.comments or "").strip()
+        if not comments:
+            wf = ProjectWorkflow.query.filter_by(project_id=p.id, stage_id=stage_num).first()
+            if wf and wf.data and isinstance(wf.data, dict):
+                comments = wf.data.get('review', {}).get('comments') or ""
+        result.append({
+            "id": p.id,
+            "review_id": r.id,
+            "project_uid": p.project_uid or f"PRJ-{p.id}",
+            "title": p.title,
+            "department": p.department.name if p.department else "N/A",
+            "plant": p.plant or (p.department.plant.name if p.department and p.department.plant else "General"),
+            "team_leader": tl_name,
+            "approved_stage": stage_num,
+            "stage_number": stage_num,
+            "current_stage": p.current_stage,
+            "status": f"Stage {stage_num} Approved",
+            "comments": comments,
+            "approved_at": approved_at
+        })
+        
+    closed_q = Project.query.filter(Project.org_id == user.org_id, Project.status.in_(['Completed', 'Closed']))
+    if not is_admin:
+        if user_dept_id:
+            closed_q = closed_q.filter(or_(Project.reviewer_id == user.id, Project.department_id == user_dept_id))
+        else:
+            closed_q = closed_q.filter(Project.reviewer_id == user.id)
+    assigned_closed = closed_q.all()
+    for p in assigned_closed:
+        if p.id not in reviewed_proj_ids:
+            reviewed_proj_ids.add(p.id)
+            tl = p.team_leader
+            tl_name = (tl.full_name or tl.username) if tl else "Unassigned"
+            stage_num = p.current_stage or 8
+            wf = ProjectWorkflow.query.filter_by(project_id=p.id, stage_id=stage_num).first()
+            comments = wf.data.get('review', {}).get('comments') if (wf and wf.data and isinstance(wf.data, dict)) else ""
+            result.append({
+                "id": p.id,
+                "review_id": None,
+                "project_uid": p.project_uid or f"PRJ-{p.id}",
+                "title": p.title,
+                "department": p.department.name if p.department else "N/A",
+                "plant": p.plant or (p.department.plant.name if p.department and p.department.plant else "General"),
+                "team_leader": tl_name,
+                "approved_stage": stage_num,
+                "stage_number": stage_num,
+                "current_stage": p.current_stage,
+                "status": f"Stage {stage_num} Approved",
+                "comments": comments,
+                "approved_at": p.created_at.isoformat() + "Z" if p.created_at else ""
+            })
+    return result
+
+
+def _get_reviewer_rejected_projects_data(user):
+    is_admin = (user.role and user.role.name == 'Admin')
+    user_dept_id = user.department_id if (user.dept and user.dept.name not in ['All', 'N/A']) else None
+    
+    from sqlalchemy import or_
+    q = ProjectReview.query.join(Project, ProjectReview.project_id == Project.id).filter(
+        Project.org_id == user.org_id,
+        ProjectReview.decision == 'Rejected'
+    )
+    if not is_admin:
+        if user_dept_id:
+            q = q.filter(or_(ProjectReview.reviewer_id == user.id, Project.reviewer_id == user.id, Project.department_id == user_dept_id))
+        else:
+            q = q.filter(or_(ProjectReview.reviewer_id == user.id, Project.reviewer_id == user.id))
+            
+    rejected_reviews = q.order_by(ProjectReview.decided_at.desc(), ProjectReview.id.desc()).all()
+    result = []
+    reviewed_proj_ids = set()
+    
+    for r in rejected_reviews:
+        p = Project.query.filter_by(id=r.project_id, org_id=user.org_id).first()
+        if not p or p.id in reviewed_proj_ids:
+            continue
+        reviewed_proj_ids.add(p.id)
+        tl = p.team_leader
+        tl_name = (tl.full_name or tl.username) if tl else "Unassigned"
+        rejected_at = r.decided_at.isoformat() + "Z" if r.decided_at else (p.created_at.isoformat() + "Z" if p.created_at else "")
+        stage_num = r.stage_number or 1
+        comments = (r.comments or p.rejection_reason or "").strip()
+        if not comments or comments == 'No reason specified':
+            wf = ProjectWorkflow.query.filter_by(project_id=p.id, stage_id=stage_num).first()
+            if wf and wf.data and isinstance(wf.data, dict):
+                comments = wf.data.get('review', {}).get('comments') or comments
+        result.append({
+            "id": p.id,
+            "review_id": r.id,
+            "project_uid": p.project_uid or f"PRJ-{p.id}",
+            "title": p.title,
+            "department": p.department.name if p.department else "N/A",
+            "plant": p.plant or (p.department.plant.name if p.department and p.department.plant else "General"),
+            "team_leader": tl_name,
+            "rejected_stage": stage_num,
+            "stage_number": stage_num,
+            "rejection_reason": comments or "No reason specified",
+            "comments": comments,
+            "rejected_at": rejected_at
+        })
+        
+    rej_q = Project.query.filter(Project.org_id == user.org_id, Project.status == 'Rejected')
+    if not is_admin:
+        if user_dept_id:
+            rej_q = rej_q.filter(or_(Project.reviewer_id == user.id, Project.department_id == user_dept_id))
+        else:
+            rej_q = rej_q.filter(Project.reviewer_id == user.id)
+    direct_rejected = rej_q.all()
+    for p in direct_rejected:
+        if p.id not in reviewed_proj_ids:
+            reviewed_proj_ids.add(p.id)
+            tl = p.team_leader
+            tl_name = (tl.full_name or tl.username) if tl else "Unassigned"
+            stage_num = p.current_stage or 1
+            wf = ProjectWorkflow.query.filter_by(project_id=p.id, stage_id=stage_num).first()
+            comments = wf.data.get('review', {}).get('comments') if (wf and wf.data and isinstance(wf.data, dict)) else (p.rejection_reason or "No reason specified")
+            result.append({
+                "id": p.id,
+                "review_id": None,
+                "project_uid": p.project_uid or f"PRJ-{p.id}",
+                "title": p.title,
+                "department": p.department.name if p.department else "N/A",
+                "plant": p.plant or (p.department.plant.name if p.department and p.department.plant else "General"),
+                "team_leader": tl_name,
+                "rejected_stage": stage_num,
+                "stage_number": stage_num,
+                "rejection_reason": comments or "No reason specified",
+                "comments": comments,
+                "rejected_at": p.created_at.isoformat() + "Z" if p.created_at else ""
+            })
+    return result
+
 # --- Dashboard Stats ---
 @reviewer_bp.route('/stats', methods=['GET'])
 @reviewer_required
@@ -176,20 +337,10 @@ def get_stats():
     except Exception:
         avg_improvement = 0
 
-    # Approved count for this reviewer
+    # Approved and Rejected counts from distinct project lists
     try:
-        if is_admin:
-            approved_count = ProjectReview.query.filter_by(org_id=user.org_id, decision='Approved').count()
-            rejected_count = ProjectReview.query.filter_by(org_id=user.org_id, decision='Rejected').count()
-        else:
-            approved_count = ProjectReview.query.filter(
-                ProjectReview.org_id == user.org_id,
-                ProjectReview.decision == 'Approved'
-            ).count()
-            rejected_count = ProjectReview.query.filter(
-                ProjectReview.org_id == user.org_id,
-                ProjectReview.decision == 'Rejected'
-            ).count()
+        approved_count = len(_get_reviewer_approved_projects_data(user))
+        rejected_count = len(_get_reviewer_rejected_projects_data(user))
     except Exception:
         approved_count = 0
         rejected_count = 0
@@ -207,189 +358,13 @@ def get_stats():
 @reviewer_required
 def get_approved_projects():
     user = db.session.get(User, get_jwt_identity())
-    is_admin = (user.role and user.role.name == 'Admin')
-    
-    # Fetch all discrete stage approval reviews made by this reviewer (or across org if Admin)
-    if is_admin:
-        approved_reviews = ProjectReview.query.filter_by(
-            org_id=user.org_id,
-            decision='Approved'
-        ).order_by(ProjectReview.decided_at.desc()).all()
-    else:
-        approved_reviews = ProjectReview.query.filter_by(
-            org_id=user.org_id,
-            reviewer_id=user.id, 
-            decision='Approved'
-        ).order_by(ProjectReview.decided_at.desc()).all()
-    
-    result = []
-    reviewed_keys = set()
-    
-    for r in approved_reviews:
-        p = Project.query.filter_by(id=r.project_id, org_id=user.org_id).first()
-        if not p:
-            continue
-            
-        stage_num = r.stage_number or 1
-        if (p.id, stage_num) in reviewed_keys:
-            continue
-        reviewed_keys.add((p.id, stage_num))
-        tl = p.team_leader
-        tl_name = (tl.full_name or tl.username) if tl else "Unassigned"
-        
-        approved_at = r.decided_at.isoformat() + "Z" if r.decided_at else (p.created_at.isoformat() + "Z" if p.created_at else "")
-        stage_num = r.stage_number or 1
-        comments = (r.comments or "").strip()
-        if not comments:
-            wf = ProjectWorkflow.query.filter_by(project_id=p.id, stage_id=stage_num).first()
-            if wf and wf.data and isinstance(wf.data, dict):
-                comments = wf.data.get('review', {}).get('comments') or ""
-        
-        result.append({
-            "id": p.id,
-            "review_id": r.id,
-            "project_uid": p.project_uid or f"PRJ-{p.id}",
-            "title": p.title,
-            "department": p.department.name if p.department else "N/A",
-            "plant": p.plant or (p.department.plant.name if p.department and p.department.plant else "General"),
-            "team_leader": tl_name,
-            "approved_stage": stage_num,
-            "stage_number": stage_num,
-            "current_stage": p.current_stage,
-            "status": f"Stage {stage_num} Approved",
-            "comments": comments,
-            "approved_at": approved_at
-        })
-        
-    # Also include any closed/completed projects assigned to this reviewer without explicit review records
-    if is_admin:
-        assigned_closed = Project.query.filter(
-            Project.org_id == user.org_id,
-            Project.status.in_(['Completed', 'Closed'])
-        ).all()
-    else:
-        assigned_closed = Project.query.filter(
-            Project.org_id == user.org_id,
-            Project.reviewer_id == user.id,
-            Project.status.in_(['Completed', 'Closed'])
-        ).all()
-    
-    for p in assigned_closed:
-        if (p.id, p.current_stage) not in reviewed_keys and (p.id, 8) not in reviewed_keys:
-            tl = p.team_leader
-            tl_name = (tl.full_name or tl.username) if tl else "Unassigned"
-            stage_num = p.current_stage or 8
-            wf = ProjectWorkflow.query.filter_by(project_id=p.id, stage_id=stage_num).first()
-            comments = wf.data.get('review', {}).get('comments') if (wf and wf.data and isinstance(wf.data, dict)) else ""
-            result.append({
-                "id": p.id,
-                "review_id": None,
-                "project_uid": p.project_uid or f"PRJ-{p.id}",
-                "title": p.title,
-                "department": p.department.name if p.department else "N/A",
-                "plant": p.plant or (p.department.plant.name if p.department and p.department.plant else "General"),
-                "team_leader": tl_name,
-                "approved_stage": stage_num,
-                "stage_number": stage_num,
-                "current_stage": p.current_stage,
-                "status": f"Stage {stage_num} Approved",
-                "comments": comments,
-                "approved_at": p.created_at.isoformat() + "Z" if p.created_at else ""
-            })
-            
-    return jsonify(result), 200
+    return jsonify(_get_reviewer_approved_projects_data(user)), 200
 
 @reviewer_bp.route('/rejected-projects', methods=['GET'])
 @reviewer_required
 def get_rejected_projects():
     user = db.session.get(User, get_jwt_identity())
-    is_admin = (user.role and user.role.name == 'Admin')
-    
-    if is_admin:
-        rejected_reviews = ProjectReview.query.filter_by(
-            org_id=user.org_id,
-            decision='Rejected'
-        ).order_by(ProjectReview.decided_at.desc()).all()
-    else:
-        rejected_reviews = ProjectReview.query.filter_by(
-            org_id=user.org_id,
-            reviewer_id=user.id, 
-            decision='Rejected'
-        ).order_by(ProjectReview.decided_at.desc()).all()
-    
-    result = []
-    reviewed_keys = set()
-    
-    for r in rejected_reviews:
-        p = Project.query.filter_by(id=r.project_id, org_id=user.org_id).first()
-        if not p:
-            continue
-            
-        stage_num = r.stage_number or 1
-        if (p.id, stage_num) in reviewed_keys:
-            continue
-        reviewed_keys.add((p.id, stage_num))
-        tl = p.team_leader
-        tl_name = (tl.full_name or tl.username) if tl else "Unassigned"
-        
-        rejected_at = r.decided_at.isoformat() + "Z" if r.decided_at else (p.created_at.isoformat() + "Z" if p.created_at else "")
-        stage_num = r.stage_number or 1
-        comments = (r.comments or p.rejection_reason or "").strip()
-        if not comments or comments == 'No reason specified':
-            wf = ProjectWorkflow.query.filter_by(project_id=p.id, stage_id=stage_num).first()
-            if wf and wf.data and isinstance(wf.data, dict):
-                comments = wf.data.get('review', {}).get('comments') or comments
-        
-        result.append({
-            "id": p.id,
-            "review_id": r.id,
-            "project_uid": p.project_uid or f"PRJ-{p.id}",
-            "title": p.title,
-            "department": p.department.name if p.department else "N/A",
-            "plant": p.plant or (p.department.plant.name if p.department and p.department.plant else "General"),
-            "team_leader": tl_name,
-            "rejected_stage": stage_num,
-            "stage_number": stage_num,
-            "rejection_reason": comments or "No reason specified",
-            "comments": comments,
-            "rejected_at": rejected_at
-        })
-        
-    if is_admin:
-        direct_rejected = Project.query.filter(
-            Project.org_id == user.org_id,
-            Project.status == 'Rejected'
-        ).all()
-    else:
-        direct_rejected = Project.query.filter(
-            Project.org_id == user.org_id,
-            Project.reviewer_id == user.id,
-            Project.status == 'Rejected'
-        ).all()
-    
-    for p in direct_rejected:
-        if (p.id, p.current_stage) not in reviewed_keys:
-            tl = p.team_leader
-            tl_name = (tl.full_name or tl.username) if tl else "Unassigned"
-            stage_num = p.current_stage or 1
-            wf = ProjectWorkflow.query.filter_by(project_id=p.id, stage_id=stage_num).first()
-            comments = wf.data.get('review', {}).get('comments') if (wf and wf.data and isinstance(wf.data, dict)) else (p.rejection_reason or "No reason specified")
-            result.append({
-                "id": p.id,
-                "review_id": None,
-                "project_uid": p.project_uid or f"PRJ-{p.id}",
-                "title": p.title,
-                "department": p.department.name if p.department else "N/A",
-                "plant": p.plant or (p.department.plant.name if p.department and p.department.plant else "General"),
-                "team_leader": tl_name,
-                "rejected_stage": stage_num,
-                "stage_number": stage_num,
-                "rejection_reason": comments or "No reason specified",
-                "comments": comments,
-                "rejected_at": p.created_at.isoformat() + "Z" if p.created_at else ""
-            })
-            
-    return jsonify(result), 200
+    return jsonify(_get_reviewer_rejected_projects_data(user)), 200
 
 # --- Pending Approvals ---
 @reviewer_bp.route('/pending', methods=['GET'])
@@ -481,6 +456,11 @@ def _process_decision_logic(user, project_id, decision, comments, pending_stage)
     if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
         return jsonify({"msg": "This project has already been permanently rejected and cannot be reviewed again."}), 400
 
+    is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
+    is_assigned = (project.reviewer_id == user.id) or (project.creator_id == user.id) or (ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None)
+    if not (is_admin or is_assigned):
+        return jsonify({"msg": "Unauthorized: You are not the assigned reviewer for this project."}), 403
+
     # Enforce department restriction for Reviewer (unless explicitly assigned as reviewer or global department)
     if user.role.name != 'Admin' and user.dept and user.dept.name not in ['All', 'N/A']:
         if project.reviewer_id != user.id and project.department_id and project.department_id != user.department_id:
@@ -490,6 +470,10 @@ def _process_decision_logic(user, project_id, decision, comments, pending_stage)
         pending_stage = project.current_stage
     if not pending_stage or pending_stage < 1 or pending_stage > 8:
         return jsonify({"msg": "Invalid or missing pending_stage"}), 400
+
+    # Ensure stage is not in future
+    if pending_stage > project.current_stage and project.status != 'Pending Review':
+        return jsonify({"msg": f"Cannot review Stage {pending_stage}. Project is at Stage {project.current_stage}."}), 400
 
     # All 8 stages require Reviewer or Admin approval
     if user.role.name not in ('Reviewer', 'Admin'):
@@ -1153,6 +1137,13 @@ def add_note():
 
     if not all([project_id, stage_number, note_text]):
         return jsonify({"msg": "project_id, stage_number, and note_text are required"}), 400
+
+    project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
+
+    is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
+    is_assigned = (project.reviewer_id == user.id) or (project.creator_id == user.id) or (ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None)
+    if not (is_admin or is_assigned):
+        return jsonify({"msg": "Unauthorized: You are not assigned to this project"}), 403
 
     note = FacilitatorNote(
         org_id=user.org_id,

@@ -556,14 +556,54 @@ const ProjectApp = {
             return s.startsWith('sec_') || s.includes('_custom_sec_') || s.startsWith('custom_') || sec.type === 'custom';
         };
 
+        const formEl = container.querySelector('[id$="Form"]') || container.firstElementChild;
+        // Filter ONLY top-level cards (excluding any inner nested cards like in Stratification or child cards)
+        const allCards = Array.from((formEl || container).querySelectorAll('.glass-card.ds-card, .ds-card'));
+        const predefinedCards = allCards.filter(c => {
+            let parent = c.parentElement;
+            while (parent && parent !== (formEl || container) && parent !== container) {
+                if (parent.classList.contains('glass-card') || parent.classList.contains('ds-card')) {
+                    return false; // Skip nested cards
+                }
+                parent = parent.parentElement;
+            }
+            return true;
+        });
+
+        // Robust matching helper to locate the exact DOM card element for any predefined section
+        const findPredefinedCard = (sec, pIdx) => {
+            if (!sec) return null;
+            // 1. Direct match by section ID
+            if (sec.id) {
+                const el = (formEl || container).querySelector(`[data-sec-id="${sec.id}"]`) ||
+                           (formEl || container).querySelector(`#${sec.id}`);
+                if (el) return el;
+            }
+            // 2. Direct match by standard section ID pattern (e.g. s2_section_7 or section_7)
+            const stageSecNum = pIdx + 1;
+            const bySecId = (formEl || container).querySelector(`#s${stageId}_section_${stageSecNum}`) ||
+                            (formEl || container).querySelector(`#section_${stageSecNum}`);
+            if (bySecId) return bySecId;
+
+            // 3. Match by badge number in card header (e.g. "2.7")
+            const badgeText = `${stageId}.${stageSecNum}`;
+            const byBadge = predefinedCards.find(card => {
+                const badge = card.querySelector('.ds-card-header .ds-icon-circle');
+                return badge && badge.textContent.trim() === badgeText;
+            });
+            if (byBadge) return byBadge;
+
+            // 4. Fallback to card index in filtered top-level cards
+            const cardIdx = sec.card_index !== undefined ? sec.card_index : pIdx;
+            return predefinedCards[cardIdx] || null;
+        };
+
         // 0. Tag predefined cards BEFORE injecting custom cards to prevent index shift issues
-        const predefinedCards = Array.from(container.querySelectorAll('.glass-card.ds-card'));
         try {
             if (stageCfg && stageCfg.sections) {
                 const predefinedSecs = stageCfg.sections.filter(sec => !_isCustomSec(sec));
                 predefinedSecs.forEach((sec, pIdx) => {
-                    const cardIdx = sec.card_index !== undefined ? sec.card_index : pIdx;
-                    const cardEl = predefinedCards[cardIdx];
+                    const cardEl = findPredefinedCard(sec, pIdx);
                     if (cardEl) {
                         cardEl.dataset.secId = sec.id;
                         const isMandatory = (sec.required === true);
@@ -598,7 +638,6 @@ const ProjectApp = {
 
         // 1. Inject custom top-level section cards
         try {
-            const formEl = container.querySelector('[id$="Form"]') || container.firstElementChild;
             if (formEl && stageCfg && stageCfg.sections) {
                 stageCfg.sections.forEach(sec => {
                     if (sec && sec.id && _isCustomSec(sec)) {
@@ -657,15 +696,17 @@ const ProjectApp = {
                 predefinedSecs.forEach((sec, pIdx) => {
                     const subFields = Array.isArray(sec.fields) ? sec.fields : (Array.isArray(sec.custom_fields) ? sec.custom_fields : []);
                     if (subFields.length > 0) {
-                        const cardIdx = sec.card_index !== undefined ? sec.card_index : pIdx;
-                        const cardEl = predefinedCards[cardIdx];
+                        const cardEl = findPredefinedCard(sec, pIdx);
                         if (cardEl) {
-                            const cardBody = cardEl.querySelector('.ds-card-body');
+                            let cardBody = cardEl.querySelector('.ds-card-body');
+                            if (!cardBody) {
+                                cardBody = cardEl.querySelector('.card-body') || cardEl;
+                            }
                             if (cardBody) {
                                 subFields.forEach(field => {
                                     if (field && !cardBody.querySelector(`#field_wrap_${field.id}`) && !cardBody.querySelector(`#${field.id}`)) {
                                         const fieldWrapper = document.createElement('div');
-                                        fieldWrapper.className = 'ds-field mt-3 border-top pt-3';
+                                        fieldWrapper.className = 'ds-field mt-3 border-top pt-3 custom-injected-field';
                                         fieldWrapper.id = `field_wrap_${field.id}`;
                                         
                                         const labelEl = document.createElement('label');
@@ -699,7 +740,6 @@ const ProjectApp = {
 
         // 3. Sort all cards in formEl according to stageCfg.sections order
         try {
-            const formEl = container.querySelector('[id$="Form"]') || container.firstElementChild;
             if (formEl && stageCfg && stageCfg.sections) {
                 const orderMap = {};
                 stageCfg.sections.forEach((sec, idx) => {
@@ -708,7 +748,7 @@ const ProjectApp = {
                     }
                 });
 
-                const cards = Array.from(formEl.querySelectorAll(':scope > .glass-card.ds-card'));
+                const cards = Array.from(formEl.querySelectorAll(':scope > .glass-card.ds-card, :scope > .ds-card'));
                 cards.sort((a, b) => {
                     const idA = a.dataset.secId || '';
                     const idB = b.dataset.secId || '';
@@ -759,9 +799,8 @@ const ProjectApp = {
 
         // Fallback pass: ensure circle numbers are stageId.secNum and hide duplicate inner section headings
         try {
-            const formEl = container.querySelector('[id$="Form"]') || container.firstElementChild;
             if (formEl) {
-                const cards = Array.from(formEl.querySelectorAll(':scope > .glass-card.ds-card, .glass-card.ds-card'));
+                const cards = Array.from(formEl.querySelectorAll(':scope > .glass-card.ds-card, :scope > .ds-card'));
                 let secIdx = 1;
                 cards.forEach(card => {
                     const circle = card.querySelector('.ds-card-header .ds-icon-circle');
@@ -818,12 +857,44 @@ const ProjectApp = {
     setupSectionNAToggles(container, stageCfg) {
         if (!stageCfg || !stageCfg.sections) return;
 
-        const predefinedCards = Array.from(container.querySelectorAll('.glass-card.ds-card'));
+        const formEl = container.querySelector('[id$="Form"]') || container.firstElementChild;
+        const allCards = Array.from((formEl || container).querySelectorAll('.glass-card.ds-card, .ds-card'));
+        const predefinedCards = allCards.filter(c => {
+            let parent = c.parentElement;
+            while (parent && parent !== (formEl || container) && parent !== container) {
+                if (parent.classList.contains('glass-card') || parent.classList.contains('ds-card')) {
+                    return false;
+                }
+                parent = parent.parentElement;
+            }
+            return true;
+        });
 
         const _isCustomSec = (sec) => {
             if (!sec || !sec.id) return false;
             const s = String(sec.id);
             return s.startsWith('sec_') || s.includes('_custom_sec_') || s.startsWith('custom_') || sec.type === 'custom';
+        };
+
+        const findPredefinedCard = (sec, pIdx) => {
+            if (!sec) return null;
+            if (sec.id) {
+                const el = (formEl || container).querySelector(`[data-sec-id="${sec.id}"]`) ||
+                           (formEl || container).querySelector(`#${sec.id}`);
+                if (el) return el;
+            }
+            const stageSecNum = pIdx + 1;
+            const bySecId = (formEl || container).querySelector(`#s${this.activeStageId}_section_${stageSecNum}`) ||
+                            (formEl || container).querySelector(`#section_${stageSecNum}`);
+            if (bySecId) return bySecId;
+            const badgeText = `${this.activeStageId}.${stageSecNum}`;
+            const byBadge = predefinedCards.find(card => {
+                const badge = card.querySelector('.ds-card-header .ds-icon-circle');
+                return badge && badge.textContent.trim() === badgeText;
+            });
+            if (byBadge) return byBadge;
+            const cardIdx = sec.card_index !== undefined ? sec.card_index : pIdx;
+            return predefinedCards[cardIdx] || null;
         };
 
         const predefinedSecs = stageCfg.sections.filter(sec => !_isCustomSec(sec));
@@ -835,8 +906,7 @@ const ProjectApp = {
                 cardEl = container.querySelector(`#card_${sec.id}`);
             } else {
                 const pIdx = predefinedSecs.indexOf(sec);
-                const cardIdx = sec.card_index !== undefined ? sec.card_index : (pIdx !== -1 ? pIdx : sIdx);
-                cardEl = predefinedCards[cardIdx];
+                cardEl = findPredefinedCard(sec, pIdx !== -1 ? pIdx : sIdx);
             }
 
             if (!cardEl) return;
@@ -2774,6 +2844,233 @@ const ProjectApp = {
         new bootstrap.Modal(document.getElementById('qcAnalysisModal')).show();
         if (window.lucide) setTimeout(() => lucide.createIcons(), 100);
     },
+
+    /**
+     * Open Project Documents Modal and fetch all documents across 8 stages
+     */
+    async openProjectDocsModal() {
+        const modalEl = document.getElementById('projectDocsModal');
+        if (!modalEl) return;
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+
+        const body = document.getElementById('projectDocsModalBody');
+        const countBadge = document.getElementById('projectDocsCountBadge');
+        const downloadAllBtn = document.getElementById('downloadAllDocsBtn');
+        if (downloadAllBtn) downloadAllBtn.style.display = 'none';
+
+        if (body) {
+            body.innerHTML = `
+                <div class="p-5 text-center text-muted">
+                    <span class="spinner-border spinner-border-sm me-2 text-primary"></span>
+                    <span>Scanning and gathering all project documents & attachments...</span>
+                </div>
+            `;
+        }
+
+        try {
+            const res = await api.get(`/projects/${this.projectId}/documents`);
+            this._projectDocs = res.documents || [];
+            if (countBadge) countBadge.textContent = this._projectDocs.length;
+            
+            // Check if any local downloadable files exist
+            const hasLocalFiles = this._projectDocs.some(d => !d.is_external && (d.url.includes('/uploads/') || d.url.startsWith('uploads/')));
+            if (downloadAllBtn && hasLocalFiles) {
+                downloadAllBtn.style.display = 'inline-flex';
+            }
+
+            this.renderProjectDocs('all');
+        } catch (err) {
+            console.error('Failed to load project documents:', err);
+            if (body) {
+                body.innerHTML = `
+                    <div class="alert alert-danger d-flex align-items-center gap-2 m-3">
+                        <i data-lucide="alert-circle"></i>
+                        <div>Failed to load project documents: ${err.message || 'Server error'}</div>
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    },
+
+    /**
+     * Render documents with category/stage filter pills
+     */
+    renderProjectDocs(selectedFilter = 'all') {
+        const body = document.getElementById('projectDocsModalBody');
+        if (!body) return;
+
+        const docs = this._projectDocs || [];
+        if (docs.length === 0) {
+            body.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:56px;height:56px;background:rgba(var(--ds-primary-rgb),0.08);color:var(--ds-primary);">
+                        <i data-lucide="folder-open" style="width:28px;height:28px;"></i>
+                    </div>
+                    <h6 class="fw-bold text-main">No Uploaded Documents Found</h6>
+                    <p class="text-xs text-muted mb-0">Files, evidence, and SOP documents uploaded during project workflow stages will appear here.</p>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+            return;
+        }
+
+        // Gather unique stages that actually have documents
+        const stageMap = {};
+        docs.forEach(d => {
+            const sNum = d.stage_number || 1;
+            stageMap[sNum] = (stageMap[sNum] || 0) + 1;
+        });
+
+        // Build filter tabs
+        let filterHtml = `
+            <div class="d-flex align-items-center gap-2 mb-4 overflow-auto pb-1" style="border-bottom: 1px solid var(--ds-border-color);">
+                <button type="button" class="btn btn-sm ${selectedFilter === 'all' ? 'btn-primary' : 'btn-light border'} rounded-pill px-3 py-1 fw-semibold text-xs" onclick="ProjectApp.renderProjectDocs('all')">
+                    All Documents <span class="badge ${selectedFilter === 'all' ? 'bg-white text-primary' : 'bg-secondary'} ms-1">${docs.length}</span>
+                </button>
+        `;
+
+        Object.keys(stageMap).sort((a, b) => Number(a) - Number(b)).forEach(sNum => {
+            const isAct = String(selectedFilter) === String(sNum);
+            filterHtml += `
+                <button type="button" class="btn btn-sm ${isAct ? 'btn-primary' : 'btn-light border'} rounded-pill px-3 py-1 fw-semibold text-xs text-nowrap" onclick="ProjectApp.renderProjectDocs(${sNum})">
+                    Stage ${sNum} <span class="badge ${isAct ? 'bg-white text-primary' : 'bg-secondary'} ms-1">${stageMap[sNum]}</span>
+                </button>
+            `;
+        });
+        filterHtml += `</div>`;
+
+        // Filter the list
+        const filteredDocs = selectedFilter === 'all' 
+            ? docs 
+            : docs.filter(d => String(d.stage_number) === String(selectedFilter));
+
+        // Get icon for document
+        const getDocIcon = (fileType, ext) => {
+            ext = (ext || '').toLowerCase();
+            if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext)) return 'image';
+            if (['xls', 'xlsx', 'csv'].includes(ext)) return 'table';
+            if (['ppt', 'pptx'].includes(ext)) return 'presentation';
+            if (['pdf'].includes(ext)) return 'file-text';
+            if (['doc', 'docx'].includes(ext)) return 'file-edit';
+            if (['mp4', 'mov', 'avi', 'mkv'].includes(ext)) return 'video';
+            if (['zip', 'rar', '7z', 'tar'].includes(ext)) return 'archive';
+            return 'paperclip';
+        };
+
+        // Render documents table / cards
+        let listHtml = `
+            <div class="table-responsive">
+                <table class="ds-table table-hover align-middle mb-0">
+                    <thead>
+                        <tr class="text-uppercase text-xs" style="color:var(--ds-text-secondary);background:rgba(var(--ds-primary-rgb),0.03);">
+                            <th style="min-width:280px;">Document / File</th>
+                            <th style="min-width:180px;">Stage & Section</th>
+                            <th style="min-width:120px;">Type & Size</th>
+                            <th class="text-end" style="min-width:140px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        filteredDocs.forEach(doc => {
+            const icon = getDocIcon(doc.file_type, doc.extension);
+            const isLocal = !doc.is_external && (doc.url.includes('/uploads/') || doc.url.startsWith('uploads/'));
+            
+            listHtml += `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width:38px;height:38px;background:rgba(var(--ds-primary-rgb),0.08);color:var(--ds-primary);">
+                                <i data-lucide="${icon}" style="width:18px;height:18px;"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <div class="fw-bold text-sm text-main text-truncate" title="${escapeHtml(doc.label)}">${escapeHtml(doc.label)}</div>
+                                <div class="text-xs text-muted text-truncate font-monospace" style="max-width:260px;" title="${escapeHtml(doc.filename)}">${escapeHtml(doc.filename)}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-column">
+                            <span class="ds-badge ds-badge-sm blue mb-1" style="width:fit-content;font-size:11px;">Stage ${doc.stage_number}</span>
+                            <span class="text-xs text-muted">${escapeHtml(doc.section || 'General')}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-column">
+                            <span class="text-xs fw-semibold text-main">${escapeHtml(doc.file_type || 'File')}</span>
+                            <span class="text-xxs text-muted">${escapeHtml(doc.file_size || 'Remote')}</span>
+                        </div>
+                    </td>
+                    <td class="text-end">
+                        <div class="d-inline-flex align-items-center gap-2">
+                            <a href="${escapeHtml(doc.url)}" target="_blank" rel="noopener noreferrer" class="ds-btn ds-btn-xs ds-btn-outline-primary" title="View / Open File">
+                                <i data-lucide="external-link" style="width:12px;height:12px;margin-right:4px;"></i> View
+                            </a>
+                            <button type="button" class="ds-btn ds-btn-xs ds-btn-primary" onclick="ProjectApp.downloadSingleDoc('${escapeHtml(doc.url)}', '${escapeHtml(doc.filename)}')" title="Download File">
+                                <i data-lucide="download" style="width:12px;height:12px;margin-right:4px;"></i> Download
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+
+        listHtml += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        body.innerHTML = filterHtml + listHtml;
+        if (window.lucide) lucide.createIcons();
+    },
+
+    /**
+     * Download a single document
+     */
+    async downloadSingleDoc(url, filename) {
+        if (!url) return;
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            window.open(url, '_blank');
+            return;
+        }
+        try {
+            // Use api.downloadFile to download securely with Authorization header
+            await api.downloadFile(url, filename || 'download');
+        } catch (err) {
+            console.error('Download failed, opening direct URL:', err);
+            window.open(url, '_blank');
+        }
+    },
+
+    /**
+     * Download all project documents in a ZIP bundle
+     */
+    async downloadAllDocuments() {
+        const btn = document.getElementById('downloadAllDocsBtn');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Packaging ZIP...`;
+        }
+
+        try {
+            const projectUid = this.projectData?.project_uid || `PRJ-${this.projectId}`;
+            const filename = `${projectUid}_All_Documents.zip`;
+            await api.downloadFile(`/projects/${this.projectId}/documents/download-all`, filename);
+        } catch (err) {
+            console.error('Failed to download documents ZIP:', err);
+            alert(`Could not download all documents as ZIP: ${err.message || 'Server error'}`);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+    }
 };
 
 document.addEventListener('DOMContentLoaded', () => ProjectApp.init());
+

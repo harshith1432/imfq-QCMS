@@ -67,7 +67,7 @@ function cleanDistDir() {
 function minifyCSS(cssCode, filename = 'style.css') {
     const output = cleanCss.minify(cssCode);
     if (output.errors.length > 0) {
-        console.warn('[WARN] CleanCSS errors in ' + path.basename(filename) + ':', output.errors);
+        console.warn('[WARN] CleanCSS errors in %s: %s', path.basename(filename), String(output.errors));
         return cssCode;
     }
     return output.styles;
@@ -78,7 +78,7 @@ function getHtmlFiles(dir, fileList = []) {
     for (const file of files) {
         const safeName = path.basename(file);
         if (safeName.startsWith('.')) continue;
-        const filePath = path.resolve(dir, safeName);
+        const filePath = path.resolve(path.normalize(dir), safeName);
         if (fs.statSync(filePath).isDirectory()) {
             if (safeName !== 'node_modules' && safeName !== 'assets' && safeName !== '.git' && safeName !== 'scratch') {
                 getHtmlFiles(filePath, fileList);

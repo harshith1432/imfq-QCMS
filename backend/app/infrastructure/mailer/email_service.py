@@ -23,10 +23,67 @@ class EmailUtils:
         return url.rstrip("/")
 
     @staticmethod
+    def is_email_integration_connected(provider_override=None):
+        """
+        Checks whether an active, connected email integration provider (ZeptoMail or Resend)
+        is enabled in the Integration Hub database.
+        Returns (is_connected, provider_type, settings).
+        """
+        try:
+            from app.infrastructure.database.models.models import IntegrationConfig
+            query = IntegrationConfig.query.filter(
+                IntegrationConfig.category == 'Communication',
+                IntegrationConfig.provider_id.in_(['zeptomail', 'resend'])
+            )
+            configs = query.all()
+            if not configs:
+                # If no IntegrationConfig records exist at all in DB, check env vars as bootstrap fallback
+                resend_key = os.getenv("RESEND_API_KEY")
+                if resend_key:
+                    return True, 'resend', {
+                        'api_key': resend_key,
+                        'sender_email': os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev"),
+                        'sender_name': "QCMS Notifications"
+                    }
+                return False, None, {}
+
+            # Strict check: only providers with status == 'Connected' and (settings.is_active is not False) are active
+            connected_configs = [
+                c for c in configs 
+                if c.status == 'Connected' and (c.settings or {}).get('is_active', True) is not False
+            ]
+
+            if provider_override:
+                match = next((c for c in connected_configs if c.provider_id == provider_override), None)
+                if match:
+                    return True, match.provider_id, match.settings or {}
+                return False, None, {}
+
+            for cfg in connected_configs:
+                s = cfg.settings or {}
+                if cfg.provider_id == 'zeptomail' and (s.get('api_key') or s.get('sender_email')):
+                    return True, 'zeptomail', s
+                elif cfg.provider_id == 'resend' and (s.get('api_key') or s.get('sender_email')):
+                    return True, 'resend', s
+
+            # If configs exist in DB but all are Disconnected/Disabled, email integrations are OFF!
+            return False, None, {}
+        except Exception as e:
+            if current_app:
+                current_app.logger.warning(f"Could not check email integration status: {e}")
+            return False, None, {}
+
+    @staticmethod
     def send_email_async(to_email, subject, html_content, provider_override=None, email_type='general', org_id=None, sender_email=None, sender_name=None, reply_to=None, attachments=None, app=None):
         """Dispatches an email asynchronously via Celery distributed task queue (with in-process fallback)."""
         if not to_email or not str(to_email).strip() or str(to_email).strip().lower() in ('none', 'null', ''):
             logger.info("[QCMS Email] Skipping email dispatch: recipient address is None or empty.")
+            return False
+
+        # Check if email integration is connected before scheduling async work
+        is_conn, _, _ = EmailUtils.is_email_integration_connected(provider_override=provider_override)
+        if not is_conn:
+            logger.info(f"[QCMS Email] Skipping email dispatch to {to_email}: All email integrations (Resend/ZeptoMail) are Disconnected in Integration Hub.")
             return False
 
         # 1. Try Celery distributed worker dispatch ONLY if Redis is connected
@@ -53,8 +110,25 @@ class EmailUtils:
                 app = None
 
         def _async_worker(target_app):
-            if target_app:
-                with target_app.app_context():
+            try:
+                if target_app:
+                    with target_app.app_context():
+                        try:
+                            EmailUtils.send_email(
+                                to_email=to_email,
+                                subject=subject,
+                                html_content=html_content,
+                                provider_override=provider_override,
+                                email_type=email_type,
+                                org_id=org_id,
+                                sender_email=sender_email,
+                                sender_name=sender_name,
+                                reply_to=reply_to,
+                                attachments=attachments
+                            )
+                        except Exception as err:
+                            target_app.logger.error(f"[AsyncEmail] Error sending background email to {to_email}: {err}")
+                else:
                     try:
                         EmailUtils.send_email(
                             to_email=to_email,
@@ -69,23 +143,13 @@ class EmailUtils:
                             attachments=attachments
                         )
                     except Exception as err:
-                        target_app.logger.error(f"[AsyncEmail] Error sending background email to {to_email}: {err}")
-            else:
+                        logger.info(f"[AsyncEmail] Error sending background email to {to_email}: {err}")
+            finally:
                 try:
-                    EmailUtils.send_email(
-                        to_email=to_email,
-                        subject=subject,
-                        html_content=html_content,
-                        provider_override=provider_override,
-                        email_type=email_type,
-                        org_id=org_id,
-                        sender_email=sender_email,
-                        sender_name=sender_name,
-                        reply_to=reply_to,
-                        attachments=attachments
-                    )
-                except Exception as err:
-                    logger.info(f"[AsyncEmail] Error sending background email to {to_email}: {err}")
+                    from app import db
+                    db.session.remove()
+                except Exception:
+                    pass
 
         email_executor.submit(_async_worker, app)
         return True
@@ -103,25 +167,32 @@ class EmailUtils:
                 app = None
 
         def _process_single_credential(target_app, item):
-            if target_app:
-                with target_app.app_context():
-                    from app.infrastructure.database.models.models import User, db
+            try:
+                if target_app:
+                    with target_app.app_context():
+                        from app.infrastructure.database.models.models import User, db
+                        try:
+                            user_id = item.get('user_id')
+                            temp_pass = item.get('temp_password')
+                            user = db.session.get(User, user_id) if user_id else item.get('user')
+                            if user:
+                                EmailUtils.send_temp_password_email(user, temp_pass)
+                        except Exception as err:
+                            target_app.logger.error(f"[BulkEmail] Error in async welcome notification for user {item.get('user_id')}: {err}")
+                else:
                     try:
-                        user_id = item.get('user_id')
+                        user = item.get('user')
                         temp_pass = item.get('temp_password')
-                        user = db.session.get(User, user_id) if user_id else item.get('user')
                         if user:
                             EmailUtils.send_temp_password_email(user, temp_pass)
                     except Exception as err:
-                        target_app.logger.error(f"[BulkEmail] Error in async welcome notification for user {item.get('user_id')}: {err}")
-            else:
+                        logger.info(f"[BulkEmail] Error in async welcome notification: {err}")
+            finally:
                 try:
-                    user = item.get('user')
-                    temp_pass = item.get('temp_password')
-                    if user:
-                        EmailUtils.send_temp_password_email(user, temp_pass)
-                except Exception as err:
-                    logger.info(f"[BulkEmail] Error in async welcome notification: {err}")
+                    from app import db
+                    db.session.remove()
+                except Exception:
+                    pass
 
         for item in user_credentials_list:
             email_executor.submit(_process_single_credential, app, item)
@@ -231,56 +302,11 @@ class EmailUtils:
 
         import requests
         import base64
-        from app.infrastructure.database.models.models import IntegrationConfig
 
-        provider_type, settings = None, {}
-        try:
-            query = IntegrationConfig.query.filter(
-                IntegrationConfig.category == 'Communication',
-                IntegrationConfig.status == 'Connected',
-                IntegrationConfig.provider_id.in_(['zeptomail', 'resend'])
-            )
-            if provider_override:
-                override_cfg = query.filter(IntegrationConfig.provider_id == provider_override).first()
-                if not override_cfg:
-                    override_cfg = IntegrationConfig.query.filter_by(provider_id=provider_override).first()
-                if override_cfg and override_cfg.settings:
-                    provider_type = override_cfg.provider_id
-                    settings = override_cfg.settings
+        is_connected, provider_type, settings = EmailUtils.is_email_integration_connected(provider_override=provider_override)
 
-            if not provider_type:
-                configs = query.all()
-                for cfg in configs:
-                    s = cfg.settings or {}
-                    if cfg.provider_id == 'zeptomail' and (s.get('api_key') or s.get('sender_email')):
-                        provider_type, settings = 'zeptomail', s
-                        break
-                    elif cfg.provider_id == 'resend' and (s.get('api_key') or s.get('sender_email')):
-                        provider_type, settings = 'resend', s
-                        break
-        except Exception as e:
-            if current_app:
-                current_app.logger.warning(f"Could not query integration config: {e}")
-
-        # Fallback to env vars if no DB integration is active
-        if not provider_type:
-            resend_key = os.getenv("RESEND_API_KEY")
-            if resend_key:
-                provider_type = 'resend'
-                settings = {
-                    'api_key': resend_key,
-                    'sender_email': os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev"),
-                    'sender_name': "QCMS Notifications"
-                }
-            elif provider_override:
-                provider_type = provider_override
-                settings = {
-                    'sender_email': os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev"),
-                    'sender_name': 'QCMS Enterprise Broadcast'
-                }
-
-        if not provider_type:
-            logger.info("[QCMS] Error: No active connected email integration provider (ZeptoMail/Resend) found.")
+        if not is_connected or not provider_type:
+            logger.info(f"[QCMS Email] Skipping email dispatch to {to_email}: Email integrations (Resend/ZeptoMail) are Disconnected in Integration Hub.")
             return None
 
         # Determine dynamic sender email & sender display name directly from Contact Directory field & Integration Hub

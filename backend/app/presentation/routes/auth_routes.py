@@ -279,6 +279,8 @@ def register_org():
         subscription_plan=plan_name,
         subscription_status='Trialing',
         trial_ends_at=trial_ends,
+        license_start_date=datetime.now(timezone.utc).replace(tzinfo=None),
+        license_expiry_date=trial_ends,
         max_users=plan_config.get('max_users', 50),
         storage_limit_mb=plan_config.get('storage_limit_mb', 5120.0),
         is_white_label=plan_config.get('white_label', False),
@@ -1183,13 +1185,6 @@ def login():
         from app.infrastructure.database.models.models import SaaSUserSession
         from app.presentation.routes.audit_routes import parse_user_agent, get_geo_location, get_real_client_ip, log_audit_event
         
-        # Mark old sessions as LoggedOut for security
-        try:
-            SaaSUserSession.query.filter_by(user_id=user.id, status='Active').update({"status": "LoggedOut", "logout_time": datetime.now(timezone.utc).replace(tzinfo=None)})
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-
         ua_str = request.headers.get('User-Agent')
         ip_addr = get_real_client_ip(request)
         os_name, browser_name, device_name = parse_user_agent(ua_str)
@@ -1241,7 +1236,7 @@ def login():
         if role_perms and isinstance(role_perms, dict) and r_k in role_perms and isinstance(role_perms[r_k], dict):
             merged_perms[r_k].update(role_perms[r_k])
 
-    resp = jsonify({
+    return jsonify({
         "access_token": access_token,
         "session_id": session_id,
         "org_id": user.org_id,
@@ -1270,9 +1265,7 @@ def login():
         "org_favicon_url": user.organization.favicon_url if user.organization else None,
         "org_timezone": user.organization.timezone if user.organization else "Asia/Kolkata",
         "trial_ends_at": user.organization.trial_ends_at.isoformat() if user.organization and user.organization.trial_ends_at else None
-    })
-    set_access_cookies(resp, access_token)
-    return resp, 200
+    }), 200
 
 @auth_bp.route('/me', methods=['GET'])
 @auth_bp.route('/profile', methods=['GET'])
@@ -1817,16 +1810,16 @@ def _mask_email(email):
         masked_name = name[0] + "***"
     else:
         masked_name = name[:2] + "***" + name[-1]
-    return f"{masked_name}@{domain}"
+    return "{0}@{1}".format(masked_name, domain)
 
 def _mask_phone(phone):
     if not phone:
         return ""
     clean = re.sub(r'\D', '', phone)
     if len(clean) >= 10:
-        return f"+91 {clean[:2]}******{clean[-2:]}"
+        return "+91 {0}******{1}".format(clean[:2], clean[-2:])
     elif len(clean) >= 4:
-        return f"{clean[:2]}****{clean[-2:]}"
+        return "{0}****{1}".format(clean[:2], clean[-2:])
     return "***"
 
 @auth_bp.route('/forgot-password', methods=['POST'])
@@ -2277,23 +2270,45 @@ def handle_support_tickets():
 
 @auth_bp.route('/maintenance-status', methods=['GET'])
 def maintenance_status():
-    from app.infrastructure.database.models.models import PlatformSettings
-    from sqlalchemy import text
-    row = db.session.execute(
-        text("SELECT maintenance_mode, maintenance_settings FROM platform_settings ORDER BY id ASC LIMIT 1")
-    ).fetchone()
-    if not row:
-        return jsonify({"maintenance_mode": False}), 200
+    import time as _time
+    from flask import current_app
+    now_ts = _time.time()
+    
+    # Fast in-memory cache check (5-second TTL) to protect DB pool from polling starvation
+    cached = getattr(current_app, '_maint_cache', None)
+    if cached and (now_ts - cached.get("ts", 0)) < 5.0:
+        maint_mode = cached.get("val", False)
+        maint_settings = cached.get("settings", {})
+        return jsonify({
+            "maintenance_mode": maint_mode,
+            "message": maint_settings.get("maintenance_message") or "The system is currently undergoing scheduled maintenance. Please try again later.",
+            "eta": maint_settings.get("estimated_completion") or ""
+        }), 200
 
-    maint_mode = bool(row[0]) if row[0] is not None else False
-    import json as _json
     try:
-        maint_settings = _json.loads(row[1]) if isinstance(row[1], str) else (row[1] or {})
+        from app.infrastructure.database.models.models import PlatformSettings
+        from sqlalchemy import text
+        row = db.session.execute(
+            text("SELECT maintenance_mode, maintenance_settings FROM platform_settings ORDER BY id ASC LIMIT 1")
+        ).fetchone()
+        if not row:
+            return jsonify({"maintenance_mode": False}), 200
+
+        maint_mode = bool(row[0]) if row[0] is not None else False
+        import json as _json
+        try:
+            maint_settings = _json.loads(row[1]) if isinstance(row[1], str) else (row[1] or {})
+        except Exception:
+            maint_settings = {}
+
+        if hasattr(current_app, '_maint_cache'):
+            current_app._maint_cache = {"val": maint_mode, "settings": maint_settings, "ts": now_ts}
+
+        return jsonify({
+            "maintenance_mode": maint_mode,
+            "message": maint_settings.get("maintenance_message") or "The system is currently undergoing scheduled maintenance. Please try again later.",
+            "eta": maint_settings.get("estimated_completion") or ""
+        }), 200
     except Exception:
-        maint_settings = {}
-    return jsonify({
-        "maintenance_mode": maint_mode,
-        "message": maint_settings.get("maintenance_message") or "The system is currently undergoing scheduled maintenance. Please try again later.",
-        "eta": maint_settings.get("estimated_completion") or ""
-    }), 200
+        return jsonify({"maintenance_mode": False}), 200
 

@@ -149,7 +149,7 @@ Provides complete audit telemetry and member transition tracking:
 ### 5. Automated PDF & Export Generation Pipeline
 - **QC Story Closure Reports**: Automated generation of comprehensive, publication-ready multi-page PDF summaries containing all 8 stages, charts, evidence photos, team rosters, and review signatures via ReportLab.
 - **Bulk CSV / Excel Exporters**: High-speed export of organizational directories, project rosters, and audit logs with custom filter parameters.
-- **ISO 9001 Compliance Certificates**: Instant certificate generation upon successful project closure.
+
 
 ### 6. Dynamic Multilingual i18n Engine
 - **6 Supported Languages**: English, Hindi, Kannada, Telugu, Tamil, Malayalam.
@@ -439,4 +439,4 @@ UPLOAD_FOLDER=uploads
 
 Designed and engineered for enterprise quality governance, industrial compliance, and continuous operational excellence.
 
-© 2026 **QCMS Enterprise OS (IFQM)**. All rights reserved.
+

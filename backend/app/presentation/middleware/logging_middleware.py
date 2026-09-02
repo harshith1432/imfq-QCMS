@@ -81,7 +81,12 @@ def init_logging_middleware(app):
         
         # Log structured request completion
         logger.info(
-            f"[{safe_req_id}] {safe_method} {safe_path} -> {response.status_code} ({duration}ms)"
+            "[%s] %s %s -> %s (%sms)",
+            safe_req_id,
+            safe_method,
+            safe_path,
+            response.status_code,
+            duration
         )
         
         response.headers['X-Request-ID'] = safe_req_id

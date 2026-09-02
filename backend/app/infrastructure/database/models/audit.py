@@ -44,6 +44,69 @@ class AuditLog(db.Model):
     user = db.relationship('User', backref='logs')
 
 
+@db.event.listens_for(AuditLog, 'before_insert')
+def auto_populate_audit_log_telemetry(mapper, connection, target):
+    try:
+        from flask import request, has_request_context, g
+        if has_request_context():
+            if not target.ip_address:
+                header_keys = ['CF-Connecting-IP', 'X-Forwarded-For', 'X-Real-IP', 'True-Client-IP', 'X-Client-IP']
+                for key in header_keys:
+                    val = request.headers.get(key)
+                    if val and val.strip():
+                        ip = val.split(',')[0].strip()
+                        if ip and ip not in ('127.0.0.1', '::1', 'localhost'):
+                            target.ip_address = ip
+                            break
+                if not target.ip_address:
+                    target.ip_address = request.remote_addr or '127.0.0.1'
+
+            if not target.user_agent:
+                target.user_agent = request.headers.get('User-Agent')
+
+            if target.user_agent and (not target.os or not target.browser or not target.device):
+                ua = target.user_agent.lower()
+                if "mobile" in ua or "android" in ua or "iphone" in ua:
+                    target.device = target.device or "Mobile"
+                elif "tablet" in ua or "ipad" in ua:
+                    target.device = target.device or "Tablet"
+                else:
+                    target.device = target.device or "Desktop"
+                    
+                if "windows" in ua: target.os = target.os or "Windows"
+                elif "macintosh" in ua or "mac os" in ua: target.os = target.os or "macOS"
+                elif "linux" in ua: target.os = target.os or "Linux"
+                elif "iphone" in ua or "ipad" in ua: target.os = target.os or "iOS"
+                elif "android" in ua: target.os = target.os or "Android"
+                else: target.os = target.os or "Windows"
+
+                if "edg/" in ua or "edge" in ua: target.browser = target.browser or "Edge"
+                elif "opr/" in ua or "opera" in ua: target.browser = target.browser or "Opera"
+                elif "brave" in ua: target.browser = target.browser or "Brave"
+                elif "chrome" in ua: target.browser = target.browser or "Chrome"
+                elif "firefox" in ua: target.browser = target.browser or "Firefox"
+                elif "safari" in ua and "chrome" not in ua: target.browser = target.browser or "Safari"
+                else: target.browser = target.browser or "Chrome"
+
+            if not target.request_id:
+                target.request_id = getattr(g, 'request_id', None) or request.headers.get('X-Request-ID')
+
+            if not target.session_id:
+                try:
+                    from flask_jwt_extended import get_jwt
+                    claims = get_jwt()
+                    if claims: target.session_id = claims.get('session_id')
+                except Exception:
+                    pass
+
+            if target.execution_time is None or target.execution_time == 0.0:
+                import time
+                if hasattr(g, 'start_time'):
+                    target.execution_time = round((time.time() - g.start_time) * 1000, 2)
+    except Exception:
+        pass
+
+
 class AuditRiskAlert(db.Model):
     __tablename__ = 'audit_risk_alerts'
     id = db.Column(db.Integer, primary_key=True)

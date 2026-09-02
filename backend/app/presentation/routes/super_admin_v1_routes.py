@@ -142,17 +142,23 @@ def get_dashboard_stats():
         prev_start_date = start_date - timedelta(days=30)
         range_label = 'Last 30 Days'
     
-    # 1. Total Organizations (non-deleted customer tenants only)
-    total_orgs = Organization.query.filter(
-        Organization.is_deleted == False,
-        Organization.is_platform_org == False
-    ).count()
-    
-    # 2. Paid Organizations (orgs on a real paid subscription, not trial)
+    # 1 & 2. Fetch non-deleted customer organizations once
     all_non_deleted_orgs = Organization.query.filter(
         Organization.is_deleted == False,
         Organization.is_platform_org == False
     ).all()
+    total_orgs = len(all_non_deleted_orgs)
+
+    def _to_naive_utc(dt):
+        if dt is None:
+            return None
+        if hasattr(dt, 'tzinfo') and dt.tzinfo is not None:
+            try:
+                from datetime import timezone
+                return dt.astimezone(timezone.utc).replace(tzinfo=None)
+            except Exception:
+                return dt.replace(tzinfo=None)
+        return dt
 
     def _is_org_paid(o):
         plan_str = (o.subscription_plan or '').strip().lower()
@@ -175,33 +181,23 @@ def get_dashboard_stats():
     ])
 
     # 4. Expired Licenses / Organizations
-    expired_licenses = Organization.query.filter(
-        Organization.is_deleted == False,
-        Organization.is_platform_org == False,
-        (Organization.license_expiry_date < now) | (Organization.subscription_status.in_(['Expired', 'EXPIRED'])),
-        ~Organization.subscription_status.in_(['Suspended', 'SUSPENDED', 'Canceled', 'CANCELED'])
-    ).count()
-
-    def _to_naive_utc(dt):
-        if dt is None:
-            return None
-        if hasattr(dt, 'tzinfo') and dt.tzinfo is not None:
-            try:
-                from datetime import timezone
-                return dt.astimezone(timezone.utc).replace(tzinfo=None)
-            except Exception:
-                return dt.replace(tzinfo=None)
-        return dt
+    expired_licenses = len([
+        o for o in all_non_deleted_orgs
+        if ((_to_naive_utc(o.license_expiry_date) and _to_naive_utc(o.license_expiry_date) < now) or ((o.subscription_status or '').upper() == 'EXPIRED'))
+        and ((o.subscription_status or '').upper() not in ('SUSPENDED', 'CANCELED', 'CANCELLED'))
+    ])
 
     # 4b. Inactive 20d Organizations
     cutoff_20d = now - timedelta(days=20)
-    all_non_deleted_orgs = Organization.query.filter(
-        Organization.is_deleted == False,
-        Organization.is_platform_org == False
-    ).all()
+    recent_login_org_ids = set(
+        r[0] for r in db.session.query(User.org_id).filter(
+            User.last_login >= cutoff_20d,
+            User.org_id != None
+        ).distinct().all()
+    )
     inactive_20d_orgs = len([
         o for o in all_non_deleted_orgs
-        if _to_naive_utc(o.created_at) and _to_naive_utc(o.created_at) < cutoff_20d and not any(_to_naive_utc(u.last_login) and _to_naive_utc(u.last_login) >= cutoff_20d for u in o.users)
+        if _to_naive_utc(o.created_at) and _to_naive_utc(o.created_at) < cutoff_20d and o.id not in recent_login_org_ids
     ])
 
     # 5. Total Users (registered tenant users only)
@@ -240,6 +236,8 @@ def get_dashboard_stats():
 
     if prev_revenue > 0:
         growth_pct = round(((revenue_in_period - prev_revenue) / prev_revenue) * 100, 1)
+    elif revenue_in_period > 0:
+        growth_pct = 100.0
     else:
         growth_pct = 0.0
 
@@ -311,16 +309,38 @@ def get_dashboard_stats():
     ).count()
 
     # 11. Suspended Organizations
-    suspended_orgs = Organization.query.filter(
-        Organization.is_deleted == False,
-        Organization.is_platform_org == False,
-        Organization.subscription_status.in_(['Suspended', 'SUSPENDED', 'Canceled', 'CANCELED'])
-    ).count()
+    suspended_orgs = len([
+        o for o in all_non_deleted_orgs
+        if (o.subscription_status or '').upper() in ('SUSPENDED', 'CANCELED', 'CANCELLED')
+    ])
 
-    # 12. Dynamic Trend Chart Points for Selected Range
+    # 12. Dynamic Trend Chart Points for Selected Range (Pre-fetched in single queries)
     trend_labels = []
     trend_mrr = []
     trend_arr = []
+
+    # Pre-fetch payments and subscriptions once
+    all_pmts = db.session.query(
+        SubscriptionPayment.created_at,
+        pmt_amount_col,
+        Organization.is_platform_org
+    ).join(
+        Organization, SubscriptionPayment.org_id == Organization.id
+    ).filter(
+        Organization.is_deleted == False,
+        SubscriptionPayment.payment_status.in_(['Completed', 'Paid', 'COMPLETED', 'PAID'])
+    ).all()
+
+    all_subs_trend = db.session.query(
+        Subscription.created_at,
+        sub_amount_col,
+        Organization.is_platform_org
+    ).join(
+        Organization, Subscription.org_id == Organization.id
+    ).filter(
+        Organization.is_deleted == False,
+        Subscription.subscription_status.in_(['Active', 'ACTIVE'])
+    ).all()
 
     if days <= 30:
         step = 1 if days <= 7 else 3
@@ -328,22 +348,10 @@ def get_dashboard_stats():
             d = now - timedelta(days=i)
             trend_labels.append(d.strftime('%b %d'))
             day_end = d + timedelta(days=1)
-            val = db.session.query(func.sum(pmt_amount_col)).join(
-                Organization, SubscriptionPayment.org_id == Organization.id
-            ).filter(
-                Organization.is_deleted == False,
-                SubscriptionPayment.payment_status.in_(['Completed', 'Paid', 'COMPLETED', 'PAID']),
-                SubscriptionPayment.created_at <= day_end
-            ).scalar() or 0.0
-
+            
+            val = sum(float(p[1] or 0.0) for p in all_pmts if _to_naive_utc(p[0]) and _to_naive_utc(p[0]) <= day_end)
             if val == 0.0:
-                val = db.session.query(func.sum(sub_amount_col)).join(
-                    Organization, Subscription.org_id == Organization.id
-                ).filter(
-                    Organization.is_deleted == False,
-                    Subscription.subscription_status.in_(['Active', 'ACTIVE']),
-                    Subscription.created_at <= day_end
-                ).scalar() or 0.0
+                val = sum(float(s[1] or 0.0) for s in all_subs_trend if _to_naive_utc(s[0]) and _to_naive_utc(s[0]) <= day_end)
 
             val_rounded = round(float(val or 0.0), 2)
             trend_mrr.append(val_rounded)
@@ -365,42 +373,24 @@ def get_dashboard_stats():
                 next_m_year += 1
             m_next = datetime(next_m_year, next_m_month, 1)
 
-            val = db.session.query(func.sum(pmt_amount_col)).join(
-                Organization, SubscriptionPayment.org_id == Organization.id
-            ).filter(
-                Organization.is_platform_org == False,
-                SubscriptionPayment.payment_status.in_(['Completed', 'Paid', 'COMPLETED', 'PAID']),
-                SubscriptionPayment.created_at >= m_date,
-                SubscriptionPayment.created_at < m_next
-            ).scalar() or 0.0
-
+            val = sum(float(p[1] or 0.0) for p in all_pmts if not p[2] and _to_naive_utc(p[0]) and m_date <= _to_naive_utc(p[0]) < m_next)
             if val == 0.0:
-                val = db.session.query(func.sum(sub_amount_col)).join(
-                    Organization, Subscription.org_id == Organization.id
-                ).filter(
-                    Organization.is_platform_org == False,
-                    Organization.is_deleted == False,
-                    Subscription.subscription_status.in_(['Active', 'ACTIVE']),
-                    Subscription.created_at < m_next
-                ).scalar() or 0.0
+                val = sum(float(s[1] or 0.0) for s in all_subs_trend if not s[2] and _to_naive_utc(s[0]) and _to_naive_utc(s[0]) < m_next)
 
             val_rounded = round(float(val or 0.0), 2)
             trend_mrr.append(val_rounded)
             trend_arr.append(round(val_rounded * 12, 2))
 
-    # 13. Month-wise Organization Onboarding & Adoption Trend
+    # 13. Month-wise Organization Onboarding & Adoption Trend (Aggregated from all_non_deleted_orgs)
     ob_labels = []
     ob_new = []
     ob_cumulative = []
     ob_adopted = []
 
     if range_str in ['all', 'all time', 'alltime']:
-        earliest_org = Organization.query.filter(
-            Organization.is_deleted == False,
-            Organization.is_platform_org == False
-        ).order_by(Organization.created_at.asc()).first()
-        if earliest_org and earliest_org.created_at:
-            earliest_dt = _to_naive_utc(earliest_org.created_at)
+        earliest_dates = [_to_naive_utc(o.created_at) for o in all_non_deleted_orgs if o.created_at]
+        if earliest_dates:
+            earliest_dt = min(earliest_dates)
             months_diff = (now.year - earliest_dt.year) * 12 + (now.month - earliest_dt.month) + 1
             ob_num_months = max(6, min(36, months_diff))
         else:
@@ -429,29 +419,15 @@ def get_dashboard_stats():
         ob_labels.append(m_date.strftime('%b %y'))
 
         # New Organizations onboarded in this month
-        new_cnt = Organization.query.filter(
-            Organization.is_deleted == False,
-            Organization.is_platform_org == False,
-            Organization.created_at >= m_date,
-            Organization.created_at < m_next
-        ).count()
+        new_cnt = sum(1 for o in all_non_deleted_orgs if _to_naive_utc(o.created_at) and m_date <= _to_naive_utc(o.created_at) < m_next)
         ob_new.append(new_cnt)
 
         # Cumulative Organizations onboarded up to end of this month
-        cum_cnt = Organization.query.filter(
-            Organization.is_deleted == False,
-            Organization.is_platform_org == False,
-            Organization.created_at < m_next
-        ).count()
+        cum_cnt = sum(1 for o in all_non_deleted_orgs if _to_naive_utc(o.created_at) and _to_naive_utc(o.created_at) < m_next)
         ob_cumulative.append(cum_cnt)
 
         # Adopted/Active/Paid Organizations created up to end of this month
-        adp_cnt = Organization.query.filter(
-            Organization.is_deleted == False,
-            Organization.is_platform_org == False,
-            Organization.created_at < m_next,
-            Organization.subscription_status.in_(['Active', 'ACTIVE', 'Paid', 'PAID', 'Trialing', 'Trial', 'TRIAL'])
-        ).count()
+        adp_cnt = sum(1 for o in all_non_deleted_orgs if _to_naive_utc(o.created_at) and _to_naive_utc(o.created_at) < m_next and (o.subscription_status or '').upper() in ('ACTIVE', 'PAID', 'TRIALING', 'TRIAL'))
         ob_adopted.append(adp_cnt)
 
     period_new_total = sum(ob_new)

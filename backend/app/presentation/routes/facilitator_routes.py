@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timedelta, timezone
 from app.infrastructure.database.models.models import (
-    User, Project, Department,
+    User, Project, Department, ProjectMember,
     Stage5RootCause, Stage7Development, Stage8Implementation,
     FacilitatorNote, AuditLog, db
 )
@@ -462,6 +462,13 @@ def add_note():
         return jsonify({"msg": "project_id, stage_number, and note_text are required"}), 400
 
     project = Project.query.get_or_404(project_id)
+    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
+
+    is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
+    is_assigned = (project.facilitator_id == user.id) or (project.creator_id == user.id) or (ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None)
+    if not (is_admin or is_assigned):
+        return jsonify({"msg": "Unauthorized: You are not assigned to this project"}), 403
 
     note = FacilitatorNote(
         org_id=user.org_id,
@@ -488,6 +495,14 @@ def validate_rca(project_id):
         return jsonify({"msg": "validation_note is required"}), 400
 
     project = Project.query.get_or_404(project_id)
+    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
+
+    is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
+    is_assigned = (project.facilitator_id == user.id) or (ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None and user.role and user.role.name == 'Facilitator')
+    if not (is_admin or is_assigned):
+        return jsonify({"msg": "Unauthorized: Only the assigned facilitator or administrator can validate RCA"}), 403
+
     if project.current_stage != 5:
         return jsonify({"msg": "Project is not in Stage 5"}), 400
 
@@ -527,6 +542,14 @@ def add_post_data(project_id):
     data = request.get_json()
 
     project = Project.query.get_or_404(project_id)
+    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
+
+    is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
+    is_assigned = (project.facilitator_id == user.id) or (ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None and user.role and user.role.name == 'Facilitator')
+    if not (is_admin or is_assigned):
+        return jsonify({"msg": "Unauthorized: Only the assigned facilitator or administrator can submit post-data"}), 403
+
     if project.current_stage != 8:
         return jsonify({"msg": "Project is not in Stage 8"}), 400
 
@@ -571,6 +594,14 @@ def approve_impact(project_id):
     user = db.session.get(User, get_jwt_identity())
 
     project = Project.query.get_or_404(project_id)
+    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
+
+    is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
+    is_assigned = (project.facilitator_id == user.id) or (ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None and user.role and user.role.name == 'Facilitator')
+    if not (is_admin or is_assigned):
+        return jsonify({"msg": "Unauthorized: Only the assigned facilitator or administrator can approve impact"}), 403
+
     if project.current_stage != 8:
         return jsonify({"msg": "Project is not in Stage 8"}), 400
 

@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, render_template_string
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token, set_access_cookies
 from app.infrastructure.database.models.models import db, Organization, User, SupportTicket, Subscription, SubscriptionPayment, SubscriptionInvoice, PlatformSettings, SuperAdminLog, Role, AuditLog, SaaSPlan
 from app.presentation.middleware.middleware import (
@@ -160,6 +160,7 @@ def get_my_permissions():
 @super_admin_bp.route('/companies/filter-options', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('organizations')
 def get_company_filter_options():
     """Return distinct options for Industry, Country, State, City, and Plan filter dropdowns based strictly on created plans and organizations"""
     try:
@@ -223,6 +224,7 @@ def _resolve_org_plan_type(org, plan_type_map=None):
 @super_admin_bp.route('/companies', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('organizations')
 def list_companies():
     """List all organizations with enriched subscription details, KPIs, filtering & pagination"""
     # --- Query Params ---
@@ -499,6 +501,7 @@ def list_companies():
 @super_admin_bp.route('/companies/<int:org_id>', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('organizations')
 def get_company_details(org_id):
     """Detailed company profile with usage stats"""
     org = Organization.query.get_or_404(org_id)
@@ -688,9 +691,12 @@ def create_company():
         
     # 1. Create Organization
     ps_settings = PlatformSettings.query.first()
-    default_trial = (ps_settings.trial_period_days if ps_settings and ps_settings.trial_period_days else 14)
     from app.domain.services.subscription_service import SubscriptionManager
     trial_plan_obj = SubscriptionManager.get_default_trial_plan()
+    default_trial = (
+        (trial_plan_obj.trial_duration_days if trial_plan_obj and trial_plan_obj.trial_duration_days else None) or
+        (ps_settings.trial_period_days if ps_settings and ps_settings.trial_period_days else 180)
+    )
     plan = sub_data.get('plan')
     if not plan or plan in ['Starter', 'Trial']:
         if trial_plan_obj:
@@ -1187,6 +1193,7 @@ def restore_company(org_id):
 @super_admin_bp.route('/recycle-bin', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('organizations')
 def get_recycle_bin():
     """List soft-deleted organizations in Recycle Bin with 30-day countdown"""
     _purge_expired_recycle_bin()
@@ -1400,7 +1407,7 @@ def impersonate_company_admin(org_id):
             full_name=org.admin_name or admin_email.split('@')[0].title(),
             role_id=role.id if role else None
         )
-        gen_pw = os.getenv('DEFAULT_ADMIN_PASSWORD') or secrets.token_urlsafe(16)
+        gen_pw = os.getenv('DEFAULT_ADMIN_PASSWORD') or f"Admin@{secrets.token_urlsafe(18)}!9Aa"
         admin_user.set_password(gen_pw)
         db.session.add(admin_user)
         db.session.commit()
@@ -1423,7 +1430,7 @@ def impersonate_company_admin(org_id):
         details=f"Impersonating admin '{admin_user.email}' of organization '{org.name}'"
     )
     
-    resp = jsonify({
+    return jsonify({
         "status": "success",
         "token": token,
         "data": {
@@ -1431,9 +1438,7 @@ def impersonate_company_admin(org_id):
             "admin_name": admin_user.full_name or admin_user.username
         },
         "admin_name": admin_user.full_name or admin_user.username
-    })
-    set_access_cookies(resp, token)
-    return resp
+    }), 200
 
 @super_admin_bp.route('/companies/bulk-action', methods=['POST'])
 @jwt_required()
@@ -1492,107 +1497,110 @@ def bulk_action_companies():
     
     return jsonify({"status": "success", "message": f"Successfully performed action '{action}' on {count} organizations."})
 
-# ==============================================================================
-# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
-# Function: get_company_users (Lines 1441-1503)
-# Reason: Tenant user sub-list; super-admin uses /companies details modal.
-# ==============================================================================
-# @super_admin_bp.route('/companies/<int:org_id>/users', methods=['GET'])
-# @jwt_required()
-# @super_admin_required()
-# def get_company_users(org_id):
-#     """List users belonging to this organization with search and pagination"""
-#     org = Organization.query.get_or_404(org_id)
 
-#     search_q = request.args.get('q', '').strip() or request.args.get('search', '').strip()
-#     page = request.args.get('page', type=int)
-#     per_page = request.args.get('per_page', 5, type=int)
+@super_admin_bp.route('/companies/<int:org_id>/users', methods=['GET'])
+@jwt_required()
+@super_admin_required()
+def get_company_users(org_id):
+    """List users belonging to this organization with search and pagination"""
+    from app.infrastructure.database.models.models import Organization, User
+    org = db.session.get(Organization, org_id)
+    if not org:
+        return jsonify({"status": "error", "message": "Organization not found"}), 404
 
-#     query = User.query.filter(User.org_id == org_id)
+    search_q = request.args.get('q', '').strip() or request.args.get('search', '').strip()
+    page = request.args.get('page', type=int)
+    per_page = request.args.get('per_page', 5, type=int)
 
-#     if search_q:
-#         search_pattern = f"%{search_q}%"
-#         query = query.filter(
-#             db.or_(
-#                 User.username.ilike(search_pattern),
-#                 User.email.ilike(search_pattern),
-#                 User.full_name.ilike(search_pattern)
-#             )
-#         )
+    query = User.query.filter(User.org_id == org_id)
 
-#     query = query.order_by(User.id.asc())
+    if search_q:
+        search_pattern = f"%{search_q}%"
+        query = query.filter(
+            db.or_(
+                User.username.ilike(search_pattern),
+                User.email.ilike(search_pattern),
+                User.full_name.ilike(search_pattern)
+            )
+        )
 
-#     if page is not None:
-#         paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-#         users = paginated.items
-#         total = paginated.total
-#         total_pages = paginated.pages
-#     else:
-#         users = query.all()
-#         total = len(users)
-#         total_pages = 1
-#         page = 1
-#         per_page = total if total > 0 else 5
+    query = query.order_by(User.id.asc())
 
-#     output = []
-#     for u in users:
-#         role_name = u.role.name if hasattr(u, 'role') and hasattr(u.role, 'name') else (str(u.role) if getattr(u, 'role', None) else 'Member')
-#         status_name = u.status if hasattr(u, 'status') and u.status else ('Active' if u.is_active else 'Inactive')
-#         output.append({
-#             "id": u.id,
-#             "username": u.username,
-#             "email": u.email,
-#             "full_name": u.full_name or '—',
-#             "role": role_name,
-#             "status": status_name,
-#             "is_active": u.is_active,
-#             "created_at": u.created_at.isoformat() if u.created_at else None,
-#             "last_login": u.last_login.isoformat() if u.last_login else None
-#         })
+    if page is not None:
+        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+        users = paginated.items
+        total = paginated.total
+        total_pages = paginated.pages
+    else:
+        users = query.all()
+        total = len(users)
+        total_pages = 1
+        page = 1
+        per_page = total if total > 0 else 5
 
-#     return jsonify({
-#         "status": "success",
-#         "data": output,
-#         "pagination": {
-#             "page": page,
-#             "per_page": per_page,
-#             "total": total,
-#             "total_pages": total_pages
-#         }
-#     })
-# [END DEAD CODE: get_company_users]
+    output = []
+    for u in users:
+        role_name = u.role.name if hasattr(u, 'role') and hasattr(u.role, 'name') else (str(u.role) if getattr(u, 'role', None) else 'Member')
+        status_name = u.status if hasattr(u, 'status') and u.status else ('Active' if u.is_active else 'Inactive')
+        output.append({
+            "id": u.id,
+            "username": u.username,
+            "email": u.email,
+            "full_name": u.full_name or '—',
+            "role": role_name,
+            "status": status_name,
+            "is_active": u.is_active,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
+            "last_login": u.last_login.isoformat() if u.last_login else None
+        })
+
+    return jsonify({
+        "status": "success",
+        "data": output,
+        "pagination": {
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "total_pages": total_pages
+        }
+    })
 
 
-# ==============================================================================
-# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
-# Function: get_company_logs (Lines 1505-1528)
-# Reason: Tenant log sub-list.
-# ==============================================================================
-# @super_admin_bp.route('/companies/<int:org_id>/logs', methods=['GET'])
-# @jwt_required()
-# @super_admin_required()
-# def get_company_logs(org_id):
-#     """Get audit logs specific to this organization"""
-#     org = Organization.query.get_or_404(org_id)
-#     logs = SuperAdminLog.query.filter(
-#         db.or_(
-#             db.and_(SuperAdminLog.target_type == 'Organization', SuperAdminLog.target_id == org_id),
-#             db.and_(SuperAdminLog.target_type == 'User', SuperAdminLog.target_id.in_(db.session.query(User.id).filter_by(org_id=org_id)))
-#         )
-#     ).order_by(SuperAdminLog.created_at.desc()).limit(100).all()
+@super_admin_bp.route('/companies/<int:org_id>/logs', methods=['GET'])
+@jwt_required()
+@super_admin_required()
+def get_company_logs(org_id):
+    """Get audit logs specific to this organization"""
+    from app.infrastructure.database.models.models import Organization, User, SuperAdminLog
+    org = db.session.get(Organization, org_id)
+    if not org:
+        return jsonify({"status": "error", "message": "Organization not found"}), 404
 
-#     output = []
-#     for log in logs:
-#         output.append({
-#             "id": log.id,
-#             "admin": log.admin.username if log.admin else "System",
-#             "action": log.action,
-#             "target": f"{log.target_type} ({log.target_id})" if log.target_type else "System",
-#             "ip": log.ip_address,
-#             "timestamp": log.created_at.isoformat()
-#         })
-#     return jsonify({"status": "success", "data": output})
-# [END DEAD CODE: get_company_logs]
+    try:
+        user_ids_subq = db.session.query(User.id).filter_by(org_id=org_id)
+        logs = SuperAdminLog.query.filter(
+            db.or_(
+                db.and_(SuperAdminLog.target_type == 'Organization', SuperAdminLog.target_id == org_id),
+                db.and_(SuperAdminLog.target_type == 'User', SuperAdminLog.target_id.in_(user_ids_subq))
+            )
+        ).order_by(SuperAdminLog.created_at.desc()).limit(100).all()
+    except Exception:
+        # Fallback: return all logs without subquery filtering
+        logs = SuperAdminLog.query.order_by(SuperAdminLog.created_at.desc()).limit(50).all()
+
+    output = []
+    for log in logs:
+        output.append({
+            "id": log.id,
+            "admin": log.admin.username if log.admin else "System",
+            "action": log.action,
+            "target": f"{log.target_type} ({log.target_id})" if log.target_type else "System",
+            "ip": log.ip_address,
+            "timestamp": log.created_at.isoformat() if log.created_at else None
+        })
+    return jsonify({"status": "success", "data": output})
+
+
 
 
 # ==============================================================================
@@ -2189,6 +2197,7 @@ def _calc_integration_health(s: PlatformSettings) -> tuple:
 @super_admin_bp.route('/settings/dashboard', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('settings')
 def settings_dashboard():
     from app.presentation.middleware.security import get_security_kpis
     s = _get_settings()
@@ -2295,6 +2304,7 @@ def settings_dashboard():
 @super_admin_bp.route('/alerts', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('overview')
 def super_admin_alerts():
     """Return real-time alerts across the platform for SuperAdmin dashboard:
        - Expiring subscriptions (within 7 days)
@@ -2358,6 +2368,7 @@ def super_admin_alerts():
 @super_admin_bp.route('/settings/security-kpis', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('security')
 def security_kpis():
     """Return real-time security counters: blocked IPs, threat alerts, etc."""
     from app.presentation.middleware.security import get_security_kpis
@@ -2380,33 +2391,10 @@ def security_kpis():
     })
 
 
-# ==============================================================================
-# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
-# Function: security_threat_log (Lines 2345-2359)
-# Reason: Unused security threat list.
-# ==============================================================================
-# @super_admin_bp.route('/settings/security-threats', methods=['GET'])
-# @jwt_required()
-# @super_admin_required()
-# def security_threat_log():
-#     """Return a paginated list of recent WAF / firewall threat events."""
-#     from app.presentation.middleware.security import get_security_kpis
-#     kpis = get_security_kpis()
-#     return jsonify({
-#         "status": "success",
-#         "data": {
-#             "recent_threats": kpis['recent_threat_events'],
-#             "total_blocked_24h": kpis['blocked_ips_24h'],
-#             "total_critical_24h": kpis['critical_threat_alerts'],
-#         }
-#     })
-# [END DEAD CODE: security_threat_log]
-
-
-
 @super_admin_bp.route('/settings/auth-kpis', methods=['GET'])
 @jwt_required()
 @super_admin_required()
+@sub_role_required('security')
 def auth_kpis():
     """Return real-time authentication statistics calculated from DB."""
     try:
@@ -2552,7 +2540,6 @@ def platform_settings():
                 "integrations_settings": integrations_d,
                 "ai_settings": _get_category(s, 'ai_settings'),
                 "feature_flags": _get_category(s, 'feature_flags'),
-                "developer_settings": _get_category(s, 'developer_settings'),
                 "audit_logs_settings": _get_category(s, 'audit_logs_settings'),
                 "system_health_settings": _get_category(s, 'system_health_settings'),
                 "about_settings": _get_category(s, 'about_settings'),
@@ -2574,9 +2561,6 @@ def platform_settings():
         }), 403
 
     data = request.json or {}
-
-    # Legacy scalar fields
-    if 'site_name' in data: s.site_name = data['site_name']
     if 'maintenance_mode' in data: s.maintenance_mode = bool(data['maintenance_mode'])
     if 'registration_open' in data: s.registration_open = bool(data['registration_open'])
     if 'require_email_otp' in data: s.require_email_otp = bool(data['require_email_otp'])
@@ -2633,6 +2617,7 @@ def platform_settings():
 @super_admin_bp.route('/settings/test-email', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('settings')
 def test_email_config():
     s = _get_settings()
     email_cfg = _get_category(s, 'email_settings')
@@ -2705,6 +2690,7 @@ def test_email_config():
 @super_admin_bp.route('/settings/test-webhook', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('settings')
 def test_webhook():
     body = request.json or {}
     url = body.get('url', '')
@@ -2718,10 +2704,17 @@ def test_webhook():
             "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             "message": "This is a test webhook ping from QCMS"
         }).encode()
-        req = urlreq.Request(url, data=payload, method='POST',
-                             headers={'Content-Type': 'application/json', 'X-QCMS-Event': 'test'})
-        with urlreq.urlopen(req, timeout=10) as resp:
-            status_code = resp.getcode()
+        if not (url.startswith('https://') or url.startswith('http://')):
+            return jsonify({"status": "error", "message": "Invalid webhook URL protocol"}), 400
+
+        import requests
+        resp = requests.post(
+            url,
+            data=payload,
+            headers={'Content-Type': 'application/json', 'X-QCMS-Event': 'test'},
+            timeout=10
+        )
+        status_code = resp.status_code
         log_admin_action(f"Tested webhook: {url}", target_type="WebhookSetting")
         return jsonify({"status": "success", "message": f"Webhook responded with HTTP {status_code}", "http_status": status_code})
     except Exception as e:
@@ -2736,6 +2729,7 @@ def test_webhook():
 @super_admin_bp.route('/settings/test-ai', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('settings')
 def test_ai_connection():
     body = request.json or {}
     provider = body.get('provider', 'openrouter').lower()
@@ -2756,21 +2750,20 @@ def test_ai_connection():
     test_url = provider_urls.get(provider, 'https://openrouter.ai/api/v1/models')
 
     try:
-        import urllib.request as urlreq
-        req = urlreq.Request(test_url)
-        req.add_header('User-Agent', 'QCMS-Enterprise-AI/4.8')
+        import requests
+        req_headers = {'User-Agent': 'QCMS-Enterprise-AI/4.8'}
         if provider == 'openrouter':
             if api_key:
-                req.add_header('Authorization', f'Bearer {api_key}')
+                req_headers['Authorization'] = f'Bearer {api_key}'
             if body.get('openrouter_site_url'):
-                req.add_header('HTTP-Referer', body.get('openrouter_site_url'))
+                req_headers['HTTP-Referer'] = body.get('openrouter_site_url')
             if body.get('openrouter_app_name'):
-                req.add_header('X-Title', body.get('openrouter_app_name'))
+                req_headers['X-Title'] = body.get('openrouter_app_name')
         elif api_key:
-            req.add_header('Authorization', f'Bearer {api_key}')
+            req_headers['Authorization'] = f'Bearer {api_key}'
 
-        with urlreq.urlopen(req, timeout=8) as resp:
-            status_code = resp.getcode()
+        resp = requests.get(test_url, headers=req_headers, timeout=8)
+        status_code = resp.status_code
 
         log_admin_action(f"Tested AI API provider: {provider} ({model})", target_type="AISetting")
         return jsonify({
@@ -2796,6 +2789,7 @@ def test_ai_connection():
 @super_admin_bp.route('/settings/integration-health', methods=['POST'])
 @jwt_required()
 @super_admin_required()
+@sub_role_write_required('integrations')
 def integration_health_check():
     body = request.json or {}
     integration_name = body.get('integration', '')
@@ -2817,9 +2811,9 @@ def integration_health_check():
     check_url = health_url_map.get(integration_name)
     if check_url:
         try:
-            import urllib.request as urlreq
-            with urlreq.urlopen(check_url, timeout=8) as resp:
-                status = resp.getcode()
+            import requests
+            resp = requests.get(check_url, timeout=8)
+            status = resp.status_code
             return jsonify({"status": "success", "message": f"{integration_name} endpoint reachable (HTTP {status})", "http_status": status})
         except Exception as e:
             logger.error(f"Health check error: {e}", exc_info=True)
@@ -3353,6 +3347,10 @@ def update_admin_login(admin_id):
     if not target:
         return jsonify({"status": "error", "message": "Admin user not found"}), 404
         
+    is_target_sa = (target.role and target.role.name == 'SuperAdmin') or getattr(target, 'is_super_admin', False) or (target.custom_fields and 'super_admin_role' in target.custom_fields)
+    if not is_target_sa:
+        return jsonify({"status": "error", "message": "The selected account is not a Super Admin user."}), 400
+
     data = request.get_json() or {}
     email = data.get('email', '').strip()
     password = data.get('password', '').strip()
@@ -3398,6 +3396,10 @@ def delete_admin_login(admin_id):
     target = db.session.get(User, admin_id)
     if not target:
         return jsonify({"status": "error", "message": "Admin user not found"}), 404
+
+    is_target_sa = (target.role and target.role.name == 'SuperAdmin') or getattr(target, 'is_super_admin', False) or (target.custom_fields and 'super_admin_role' in target.custom_fields)
+    if not is_target_sa:
+        return jsonify({"status": "error", "message": "The selected account is not a Super Admin user."}), 400
         
     # Clean up and reassign all child foreign key dependencies before removing user
     try:
@@ -3613,8 +3615,13 @@ def save_global_stages_template():
         except Exception as img_err:
             print(f"[QCMS] Error saving template preview image: {img_err}")
             preview_image_url = None
-    elif preview_image and isinstance(preview_image, str) and not preview_image.startswith('data:'):
-        preview_image_url = preview_image
+    # Freeze current baseline template for all active organizations whose stages_config was None
+    # so their workflows do not unexpectedly auto-mutate to the new global template version.
+    import copy
+    prev_global_stages = copy.deepcopy((ps and ps.global_stages_config) or Organization.DEFAULT_STAGES_CONFIG)
+    orgs_without_config = Organization.query.filter_by(is_deleted=False).filter(Organization.stages_config.is_(None)).all()
+    for o in orgs_without_config:
+        o.stages_config = copy.deepcopy(prev_global_stages)
 
     ps.global_stages_config = stages
     ps.global_template_version = (ps.global_template_version or 1) + 1
@@ -3650,7 +3657,11 @@ def save_global_stages_template():
                 fields_count = len(sec.get('fields', []))
                 field_names = [html_lib.escape(str(f.get('label') or f.get('type') or 'Field')) for f in (sec.get('fields') or [])]
                 field_str = f" ({len(field_names)} input elements: {', '.join(field_names)})" if field_names else ""
-                change_highlights.append(f"<strong>Stage {sid} ({stitle})</strong> &rarr; New Section: <strong>{sec_label}</strong>{field_str}")
+                change_item = render_template_string(
+                    "<strong>Stage {{ sid }} ({{ stitle }})</strong> &rarr; New Section: <strong>{{ sec_label }}</strong>{{ field_str }}",
+                    sid=sid, stitle=stitle, sec_label=sec_label, field_str=field_str
+                )
+                change_highlights.append(change_item)
             else:
                 d_sec = next((ds for ds in d_stage.get('sections', []) if ds.get('id') == sec_id), None)
                 d_fields = {f.get('id') for f in (d_sec.get('fields') or [])} if d_sec else set()
@@ -3658,7 +3669,11 @@ def save_global_stages_template():
                     if f.get('id') not in d_fields:
                         f_label = html_lib.escape(str(f.get('label', 'Field')))
                         f_type = html_lib.escape(str(f.get('type', 'text')))
-                        change_highlights.append(f"<strong>Stage {sid} ({stitle}) &rarr; {sec_label}</strong> &rarr; New element: <strong>{f_label}</strong> ({f_type})")
+                        change_item = render_template_string(
+                            "<strong>Stage {{ sid }} ({{ stitle }}) &rarr; {{ sec_label }}</strong> &rarr; New element: <strong>{{ f_label }}</strong> ({{ f_type }})",
+                            sid=sid, stitle=stitle, sec_label=sec_label, f_label=f_label, f_type=f_type
+                        )
+                        change_highlights.append(change_item)
 
     # Mark all active organizations as having a pending template update
     Organization.query.filter_by(is_deleted=False).update({"has_pending_template_update": True})
@@ -3826,6 +3841,11 @@ def save_global_stages_template():
                         db.session.rollback()
             except Exception as bg_err:
                 print(f"[QCMS] Global template async notification error: {bg_err}")
+            finally:
+                try:
+                    db.session.remove()
+                except Exception:
+                    pass
 
     try:
         import threading

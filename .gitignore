@@ -10,6 +10,7 @@ env/
 
 # Environment Variables (CRITICAL)
 .env
+.env.local
 backend/.env
 .flaskenv
 

@@ -6,6 +6,11 @@ services:
     container_name: qcms_redis
     command: redis-server --appendonly yes
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+      - /run
     security_opt:
       - no-new-privileges:true
     ports:
@@ -24,6 +29,10 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: qcms_backend
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
     security_opt:
       - no-new-privileges:true
     ports:
@@ -52,6 +61,10 @@ services:
       dockerfile: Dockerfile
     container_name: qcms_celery_worker
     command: celery -A celery_worker.celery worker --loglevel=info --concurrency=2
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
     security_opt:
       - no-new-privileges:true
     depends_on:
@@ -69,6 +82,11 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: qcms_frontend
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
     security_opt:
       - no-new-privileges:true
     ports:

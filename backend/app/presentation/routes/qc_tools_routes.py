@@ -282,10 +282,13 @@ def save_histogram(project_id):
     
     safe_vals = []
     for v in values:
-        if isinstance(v, str) and v.strip().lower() in ('nan', 'inf', '-inf', '+inf'):
+        s_val = str(v).strip()
+        if s_val.lower() in ('nan', 'inf', '-inf', '+inf'):
             return jsonify({"msg": "Invalid numerical value"}), 400
+        if not re.match(r'^-?\d+(\.\d+)?([eE][-+]?\d+)?$', s_val):
+            return jsonify({"msg": "Invalid numerical format"}), 400
         try:
-            fv = float(v)
+            fv = float(s_val)
             if math.isnan(fv) or math.isinf(fv):
                 return jsonify({"msg": "Invalid numerical value"}), 400
             safe_vals.append(fv)

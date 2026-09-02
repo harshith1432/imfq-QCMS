@@ -96,11 +96,8 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
                 if (window.api) window.api.token = data.access_token;
                 sessionStorage.setItem('token', data.access_token);
                 sessionStorage.setItem('access_token', data.access_token);
-                localStorage.setItem('token', data.access_token);
-                localStorage.setItem('access_token', data.access_token);
             }
             sessionStorage.setItem('octaqube_authenticated', 'true');
-            localStorage.setItem('octaqube_authenticated', 'true');
 
             if (rememberMe) {
                 localStorage.setItem('octaqube_remember_me', 'true');
@@ -141,16 +138,13 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             });
 
             sessionStorage.setItem('user', userPayload);
-            localStorage.setItem('user', userPayload);
 
             if (data.role_permissions) {
                 sessionStorage.setItem('role_permissions', JSON.stringify(data.role_permissions));
-                localStorage.setItem('role_permissions', JSON.stringify(data.role_permissions));
             }
 
             const now = Date.now().toString();
             sessionStorage.setItem('octaqube_last_activity', now);
-            localStorage.setItem('octaqube_last_activity', now);
             
             // Sync global language
             if (data.language) {
@@ -306,12 +300,11 @@ async function logout() {
     } catch (_) {}
     try {
         sessionStorage.clear();
-        localStorage.removeItem('octaqube_authenticated');
-        localStorage.removeItem('token');
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('role_permissions');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('access_token');
+        sessionStorage.removeItem('user');
         sessionStorage.removeItem('role_permissions');
+        sessionStorage.removeItem('octaqube_authenticated');
     } catch (_) {}
     window.location.replace('/auth/login.html?logout=true');
 }

@@ -166,7 +166,15 @@ def init_idempotency_middleware(app):
 
         if status == 'COMPLETED' and cached_res:
             res_data, status_code = cached_res
-            res = make_response(res_data if isinstance(res_data, str) else jsonify(res_data), status_code)
+            if isinstance(res_data, (dict, list)):
+                res = jsonify(res_data)
+                res.status_code = status_code
+            else:
+                res = app.response_class(
+                    response=res_data,
+                    status=status_code,
+                    mimetype='application/json'
+                )
             res.headers['Content-Type'] = 'application/json'
             res.headers['X-Idempotent-Replay'] = 'true'
             return res

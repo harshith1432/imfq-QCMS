@@ -522,20 +522,7 @@ const EnterpriseAnalytics = {
                                     <tbody id="revDrillBody"></tbody>
                                 </table>
                             </div>
-                            <div class="ds-card-body py-3 px-4 border-top d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color:var(--ds-border-color)!important;">
-                                <div class="text-xs text-muted" id="revDrillInfo">—</div>
-                                <div class="d-flex gap-1 align-items-center">
-                                    <select class="ds-input" id="revDrillPerPage" style="height:30px; font-size:12px; padding: 3px 24px 3px 8px; width:80px;" onchange="EnterpriseAnalytics.setRevDrillPerPage(this.value)">
-                                        <option value="5" selected>5</option>
-                                        <option value="10">10</option>
-                                        <option value="20">20</option>
-                                        <option value="50">50</option>
-                                        <option value="100">100</option>
-                                    </select>
-                                    <span class="text-xs text-muted ms-1">per page</span>
-                                    <div id="revDrillPagBtns" class="ms-2 d-flex gap-1"></div>
-                                </div>
-                            </div>
+                            <div id="revDrillPagination"></div>
                         </div>
                     </div>
                 `;
@@ -552,7 +539,25 @@ const EnterpriseAnalytics = {
                             labels: revRes.trends.labels,
                             datasets: [{ label: 'Completed Payments', data: revRes.trends.values, backgroundColor: 'rgba(59,130,246,0.85)', borderRadius: 5 }]
                         },
-                        options: { responsive: true, maintainAspectRatio: false }
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => `Completed Payments: ₹${Number(ctx.raw || 0).toLocaleString('en-IN')}`
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: (v) => '₹' + Number(v).toLocaleString('en-IN')
+                                    }
+                                }
+                            }
+                        }
                     });
                 }
                 
@@ -562,9 +567,37 @@ const EnterpriseAnalytics = {
                         type: 'line',
                         data: {
                             labels: revRes.forecast.labels,
-                            datasets: [{ label: 'Forecasted Revenue', data: revRes.forecast.values, borderColor: '#ef4444', borderDash: [6,6], fill: false, tension: 0.3 }]
+                            datasets: [{
+                                label: 'Forecasted Revenue',
+                                data: revRes.forecast.values,
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                                borderDash: [6,6],
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            }]
                         },
-                        options: { responsive: true, maintainAspectRatio: false }
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => `Forecasted Revenue: ₹${Number(ctx.raw || 0).toLocaleString('en-IN')}`
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: (v) => '₹' + Number(v).toLocaleString('en-IN')
+                                    }
+                                }
+                            }
+                        }
                     });
                 }
                 
@@ -1069,17 +1102,10 @@ const EnterpriseAnalytics = {
 
     renderRevDrillTable() {
         const tbody = document.getElementById('revDrillBody');
-        const info = document.getElementById('revDrillInfo');
-        const btns = document.getElementById('revDrillPagBtns');
-        const perPageSelect = document.getElementById('revDrillPerPage');
-
         const list = this._revDrillList || [];
         const page = this._revDrillPage || 1;
         const perPage = this._revDrillPerPage || 5;
         const total = list.length;
-        const totalPages = Math.max(1, Math.ceil(total / perPage));
-
-        if (perPageSelect) perPageSelect.value = perPage;
 
         const start = (page - 1) * perPage;
         const pageData = list.slice(start, start + perPage);
@@ -1096,19 +1122,21 @@ const EnterpriseAnalytics = {
             `).join('') || '<tr><td colspan="5" class="text-center py-4 text-muted">No historical billing data available.</td></tr>';
         }
 
-        if (info) {
-            const startItem = total > 0 ? start + 1 : 0;
-            const endItem = Math.min(page * perPage, total);
-            info.textContent = total > 0 ? `Showing ${startItem}–${endItem} of ${total}` : 'No results';
-        }
-
-        if (btns) {
-            let btnHtml = `<button class="ds-btn ds-btn-sm ds-btn-ghost" ${page <= 1 ? 'disabled' : ''} onclick="EnterpriseAnalytics.revDrillGoToPage(${page - 1})"><i data-lucide="chevron-left" style="width:14px;height:14px;"></i></button>`;
-            for (let i = 1; i <= totalPages; i++) {
-                btnHtml += `<button class="ds-btn ds-btn-sm ${i === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" onclick="EnterpriseAnalytics.revDrillGoToPage(${i})">${i}</button>`;
-            }
-            btnHtml += `<button class="ds-btn ds-btn-sm ds-btn-ghost" ${page >= totalPages ? 'disabled' : ''} onclick="EnterpriseAnalytics.revDrillGoToPage(${page + 1})"><i data-lucide="chevron-right" style="width:14px;height:14px;"></i></button>`;
-            btns.innerHTML = btnHtml;
+        if (typeof window.createStandardPagination === 'function') {
+            window.createStandardPagination({
+                containerId: 'revDrillPagination',
+                entityName: 'organizations',
+                totalItems: total,
+                currentPage: page,
+                pageSize: perPage,
+                pageSizeOptions: [5, 10, 20, 50, 100],
+                onPageChange: (p) => {
+                    EnterpriseAnalytics.revDrillGoToPage(p);
+                },
+                onPageSizeChange: (sz) => {
+                    EnterpriseAnalytics.setRevDrillPerPage(sz);
+                }
+            });
         }
 
         if (window.lucide) lucide.createIcons();

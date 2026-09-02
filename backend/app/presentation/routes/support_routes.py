@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template_string
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import re
 from app.infrastructure.database.models.models import (
@@ -329,6 +329,16 @@ def create_ticket():
     assigned_engineer_id = data.get('assigned_engineer_id')
     assigned_team = data.get('assigned_team', 'Tier 1 Support')
     
+    # Only allow explicit assignment if caller is support personnel / admin
+    is_staff = user.role and user.role.name in ('Support Engineer', 'Support Manager', 'Admin', 'SuperAdmin')
+    if assigned_engineer_id and not is_staff:
+        assigned_engineer_id = None
+
+    if assigned_engineer_id:
+        target_eng = db.session.get(User, assigned_engineer_id)
+        if not target_eng or (target_eng.role and target_eng.role.name not in ('Support Engineer', 'Support Manager', 'Admin', 'SuperAdmin')):
+            assigned_engineer_id = None
+
     if not assigned_engineer_id:
         engineers = User.query.join(Role).filter(Role.name.in_(['Support Engineer', 'Support Manager', 'SuperAdmin'])).all()
         if engineers:
@@ -530,8 +540,15 @@ def update_ticket(ticket_id):
     old_assignee_id = ticket.assigned_engineer_id
 
     # Update actions
+    if 'assigned_engineer_id' in data and not is_support_admin:
+        return jsonify({"status": "error", "message": "Only support personnel or administrators can reassign tickets."}), 403
+
     if 'status' in data:
         new_status = data['status']
+        if new_status in ['Resolved', 'Closed'] and not (is_support_admin or is_assigned):
+            # Non-support requester cannot mark resolved/closed directly
+            return jsonify({"status": "error", "message": "Only assigned support engineers or administrators can resolve tickets."}), 403
+
         ticket.status = new_status
         
         # Audit status changes
@@ -1264,25 +1281,30 @@ def send_enquiry_email(enquiry_id):
         from app.infrastructure.mailer.email_service import EmailUtils
         from app.domain.services.document_branding_service import DocumentBrandingService
 
+        import html as html_escape
         user_org_id = getattr(user, 'org_id', None)
 
         msg_str = message_content.strip()
-        # Avoid duplicate greeting if message content already includes "Dear ...", "Hi ...", or "Hello ..."
-        if re.match(r'^(dear|hi|hello|greetings)\b', msg_str, re.IGNORECASE):
-            greeting_hdr = ""
-        else:
-            greeting_hdr = f"<p style=\"margin-bottom: 12px;\">Dear {enquiry.name or 'Valued Prospect'},</p>"
+        has_custom_greeting = bool(re.match(r'^(dear|hi|hello|greetings)\b', msg_str, re.IGNORECASE))
+        enquiry_name = enquiry.name or 'Valued Prospect'
+        company_name = enquiry.company_name or 'QCMS Enterprise'
 
-        body_html = f"""
-        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1e293b; line-height: 1.6;">
-            {greeting_hdr}
-            <div style="margin: 8px 0; white-space: pre-wrap;">{msg_str}</div>
-            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #64748b;">
-                This communication is sent regarding your sales inquiry with <strong>{enquiry.company_name or 'QCMS Enterprise'}</strong>.
-            </p>
-        </div>
-        """
+        body_html = render_template_string(
+            """<div style="font-family: Arial, sans-serif; font-size: 14px; color: #1e293b; line-height: 1.6;">
+                {% if not has_custom_greeting %}
+                <p style="margin-bottom: 12px;">Dear {{ enquiry_name }},</p>
+                {% endif %}
+                <div style="margin: 8px 0; white-space: pre-wrap;">{{ msg_str }}</div>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+                <p style="font-size: 12px; color: #64748b;">
+                    This communication is sent regarding your sales inquiry with <strong>{{ company_name }}</strong>.
+                </p>
+            </div>""",
+            has_custom_greeting=has_custom_greeting,
+            enquiry_name=enquiry_name,
+            msg_str=msg_str,
+            company_name=company_name
+        )
         html_wrapped = DocumentBrandingService.wrap_email_html(body_html, title=subject, org_id=user_org_id)
 
         # Dispatch email asynchronously using 'support' email_type in background
@@ -1338,6 +1360,14 @@ def upload_ticket_attachment(ticket_id):
     ticket = SupportTicket.query.get_or_404(ticket_id)
     if user.role.name != 'SuperAdmin' and ticket.org_id != user.org_id:
         return jsonify({"status": "error", "message": "Access denied"}), 403
+
+    role_name = user.role.name if (user and user.role) else 'Team Member'
+    is_support_admin = role_name in ('SuperAdmin', 'Admin', 'CEO', 'Support Engineer', 'Support Manager')
+    is_requester = (ticket.user_id == user.id)
+    is_assigned = (ticket.assigned_engineer_id == user.id)
+
+    if not (is_support_admin or is_requester or is_assigned):
+        return jsonify({"status": "error", "message": "Access denied: You are not authorized to upload attachments to this ticket."}), 403
 
     if 'file' not in request.files:
         return jsonify({"status": "error", "message": "No file provided"}), 400

@@ -7,17 +7,17 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.f853ac88a083.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.86d6542b6d44.min.js" as="script">
-    <script src="/assets/dist/auth-guard.86d6542b6d44.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.003248ba8802.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.bca5f8498c05.min.js" as="script">
+    <script src="/assets/dist/auth-guard.bca5f8498c05.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <link rel="stylesheet" href="/assets/dist/core.f853ac88a083.min.css">
-    <script src="/assets/dist/breadcrumbs.660346031d95.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="/assets/dist/core.003248ba8802.min.css">
+    <script src="/assets/dist/breadcrumbs.ef74fb9c326e.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js" integrity="sha384-tTkFttkBclaU1cloKwOi9xk3pbao3VZxTjLNBt8iFABWDBQibbAbWpVmO28zMuxq" crossorigin="anonymous"></script>
     <style>
         .leader-radio:checked+span {
             color: var(--ds-primary);
@@ -590,8 +590,8 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous"></script>
-    <script src="/assets/dist/core-bundle.f481807e72ef.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js" integrity="sha384-e6cc9LaIG7xZ3XD5B+jtr1NhTWPQGQdRCh6xiZ+ZFUtWCpg4ycv3Sh+SkZoopvUY" crossorigin="anonymous"></script>
+    <script src="/assets/dist/core-bundle.1abb5f54ddea.min.js"></script>
     <script>
         const adminDash = {
             allProjects: [],
@@ -1230,16 +1230,36 @@
                 if (existing) existing.destroy();
 
                 const categoryColors = {
-                    'Environment': '#3B82F6',
-                    'Quality': '#10B981',
-                    'Delivery': '#8B5CF6',
-                    'Productivity': '#F59E0B',
-                    'Cost': '#EC4899',
-                    'Morale': '#06B6D4',
-                    'Safety': '#EF4444'
+                    'Environment': '#3B82F6',   // Vibrant Blue
+                    'Quality': '#10B981',       // Emerald Green
+                    'Delivery': '#8B5CF6',      // Purple
+                    'Productivity': '#F59E0B',  // Warm Amber
+                    'Cost': '#EC4899',          // Bright Pink
+                    'Morale': '#06B6D4',        // Cyan
+                    'Safety': '#EF4444',        // Red
+                    'Unassigned': '#64748B',    // Slate Neutral Gray (distinct from Cost and others)
+                    'General': '#94A3B8',       // Light Slate
+                    'Sustainability': '#14B8A6',// Teal
+                    'Innovation': '#D946EF',    // Fuchsia
+                    'Other': '#78716C'          // Warm Stone
                 };
-                const vibrantColors = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4', '#EF4444', '#F97316', '#6366F1'];
-                const bgColors = Object.keys(cats).map((cat, i) => categoryColors[cat] || vibrantColors[i % vibrantColors.length]);
+                const distinctPalette = [
+                    '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899',
+                    '#06B6D4', '#EF4444', '#64748B', '#14B8A6', '#F97316',
+                    '#84CC16', '#6366F1', '#D946EF', '#0EA5E9', '#EAB308',
+                    '#A855F7', '#F43F5E', '#78716C', '#22C55E', '#FB923C'
+                ];
+                const usedColors = new Set();
+                const bgColors = Object.keys(cats).map((cat) => {
+                    const definedColor = categoryColors[cat];
+                    if (definedColor && !usedColors.has(definedColor.toLowerCase())) {
+                        usedColors.add(definedColor.toLowerCase());
+                        return definedColor;
+                    }
+                    const fallback = distinctPalette.find(c => !usedColors.has(c.toLowerCase())) || distinctPalette[usedColors.size % distinctPalette.length];
+                    usedColors.add(fallback.toLowerCase());
+                    return fallback;
+                });
 
                 const centerTextPlugin = {
                     id: 'centerTextPlugin',

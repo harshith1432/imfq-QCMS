@@ -364,7 +364,7 @@ def get_dashboard_data():
 
         if target_project_id:
             proj = db.session.get(Project, target_project_id)
-            if not proj:
+            if not proj or (user.role and user.role.name != 'SuperAdmin' and proj.org_id != user.org_id):
                 return jsonify({"message": "Project not found"}), 404
 
             comp_pct = 100 if proj.status == 'Closed' else min(95, max(15, (int(proj.current_stage / 8.0) * 100)))

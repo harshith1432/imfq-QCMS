@@ -72,14 +72,19 @@ def update_stage_data(stage_num):
     project = Project.query.filter_by(id=project_id, org_id=user.org_id).first_or_404()
     
     # Conditional logic based on stage
+    if stage_num < 1 or stage_num > 8:
+        return jsonify({"msg": "Invalid stage number"}), 400
+
     # Stage 5 is strictly Reviewer only. Members cannot update it.
     if stage_num == 5:
         return jsonify({"msg": "Stage 5 is read-only for Team Members"}), 403
         
-    # Check if the project is actually at the target stage (or if they are just updating previous stage data)
-    # Typically, you can only realistically update the current active stage or previous unlocked stages
-    if project.status == 'Closed':
-        return jsonify({"msg": "Project is closed"}), 403
+    # Team members can only update current active stage or prior unlocked stages
+    if stage_num > project.current_stage:
+        return jsonify({"msg": f"Stage {stage_num} is locked. Project is currently at Stage {project.current_stage}."}), 403
+
+    if project.status in ['Closed', 'Completed', 'Rejected']:
+        return jsonify({"msg": f"Project cannot be modified (Status: {project.status})"}), 403
         
     # Ensure a workflow record exists for the stage
     wf = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=stage_num, org_id=user.org_id).first()

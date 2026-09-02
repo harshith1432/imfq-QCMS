@@ -23,158 +23,240 @@ def calculate_org_storage_realtime(org_id=None):
         query = query.filter(Organization.id == org_id)
     
     orgs = query.all()
-    
+    if not orgs:
+        return {
+            "organizations": [],
+            "summary": {
+                "total_used_mb": 0.0,
+                "total_used_fmt": "0.00 MB",
+                "total_software_used_mb": 0.0,
+                "total_software_used_fmt": "0.00 MB",
+                "total_limit_mb": 0.0,
+                "total_limit_fmt": "0.0 GB",
+                "total_orgs": 0,
+                "high_usage_count": 0,
+                "avg_usage_mb": 0.0
+            }
+        }
+
+    # 1. Support Attachment file sizes (grouped by org_id)
+    att_map = {}
+    try:
+        att_query = db.session.query(
+            User.org_id, func.sum(SupportAttachment.file_size)
+        ).join(User, SupportAttachment.uploaded_by_id == User.id)
+        if org_id:
+            att_query = att_query.filter(User.org_id == org_id)
+        att_map = {r[0]: (r[1] or 0) for r in att_query.group_by(User.org_id).all() if r[0] is not None}
+    except Exception:
+        pass
+
+    # 2. Announcement Attachment file sizes (grouped by org_id)
+    ann_map = {}
+    try:
+        ann_query = db.session.query(
+            User.org_id, func.sum(AnnouncementAttachment.file_size)
+        ).join(User, AnnouncementAttachment.uploaded_by == User.id)
+        if org_id:
+            ann_query = ann_query.filter(User.org_id == org_id)
+        ann_map = {r[0]: (r[1] or 0) for r in ann_query.group_by(User.org_id).all() if r[0] is not None}
+    except Exception:
+        pass
+
+    # 3. Project string & payload bytes (grouped by org_id)
+    proj_bytes_map = {}
+    try:
+        proj_q = db.session.query(
+            Project.org_id,
+            func.sum(
+                func.length(func.coalesce(Project.title, '')) + 
+                func.length(func.coalesce(Project.description, '')) +
+                func.length(func.coalesce(Project.category, '')) +
+                func.length(func.coalesce(Project.work_area, '')) +
+                func.length(func.coalesce(Project.plant, ''))
+            )
+        )
+        if org_id:
+            proj_q = proj_q.filter(Project.org_id == org_id)
+        proj_bytes_map = {r[0]: (r[1] or 0) for r in proj_q.group_by(Project.org_id).all() if r[0] is not None}
+    except Exception:
+        pass
+
+    # Project workflows JSON bytes (grouped by org_id)
+    wf_bytes_map = {}
+    try:
+        wf_q = db.session.query(
+            Project.org_id,
+            func.sum(func.length(func.cast(ProjectWorkflow.data, db.String)))
+        ).join(Project, ProjectWorkflow.project_id == Project.id)
+        if org_id:
+            wf_q = wf_q.filter(Project.org_id == org_id)
+        wf_bytes_map = {r[0]: (r[1] or 0) for r in wf_q.group_by(Project.org_id).all() if r[0] is not None}
+    except Exception:
+        pass
+
+    # Knowledge repository text bytes (grouped by org_id)
+    kr_bytes_map = {}
+    try:
+        kr_q = db.session.query(
+            KnowledgeRepository.org_id,
+            func.sum(
+                func.length(func.coalesce(KnowledgeRepository.title, '')) +
+                func.length(func.coalesce(KnowledgeRepository.problem_summary, '')) +
+                func.length(func.coalesce(KnowledgeRepository.root_cause, '')) +
+                func.length(func.coalesce(KnowledgeRepository.solution_summary, '')) +
+                func.length(func.coalesce(KnowledgeRepository.keywords, ''))
+            )
+        )
+        if org_id:
+            kr_q = kr_q.filter(KnowledgeRepository.org_id == org_id)
+        kr_bytes_map = {r[0]: (r[1] or 0) for r in kr_q.group_by(KnowledgeRepository.org_id).all() if r[0] is not None}
+    except Exception:
+        pass
+
+    # Audit log text bytes (grouped by org_id)
+    audit_bytes_map = {}
+    try:
+        audit_q = db.session.query(
+            AuditLog.org_id,
+            func.sum(
+                func.length(func.coalesce(AuditLog.action, '')) +
+                func.length(func.coalesce(AuditLog.target_table, '')) +
+                func.length(func.cast(AuditLog.details, db.String))
+            )
+        )
+        if org_id:
+            audit_q = audit_q.filter(AuditLog.org_id == org_id)
+        audit_bytes_map = {r[0]: (r[1] or 0) for r in audit_q.group_by(AuditLog.org_id).all() if r[0] is not None}
+    except Exception:
+        pass
+
+    # Users text bytes and counts (grouped by org_id)
+    user_bytes_map = {}
+    user_cnt_map = {}
+    try:
+        user_q = db.session.query(
+            User.org_id,
+            func.sum(
+                func.length(func.coalesce(User.full_name, '')) +
+                func.length(func.coalesce(User.email, '')) +
+                func.length(func.coalesce(User.username, '')) +
+                func.length(func.cast(User.custom_fields, db.String))
+            ),
+            func.count(User.id)
+        )
+        if org_id:
+            user_q = user_q.filter(User.org_id == org_id)
+        user_stats = user_q.group_by(User.org_id).all()
+        for r in user_stats:
+            if r[0] is not None:
+                user_bytes_map[r[0]] = r[1] or 0
+                user_cnt_map[r[0]] = r[2] or 0
+    except Exception:
+        pass
+
+    # Support tickets text bytes (grouped by org_id)
+    ticket_bytes_map = {}
+    try:
+        ticket_q = db.session.query(
+            SupportTicket.org_id,
+            func.sum(
+                func.length(func.coalesce(SupportTicket.subject, '')) +
+                func.length(func.coalesce(SupportTicket.message, ''))
+            )
+        )
+        if org_id:
+            ticket_q = ticket_q.filter(SupportTicket.org_id == org_id)
+        ticket_bytes_map = {r[0]: (r[1] or 0) for r in ticket_q.group_by(SupportTicket.org_id).all() if r[0] is not None}
+    except Exception:
+        pass
+
+    # Projects counts
+    proj_cnt_map = {}
+    try:
+        pq = db.session.query(Project.org_id, func.count(Project.id))
+        if org_id: pq = pq.filter(Project.org_id == org_id)
+        proj_cnt_map = {r[0]: (r[1] or 0) for r in pq.group_by(Project.org_id).all() if r[0] is not None}
+    except Exception:
+        pass
+
+    # Audit counts
+    audit_cnt_map = {}
+    try:
+        aq = db.session.query(AuditLog.org_id, func.count(AuditLog.id))
+        if org_id: aq = aq.filter(AuditLog.org_id == org_id)
+        audit_cnt_map = {r[0]: (r[1] or 0) for r in aq.group_by(AuditLog.org_id).all() if r[0] is not None}
+    except Exception:
+        pass
+
+    # Knowledge counts
+    kr_cnt_map = {}
+    try:
+        kq = db.session.query(KnowledgeRepository.org_id, func.count(KnowledgeRepository.id))
+        if org_id: kq = kq.filter(KnowledgeRepository.org_id == org_id)
+        kr_cnt_map = {r[0]: (r[1] or 0) for r in kq.group_by(KnowledgeRepository.org_id).all() if r[0] is not None}
+    except Exception:
+        pass
+
+    # Active subscription storage limit mapping
+    sub_limit_map = {}
+    try:
+        subs_q = Subscription.query.filter(
+            Subscription.subscription_status.in_(['Active', 'ACTIVE', 'Trialing', 'TRIALING'])
+        )
+        if org_id: subs_q = subs_q.filter(Subscription.org_id == org_id)
+        subs = subs_q.order_by(Subscription.id.asc()).all()
+        for s in subs:
+            if s.org_id and getattr(s, 'storage_limit_gb', None) and s.storage_limit_gb > 0:
+                sub_limit_map[s.org_id] = float(s.storage_limit_gb) * 1024.0
+    except Exception:
+        pass
+
+    # SaaSPlan limits lookup
+    plan_limits_dict = {}
+    try:
+        all_plans = SaaSPlan.query.all()
+        for p in all_plans:
+            pl = SaaSPlanLimits.query.filter_by(plan_id=p.id).first()
+            if pl and pl.storage_limit_gb and pl.storage_limit_gb > 0:
+                lim = float(pl.storage_limit_gb) * 1024.0
+                if p.name: plan_limits_dict[p.name.strip().lower()] = lim
+                if p.code: plan_limits_dict[p.code.strip().lower()] = lim
+    except Exception:
+        pass
+
     result = []
     total_platform_used_mb = 0.0
     total_platform_limit_mb = 0.0
-    
+
     for org in orgs:
-        # 1. Support Attachment file sizes
-        att_bytes = 0
-        try:
-            att_bytes = db.session.query(func.sum(SupportAttachment.file_size)).join(
-                User, SupportAttachment.uploaded_by_id == User.id
-            ).filter(User.org_id == org.id).scalar() or 0
-        except Exception:
-            pass
+        att_bytes = att_map.get(org.id, 0)
+        ann_bytes = ann_map.get(org.id, 0)
+        proj_bytes = proj_bytes_map.get(org.id, 0)
+        wf_bytes = wf_bytes_map.get(org.id, 0)
+        kr_bytes = kr_bytes_map.get(org.id, 0)
+        audit_bytes = audit_bytes_map.get(org.id, 0)
+        user_bytes = user_bytes_map.get(org.id, 0)
+        ticket_bytes = ticket_bytes_map.get(org.id, 0)
 
-        # 2. Announcement Attachment file sizes
-        ann_bytes = 0
-        try:
-            ann_bytes = db.session.query(func.sum(AnnouncementAttachment.file_size)).join(
-                User, AnnouncementAttachment.uploaded_by == User.id
-            ).filter(User.org_id == org.id).scalar() or 0
-        except Exception:
-            pass
+        users_cnt = user_cnt_map.get(org.id, 0)
+        projects_cnt = proj_cnt_map.get(org.id, 0)
+        audits_cnt = audit_cnt_map.get(org.id, 0)
+        knowledge_cnt = kr_cnt_map.get(org.id, 0)
 
-        # 3. DB text & payload byte sizes for this organization
-        proj_bytes = 0
-        try:
-            proj_bytes = db.session.query(
-                func.sum(
-                    func.length(func.coalesce(Project.title, '')) + 
-                    func.length(func.coalesce(Project.description, '')) +
-                    func.length(func.coalesce(Project.category, '')) +
-                    func.length(func.coalesce(Project.work_area, '')) +
-                    func.length(func.coalesce(Project.plant, ''))
-                )
-            ).filter(Project.org_id == org.id).scalar() or 0
-        except Exception:
-            pass
-
-        wf_bytes = 0
-        try:
-            wf_bytes = db.session.query(
-                func.sum(func.length(func.cast(ProjectWorkflow.data, db.String)))
-            ).join(Project, ProjectWorkflow.project_id == Project.id).filter(Project.org_id == org.id).scalar() or 0
-        except Exception:
-            pass
-
-        kr_bytes = 0
-        try:
-            kr_bytes = db.session.query(
-                func.sum(
-                    func.length(func.coalesce(KnowledgeRepository.title, '')) +
-                    func.length(func.coalesce(KnowledgeRepository.problem_summary, '')) +
-                    func.length(func.coalesce(KnowledgeRepository.root_cause, '')) +
-                    func.length(func.coalesce(KnowledgeRepository.solution_summary, '')) +
-                    func.length(func.coalesce(KnowledgeRepository.keywords, ''))
-                )
-            ).filter(KnowledgeRepository.org_id == org.id).scalar() or 0
-        except Exception:
-            pass
-
-        audit_bytes = 0
-        try:
-            audit_bytes = db.session.query(
-                func.sum(
-                    func.length(func.coalesce(AuditLog.action, '')) +
-                    func.length(func.coalesce(AuditLog.target_table, '')) +
-                    func.length(func.cast(AuditLog.details, db.String))
-                )
-            ).filter(AuditLog.org_id == org.id).scalar() or 0
-        except Exception:
-            pass
-
-        user_bytes = 0
-        try:
-            user_bytes = db.session.query(
-                func.sum(
-                    func.length(func.coalesce(User.full_name, '')) +
-                    func.length(func.coalesce(User.email, '')) +
-                    func.length(func.coalesce(User.username, '')) +
-                    func.length(func.cast(User.custom_fields, db.String))
-                )
-            ).filter(User.org_id == org.id).scalar() or 0
-        except Exception:
-            pass
-
-        ticket_bytes = 0
-        try:
-            ticket_bytes = db.session.query(
-                func.sum(
-                    func.length(func.coalesce(SupportTicket.subject, '')) +
-                    func.length(func.coalesce(SupportTicket.message, ''))
-                )
-            ).filter(SupportTicket.org_id == org.id).scalar() or 0
-        except Exception:
-            pass
-
-        # Count DB entities
-        users_cnt = 0
-        projects_cnt = 0
-        audits_cnt = 0
-        knowledge_cnt = 0
-        try:
-            users_cnt = User.query.filter_by(org_id=org.id).count()
-        except Exception:
-            pass
-        try:
-            projects_cnt = Project.query.filter_by(org_id=org.id).count()
-        except Exception:
-            pass
-        try:
-            audits_cnt = AuditLog.query.filter_by(org_id=org.id).count()
-        except Exception:
-            pass
-        try:
-            knowledge_cnt = KnowledgeRepository.query.filter_by(org_id=org.id).count()
-        except Exception:
-            pass
-
-        # 4. Total actual bytes stored for this organization
         total_actual_bytes = att_bytes + ann_bytes + proj_bytes + wf_bytes + kr_bytes + audit_bytes + user_bytes + ticket_bytes
         
-        # Exact physical & DB storage used in MB
         calc_used_mb = round(total_actual_bytes / (1024.0 * 1024.0), 3)
         if calc_used_mb == 0 and (users_cnt > 0 or projects_cnt > 0):
-            calc_used_mb = 0.01  # Minimum non-zero representation for active tenants with data
-        
-        # Resolve dynamic storage limit from plan allocation
-        limit_mb = None
+            calc_used_mb = 0.01
 
-        # 1) Check active subscription record
-        active_sub = Subscription.query.filter_by(org_id=org.id).filter(
-            Subscription.subscription_status.in_(['Active', 'ACTIVE', 'Trialing', 'TRIALING'])
-        ).order_by(Subscription.id.desc()).first()
-        if active_sub and getattr(active_sub, 'storage_limit_gb', None) and active_sub.storage_limit_gb > 0:
-            limit_mb = active_sub.storage_limit_gb * 1024.0
-
-        # 2) Check matching SaaSPlan by name or code
+        # Resolve storage limit
+        limit_mb = sub_limit_map.get(org.id)
         if not limit_mb and org.subscription_plan:
-            saas_plan = SaaSPlan.query.filter(
-                (SaaSPlan.name.ilike(org.subscription_plan)) | (SaaSPlan.code.ilike(org.subscription_plan))
-            ).first()
-            if saas_plan:
-                plan_limits = SaaSPlanLimits.query.filter_by(plan_id=saas_plan.id).first()
-                if plan_limits and plan_limits.storage_limit_gb and plan_limits.storage_limit_gb > 0:
-                    limit_mb = plan_limits.storage_limit_gb * 1024.0
-
-        # 3) Fallback to organization's stored limit or 10 GB
+            limit_mb = plan_limits_dict.get(org.subscription_plan.strip().lower())
         if not limit_mb:
             limit_mb = org.storage_limit_mb if (org.storage_limit_mb and org.storage_limit_mb > 0) else 10240.0
 
-        # Sync resolved storage limit and actual storage used to organization record
         org.storage_limit_mb = limit_mb
         org.storage_used_mb = calc_used_mb
         limit_gb = round(limit_mb / 1024.0, 2)

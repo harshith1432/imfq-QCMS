@@ -6,16 +6,16 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.f853ac88a083.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.86d6542b6d44.min.js" as="script">
-    <script src="/assets/dist/auth-guard.86d6542b6d44.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.003248ba8802.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.bca5f8498c05.min.js" as="script">
+    <script src="/assets/dist/auth-guard.bca5f8498c05.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>8-Stage Workflow Template | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <link rel="stylesheet" href="/assets/dist/core.f853ac88a083.min.css">
-    <script src="/assets/dist/breadcrumbs.660346031d95.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.003248ba8802.min.css">
+    <script src="/assets/dist/breadcrumbs.ef74fb9c326e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous"></script>
     <script>
@@ -24,7 +24,7 @@
         window.api = { get: () => Promise.resolve([]), post: () => Promise.resolve({}) };
         window.OctaQube = { toast: () => {} };
     </script>
-    <script src="/assets/dist/stages-bundle.636228ab6597.min.js"></script>
+    <script src="/assets/dist/stages-bundle.313f6f88b48f.min.js"></script>
     <style>
         /* ── Stage list ──────────────────────────────────────────────── */
         #stageList {
@@ -777,7 +777,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
-<script src="/assets/dist/core-bundle.f481807e72ef.min.js"></script>
+<script src="/assets/dist/core-bundle.1abb5f54ddea.min.js"></script>
     <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon library
@@ -2357,6 +2357,33 @@ function deleteStage(idx) {
 }
 window.deleteStage = deleteStage;
 
+async function skipGlobalTemplateUpdate() {
+    if (!confirm('Are you sure you want to skip this global template version update? Your current organization workflow structure will be kept unchanged, and update prompts for this version will be dismissed automatically.')) {
+        return;
+    }
+    try {
+        const res = await api.post('/admin/stages-template/skip-global');
+        showToast(res.message || 'Global template update skipped. Current organization template preserved.');
+
+        const diffModalEl = document.getElementById('globalSyncDiffModal');
+        if (diffModalEl) {
+            const bsModal = bootstrap.Modal.getInstance(diffModalEl);
+            if (bsModal) bsModal.hide();
+        }
+
+        const previewModalEl = document.getElementById('diffPreviewModal');
+        if (previewModalEl) {
+            const pModal = bootstrap.Modal.getInstance(previewModalEl);
+            if (pModal) pModal.hide();
+        }
+
+        await checkGlobalTemplateStatus();
+    } catch (err) {
+        showToast('Error skipping update: ' + (err.message || 'Unknown error'), 'error');
+    }
+}
+window.skipGlobalTemplateUpdate = skipGlobalTemplateUpdate;
+
 async function checkGlobalTemplateStatus() {
     try {
         const res = await api.get('/admin/stages-template/status');
@@ -2365,7 +2392,7 @@ async function checkGlobalTemplateStatus() {
 
         if (res && res.has_pending_template_update) {
             container.innerHTML = `
-                <div class="alert alert-warning border border-warning-subtle d-flex align-items-center justify-content-between p-3 mb-4 rounded-3 shadow-xs">
+                <div class="alert alert-warning border border-warning-subtle d-flex align-items-center justify-content-between p-3 mb-4 rounded-3 shadow-xs flex-wrap gap-2">
                     <div class="d-flex align-items-center gap-3">
                         <div class="rounded-circle bg-warning bg-opacity-20 d-flex align-items-center justify-content-center text-warning" style="width:38px;height:38px;flex-shrink:0;">
                             <i data-lucide="sparkles" style="width:20px;height:20px;"></i>
@@ -2375,9 +2402,14 @@ async function checkGlobalTemplateStatus() {
                             <p class="mb-0 text-xs text-secondary">Super Admin published a new global template update. Your organization is currently on v${res.applied_template_version}.</p>
                         </div>
                     </div>
-                    <button class="ds-btn ds-btn-primary ds-btn-sm text-xs py-2 px-3 d-flex align-items-center gap-1.5" onclick="openGlobalSyncModal(${res.global_template_version}, ${res.applied_template_version})">
-                        <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Review & Apply Global Template Changes
-                    </button>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="ds-btn ds-btn-outline-secondary ds-btn-sm text-xs py-2 px-3 d-flex align-items-center gap-1.5" onclick="skipGlobalTemplateUpdate()" title="Dismiss this update and keep current organization template">
+                            <i data-lucide="skip-forward" style="width:14px;height:14px;"></i> Skip This Version
+                        </button>
+                        <button type="button" class="ds-btn ds-btn-primary ds-btn-sm text-xs py-2 px-3 d-flex align-items-center gap-1.5" onclick="openGlobalSyncModal(${res.global_template_version}, ${res.applied_template_version})">
+                            <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Review & Apply Global Template Changes
+                        </button>
+                    </div>
                 </div>
             `;
             if (window.lucide) lucide.createIcons();
@@ -2801,7 +2833,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 <!-- Global Template Sync & Diff Review Modal -->
 <div class="modal fade" id="globalSyncDiffModal" tabindex="-1" aria-hidden="true" style="z-index: 100005;">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-width: 980px;">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
             <div class="modal-header border-bottom px-4 py-3 bg-light">
                 <div class="d-flex align-items-center gap-2">
@@ -2828,13 +2860,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-top px-4 py-3 bg-light d-flex justify-content-between">
-                <button type="button" class="ds-btn ds-btn-ghost text-secondary ds-btn-sm" data-bs-dismiss="modal">Keep Current Org Template</button>
+            <div class="modal-footer border-top px-4 py-3 bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div class="d-flex gap-2">
-                    <button type="button" class="ds-btn ds-btn-outline-primary ds-btn-sm" onclick="executeGlobalSync('merge')">
+                    <button type="button" class="ds-btn ds-btn-outline-secondary ds-btn-sm fw-semibold text-dark d-flex align-items-center gap-1.5" data-bs-dismiss="modal" style="border: 1.5px solid #cbd5e1; background: #ffffff; color: #1e293b !important;">
+                        <i data-lucide="shield-check" style="width:14px;height:14px;color:#475569;"></i> Keep Current Org Template
+                    </button>
+                    <button type="button" class="ds-btn ds-btn-outline-danger ds-btn-sm fw-semibold d-flex align-items-center gap-1.5" onclick="skipGlobalTemplateUpdate()" title="Skip this version and dismiss update prompts">
+                        <i data-lucide="skip-forward" style="width:14px;height:14px;"></i> Skip This Version
+                    </button>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="ds-btn ds-btn-outline-primary ds-btn-sm fw-semibold d-flex align-items-center gap-1.5" onclick="executeGlobalSync('merge')">
                         <i data-lucide="git-merge" style="width:14px;height:14px;"></i> Merge Updates (Keep Custom Sections)
                     </button>
-                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="executeGlobalSync('overwrite')">
+                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm fw-semibold d-flex align-items-center gap-1.5" onclick="executeGlobalSync('overwrite')">
                         <i data-lucide="check-circle-2" style="width:14px;height:14px;"></i> Apply All Global Updates
                     </button>
                 </div>
@@ -2879,11 +2918,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     This is a live preview of exactly what will appear in your workspace after applying the update.
                 </div>
                 <div class="d-flex gap-2">
-                    <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" data-bs-dismiss="modal">Close Preview</button>
-                    <button type="button" class="ds-btn ds-btn-outline-primary ds-btn-sm" onclick="bootstrap.Modal.getInstance(document.getElementById('diffPreviewModal')).hide(); executeGlobalSync('merge')">
+                    <button type="button" class="ds-btn ds-btn-outline-secondary ds-btn-sm fw-semibold text-dark" data-bs-dismiss="modal" style="border: 1.5px solid #cbd5e1; background: #ffffff; color: #1e293b !important;">Close Preview</button>
+                    <button type="button" class="ds-btn ds-btn-outline-danger ds-btn-sm fw-semibold" onclick="bootstrap.Modal.getInstance(document.getElementById('diffPreviewModal')).hide(); skipGlobalTemplateUpdate()">
+                        <i data-lucide="skip-forward" style="width:14px;height:14px;"></i> Skip This Version
+                    </button>
+                    <button type="button" class="ds-btn ds-btn-outline-primary ds-btn-sm fw-semibold" onclick="bootstrap.Modal.getInstance(document.getElementById('diffPreviewModal')).hide(); executeGlobalSync('merge')">
                         <i data-lucide="git-merge" style="width:13px;height:13px;"></i> Merge This Update
                     </button>
-                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm" onclick="bootstrap.Modal.getInstance(document.getElementById('diffPreviewModal')).hide(); executeGlobalSync('overwrite')">
+                    <button type="button" class="ds-btn ds-btn-primary ds-btn-sm fw-semibold" onclick="bootstrap.Modal.getInstance(document.getElementById('diffPreviewModal')).hide(); executeGlobalSync('overwrite')">
                         <i data-lucide="check-circle-2" style="width:13px;height:13px;"></i> Apply All Global Updates
                     </button>
                 </div>

@@ -726,14 +726,17 @@ def assign_organizations(module_id):
         (ModuleAssignment.assigned_type != 'Plan')
     ).delete()
     
+    new_assignments = []
     for o in org_ids:
-        db.session.add(ModuleAssignment(module_id=m.id, assigned_type='Organization', assigned_target=str(o)))
+        new_assignments.append(ModuleAssignment(module_id=m.id, assigned_type='Organization', assigned_target=str(o)))
     for ind in industries:
-        db.session.add(ModuleAssignment(module_id=m.id, assigned_type='Industry', assigned_target=ind))
+        new_assignments.append(ModuleAssignment(module_id=m.id, assigned_type='Industry', assigned_target=ind))
     for reg in regions:
-        db.session.add(ModuleAssignment(module_id=m.id, assigned_type='Region', assigned_target=reg))
+        new_assignments.append(ModuleAssignment(module_id=m.id, assigned_type='Region', assigned_target=reg))
     for ct in customer_types:
-        db.session.add(ModuleAssignment(module_id=m.id, assigned_type='CustomerType', assigned_target=ct))
+        new_assignments.append(ModuleAssignment(module_id=m.id, assigned_type='CustomerType', assigned_target=ct))
+    if new_assignments:
+        db.session.add_all(new_assignments)
         
     db.session.commit()
     _log_module_action(m.id, "ASSIGN_ORG", "Explicit organization pilot assignments updated.")

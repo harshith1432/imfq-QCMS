@@ -7,18 +7,18 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.f853ac88a083.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.86d6542b6d44.min.js" as="script">
-    <script src="/assets/dist/auth-guard.86d6542b6d44.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.003248ba8802.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.bca5f8498c05.min.js" as="script">
+    <script src="/assets/dist/auth-guard.bca5f8498c05.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Master Control | OctaQube SaaS Platform</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <link rel="stylesheet" href="/assets/dist/core.f853ac88a083.min.css">
-    <script src="/assets/dist/breadcrumbs.660346031d95.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="/assets/dist/core.003248ba8802.min.css">
+    <script src="/assets/dist/breadcrumbs.ef74fb9c326e.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js" integrity="sha384-tTkFttkBclaU1cloKwOi9xk3pbao3VZxTjLNBt8iFABWDBQibbAbWpVmO28zMuxq" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha384-Yv5O+t3uE3hunW8uyrbpPW3iw6/5/Y7HitWJBLgqfMoA36NogMmy+8wWZMpn3HWc" crossorigin="anonymous"></script>
     <style>
         /* Hide Helpdesk Support & Quality AI Assistant floating widgets on Super Admin Portal */
         #ai-chat-widget, #helpdesk-widget {
@@ -1273,10 +1273,6 @@
                                     <div style="cursor:help;" data-bs-toggle="tooltip" data-bs-placement="top" title="Paid Organizations: Total count of active customer tenant organizations with paid subscriptions or completed payments.">
                                         <div class="text-xs text-muted">Paid Orgs</div>
                                         <div class="fw-bold text-lg" id="dashPaidOrgs">—</div>
-                                    </div>
-                                    <div style="cursor:help;" data-bs-toggle="tooltip" data-bs-placement="top" title="Revenue Growth: Percentage increase in recurring revenue compared to the previous period.">
-                                        <div class="text-xs text-muted">Growth</div>
-                                        <div class="fw-bold text-lg" id="dashGrowth" style="color:var(--ds-success);">—</div>
                                     </div>
                                 </div>
                                 <div class="ds-card-body pt-2">
@@ -4234,12 +4230,6 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-12 pw-fixed-pricing-field">
-                                            <div class="form-check mt-2">
-                                                <input class="form-check-input" type="checkbox" id="pwIsCustom">
-                                                <label class="form-check-label text-sm" for="pwIsCustom">Mark as Custom Plan (Hide public pricing, require custom quote)</label>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
 
@@ -6670,13 +6660,13 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous"></script>
-    <script src="/assets/dist/core-bundle.f481807e72ef.min.js"></script>
-    <script src="/assets/dist/enterprise-analytics.304c058192ce.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js" integrity="sha384-e6cc9LaIG7xZ3XD5B+jtr1NhTWPQGQdRCh6xiZ+ZFUtWCpg4ycv3Sh+SkZoopvUY" crossorigin="anonymous"></script>
+    <script src="/assets/dist/core-bundle.1abb5f54ddea.min.js"></script>
+    <script src="/assets/dist/enterprise-analytics.e98b4f583ec5.min.js"></script>
     <script src="/assets/dist/support-desk.67aff1dd2393.min.js"></script>
     <script src="/assets/dist/integrations.d5ac497783dd.min.js"></script>
     <script src="/assets/dist/platform-settings.35a218d41b52.min.js"></script>
-    <script src="/assets/dist/super-admin.707dc0204351.min.js"></script>
+    <script src="/assets/dist/super-admin.7cd001c19c87.min.js"></script>
     <script>
     if (typeof SupportDesk !== 'undefined') window.SupportDesk = SupportDesk;
     if (typeof StageWeightageManager !== 'undefined') window.StageWeightageManager = StageWeightageManager;
@@ -7105,9 +7095,9 @@
                 const displaySub = platformSub || 'ENTERPRISE OS';
                 const logoUrl = ctx.logo_url;
 
-                let logoHtml = `<div class="brand-icon" style="background: var(--ds-accent);"><i data-lucide="shield-check" style="color:white;"></i></div>`;
+                let logoHtml = `<div class="brand-icon" style="background: rgba(255,255,255,0.1);"><i data-lucide="shield-check" style="color:white;"></i></div>`;
                 if (logoUrl && logoUrl !== 'null' && logoUrl !== 'None' && !logoUrl.includes('/assets/img/logo.png')) {
-                    logoHtml = `<img src="${logoUrl}" alt="Logo" style="width: 32px; height: 32px; object-fit: contain; border-radius: 8px;">`;
+                    logoHtml = `<img src="${logoUrl}" alt="Logo" style="height: 32px; max-width: 140px; object-fit: contain; background: transparent;">`;
                 }
 
                 sidebarBrand.innerHTML = `${logoHtml}<div class="brand-text">${OctaQube.escapeHtml(shortName)} <small style="color:var(--ds-accent); opacity:1;">${OctaQube.escapeHtml(displaySub)}</small></div>`;

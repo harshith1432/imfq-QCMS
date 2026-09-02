@@ -6,15 +6,15 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.f853ac88a083.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.86d6542b6d44.min.js" as="script">
-    <script src="/assets/dist/auth-guard.86d6542b6d44.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.003248ba8802.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.bca5f8498c05.min.js" as="script">
+    <script src="/assets/dist/auth-guard.bca5f8498c05.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Details | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <link rel="stylesheet" href="/assets/dist/core.f853ac88a083.min.css">
-    <script src="/assets/dist/breadcrumbs.660346031d95.min.js"></script>
+    <link rel="stylesheet" href="/assets/dist/core.003248ba8802.min.css">
+    <script src="/assets/dist/breadcrumbs.ef74fb9c326e.min.js"></script>
     <script src="https://unpkg.com/lucide@latest" crossorigin="anonymous"></script>
     <style>
         .stage-section { border-left: 3px solid var(--ds-primary); padding-left: 1rem; margin-bottom: 2rem; }
@@ -77,6 +77,9 @@
                     </div>
                     <div class="h-stack gap-2 align-items-center">
                         <div id="projectPresenceAvatars" class="live-presence-avatar-stack me-2"></div>
+                        <button class="ds-btn ds-btn-ghost" id="projectDocsBtn" onclick="ProjectApp.openProjectDocsModal()" title="View and download all uploaded documents for this project">
+                            <i data-lucide="paperclip" style="width:14px;height:14px;"></i> Project Documents
+                        </button>
                         <button class="ds-btn ds-btn-ghost d-none" id="qcAnalysisBtn" onclick="ProjectApp.openQcAnalysisModal()">
                             <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> QC Tools Analysis
                         </button>
@@ -732,12 +735,51 @@
         </div>
     </div>
 
+    <!-- Project Documents & Uploaded Files Modal -->
+    <div class="modal fade" id="projectDocsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content glass-card ds-card border-0" style="border: 1px solid var(--ds-border-color) !important;">
+                <div class="modal-header border-bottom px-4 py-3 d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;background:rgba(var(--ds-primary-rgb),0.12);color:var(--ds-primary);flex-shrink:0;">
+                            <i data-lucide="paperclip" style="width:20px;height:20px;"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="modal-title fw-bold mb-0" id="projectDocsModalTitle">Project Documents &amp; Attachments</h5>
+                                <span class="badge bg-primary text-white" id="projectDocsCountBadge">0</span>
+                            </div>
+                            <p class="text-xs text-muted mb-0" id="projectDocsModalSubtitle">All documents, evidence files, SOPs, and presentations uploaded for this project.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="ds-btn ds-btn-primary ds-btn-sm" id="downloadAllDocsBtn" onclick="ProjectApp.downloadAllDocuments()" style="display:none;">
+                            <i data-lucide="download-cloud" style="width:14px;height:14px;margin-right:6px;"></i> Download All (ZIP)
+                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                </div>
+                <div class="modal-body p-4" id="projectDocsModalBody">
+                    <div class="p-5 text-center text-muted">
+                        <span class="spinner-border spinner-border-sm me-2"></span> Loading project documents...
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 d-flex justify-content-between">
+                    <div class="text-xs text-muted">
+                        <i data-lucide="shield-check" style="width:13px;height:13px;margin-right:4px;"></i> Secure Tenant-Isolated Document Storage
+                    </div>
+                    <button type="button" class="ds-btn ds-btn-ghost" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous"></script>
-    <script src="/assets/dist/core-bundle.f481807e72ef.min.js"></script>
-    <script src="/assets/dist/stages-bundle.636228ab6597.min.js"></script>
-    <script src="/assets/dist/live-presence.1dc5b856b8dc.min.js"></script>
-    <script src="/assets/dist/project-details-app.adc46963ce2f.min.js"></script>
+    <script src="/assets/dist/core-bundle.1abb5f54ddea.min.js"></script>
+    <script src="/assets/dist/stages-bundle.313f6f88b48f.min.js"></script>
+    <script src="/assets/dist/live-presence.8e6850ccb152.min.js"></script>
+    <script src="/assets/dist/project-details-app.b0fef08c4433.min.js"></script>
 </body>
 </html>
 

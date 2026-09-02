@@ -19,7 +19,7 @@ class Config:
         if not os.getenv('JWT_SECRET_KEY') or JWT_SECRET_KEY in INSECURE_SECRETS:
             raise ValueError("[QCMS Security Critical] Running in PRODUCTION with default/insecure JWT_SECRET_KEY! Set a strong JWT_SECRET_KEY in .env.")
 
-    JWT_TOKEN_LOCATION = ['headers', 'cookies']
+    JWT_TOKEN_LOCATION = ['headers']
     JWT_ACCESS_COOKIE_NAME = 'access_token_cookie'
     JWT_ACCESS_COOKIE_PATH = '/'
     JWT_COOKIE_SECURE = (ENVIRONMENT == 'production')
@@ -33,9 +33,9 @@ class Config:
     # Connection Pool Settings
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
-        'pool_recycle': 1800,
-        'pool_size': 10,
-        'max_overflow': 10,
+        'pool_recycle': 300,
+        'pool_size': 50,
+        'max_overflow': 50,
         'pool_timeout': 30,
     }
     
@@ -138,10 +138,11 @@ class Config:
             ssl_ctx = ssl.create_default_context()
             SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'ssl_context': ssl_ctx}
     elif SQLALCHEMY_DATABASE_URI and 'sqlite' not in SQLALCHEMY_DATABASE_URI:
-        SQLALCHEMY_ENGINE_OPTIONS['pool_size'] = 10
-        SQLALCHEMY_ENGINE_OPTIONS['max_overflow'] = 10
+        SQLALCHEMY_ENGINE_OPTIONS['pool_size'] = 50
+        SQLALCHEMY_ENGINE_OPTIONS['max_overflow'] = 50
+        SQLALCHEMY_ENGINE_OPTIONS['pool_timeout'] = 30
         SQLALCHEMY_ENGINE_OPTIONS['pool_pre_ping'] = True
-        SQLALCHEMY_ENGINE_OPTIONS['pool_recycle'] = 1800
+        SQLALCHEMY_ENGINE_OPTIONS['pool_recycle'] = 300
     else:
         # For SQLite (including :memory:) use StaticPool so every session and
         # every Flask request handler share the SAME single connection.
