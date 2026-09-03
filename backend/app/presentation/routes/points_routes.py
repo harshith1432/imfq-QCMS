@@ -95,10 +95,6 @@ def get_points_history():
         target_user = db.session.get(User, target_emp_id)
         if not target_user or target_user.org_id != current_user.org_id:
             return jsonify({"message": "Employee not found in organization"}), 404
-        if int(target_emp_id) != int(current_user_id):
-            is_admin = current_user.role and current_user.role.name in ['Admin', 'SuperAdmin', 'CEO', 'Team Leader']
-            if not is_admin:
-                return jsonify({"message": "Unauthorized to view other employees' point histories"}), 403
         emp_id = target_emp_id
     else:
         emp_id = current_user_id
@@ -143,9 +139,11 @@ def get_leaderboard():
     req_org = request.args.get('org_id', type=int)
 
     org_id = None
-    if req_org and is_superadmin:
+    if req_org:
         org_id = req_org
-    else:
+    elif not is_superadmin:
+        org_id = current_user.org_id
+    elif current_user.org_id:
         org_id = current_user.org_id
 
     # Ensure leaderboard is initialized

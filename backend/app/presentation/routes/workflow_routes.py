@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.orm.exc import StaleDataError
 from app.infrastructure.database.models.models import (
-    Project, ProjectMember, db, AuditLog, ProjectReview, ProjectStageTracker, User,
+    Project, db, AuditLog, ProjectReview, ProjectStageTracker, User,
     Stage1ProblemDefinitionProjectInitiation, Stage2ObservationDataCollection, Stage3CauseIdentification,
     Stage4RootCauseAnalysisVerification, Stage5CountermeasurePlanningSolutionDevelopment, Stage6ImplementationChangeManagement,
     Stage7PerformanceVerificationBenefitsRealization, Stage8StandardizationKnowledgeSharingProjectClosure
@@ -59,57 +59,63 @@ def snapshot_stage_template(project, stage_number):
     except Exception as e:
         print(f"[QCMS] Error snapshotting stage template: {e}")
 
-@workflow_bp.route('/<int:project_id>/stage/<int:stage_id>', methods=['GET'])
-@jwt_required()
-def get_stage_data(project_id, stage_id):
-    user_id = get_jwt_identity()
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
-    project = db.session.get(Project, project_id)
-    if not project:
-        return jsonify({"msg": "Project not found"}), 404
-    if user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
-        return jsonify({"msg": "Project not found"}), 404
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_stage_data (Lines 62-112)
+# Reason: Redundant unaliased route. Frontend uses /projects/<id>/stages/<stage_id>.
+# ==============================================================================
+# @workflow_bp.route('/<int:project_id>/stage/<int:stage_id>', methods=['GET'])
+# @jwt_required()
+# def get_stage_data(project_id, stage_id):
+#     user_id = get_jwt_identity()
+#     user = db.session.get(User, user_id)
+#     if not user:
+#         return jsonify({"msg": "User not found"}), 404
+#     project = db.session.get(Project, project_id)
+#     if not project:
+#         return jsonify({"msg": "Project not found"}), 404
+#     if user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+#         return jsonify({"msg": "Project not found"}), 404
 
-    # Enforce role-based access control
-    role = user.role.name
-    if role in ('SuperAdmin', 'CEO', 'Admin'):
-        pass
-    elif role == 'Team Member':
-        from app.infrastructure.database.models.models import ProjectMember
-        is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
-        if not is_member:
-            return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
-    elif role == 'Team Leader':
-        from app.infrastructure.database.models.models import ProjectMember
-        is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
-        if project.team_leader_id != user.id and project.creator_id != user.id and not is_member:
-            return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
-    elif role == 'Facilitator':
-        if project.facilitator_id != user.id:
-            return jsonify({"msg": "Unauthorized access. You are not the facilitator for this project."}), 403
+#     # Enforce role-based access control
+#     role = user.role.name
+#     if role in ('SuperAdmin', 'CEO', 'Admin'):
+#         pass
+#     elif role == 'Team Member':
+#         from app.infrastructure.database.models.models import ProjectMember
+#         is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
+#         if not is_member:
+#             return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
+#     elif role == 'Team Leader':
+#         from app.infrastructure.database.models.models import ProjectMember
+#         is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
+#         if project.team_leader_id != user.id and project.creator_id != user.id and not is_member:
+#             return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
+#     elif role == 'Facilitator':
+#         if project.facilitator_id != user.id:
+#             return jsonify({"msg": "Unauthorized access. You are not the facilitator for this project."}), 403
 
-    from app.infrastructure.database.models.models import ProjectWorkflow
-    wf = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=stage_id).first()
-    if wf and wf.data:
-        return jsonify({
-            "data": wf.data,
-            "version_id": getattr(wf, 'version_id', 1),
-            "updated_at": wf.updated_at.isoformat() if wf.updated_at else None
-        }), 200
+#     from app.infrastructure.database.models.models import ProjectWorkflow
+#     wf = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=stage_id).first()
+#     if wf and wf.data:
+#         return jsonify({
+#             "data": wf.data,
+#             "version_id": getattr(wf, 'version_id', 1),
+#             "updated_at": wf.updated_at.isoformat() if wf.updated_at else None
+#         }), 200
 
-    model = STAGE_MODEL_MAP.get(stage_id)
-    if not model:
-        return jsonify({"msg": "Invalid stage"}), 400
+#     model = STAGE_MODEL_MAP.get(stage_id)
+#     if not model:
+#         return jsonify({"msg": "Invalid stage"}), 400
 
-    data = model.query.filter_by(project_id=project_id).first()
-    if not data:
-        return jsonify({"data": {}, "version_id": 1}), 200
+#     data = model.query.filter_by(project_id=project_id).first()
+#     if not data:
+#         return jsonify({"data": {}, "version_id": 1}), 200
 
-    # Convert model to dict (excluding internal SQLAlchemy fields)
-    result = {c.name: getattr(data, c.name) for c in data.__table__.columns}
-    return jsonify({"data": result, "version_id": 1}), 200
+#     # Convert model to dict (excluding internal SQLAlchemy fields)
+#     result = {c.name: getattr(data, c.name) for c in data.__table__.columns}
+#     return jsonify({"data": result, "version_id": 1}), 200
+# [END DEAD CODE: get_stage_data]
 
 
 @workflow_bp.route('/<int:project_id>/stage/<int:stage_id>', methods=['POST', 'PUT'])
@@ -120,21 +126,8 @@ def update_stage_data(project_id, stage_id):
     project = Project.query.get_or_404(project_id)
     
     user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
-        
-    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
-        return jsonify({"msg": "Project not found"}), 404
-
-    role_name = user.role.name if user.role else 'Team Member'
-    if role_name not in ('Admin', 'SuperAdmin', 'CEO', 'Team Leader', 'Team Member', 'Facilitator'):
+    if user.role.name not in ('Admin', 'SuperAdmin', 'Team Leader', 'Team Member'):
         return jsonify({"msg": "Access denied. You do not have permission to edit stage details."}), 403
-
-    if role_name == 'Team Member':
-        from app.infrastructure.database.models.models import ProjectMember
-        is_mem = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
-        if not is_mem and project.creator_id != user.id and project.team_leader_id != user.id:
-            return jsonify({"msg": "Access denied. You are not assigned to this project."}), 403
     
     # Check if stage is valid to update (current or past)
     if stage_id > project.current_stage:
@@ -277,11 +270,6 @@ def stage1_decision(project_id):
     data = request.get_json() # {status: 'Approved'/'Rejected', 'comments': '...'}
     user_id = get_jwt_identity()
     project = Project.query.get_or_404(project_id)
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
-    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
-        return jsonify({"msg": "Project not found"}), 404
     
     s1 = Stage1ProblemDefinitionProjectInitiation.query.filter_by(project_id=project_id).first()
     if not s1:
@@ -304,22 +292,11 @@ def stage1_decision(project_id):
 
 @workflow_bp.route('/<int:project_id>/approve', methods=['POST'])
 @jwt_required()
-@role_required(['Reviewer', 'Admin', 'SuperAdmin', 'CEO'])
+@role_required(['Reviewer', 'Admin'])
 def approve_project(project_id):
     data = request.get_json() # {status: 'Approved'/'Rejected', 'comments': '...', 'stage': 7}
     user_id = get_jwt_identity()
     project = Project.query.get_or_404(project_id)
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
-    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
-        return jsonify({"msg": "Project not found"}), 404
-
-    is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
-    is_assigned_reviewer = (project.reviewer_id == user.id) or (ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None and user.role and user.role.name == 'Reviewer')
-    if not (is_admin or is_assigned_reviewer):
-        return jsonify({"msg": "Unauthorized: You are not the assigned reviewer for this project"}), 403
-
     target_stage = data.get('stage', project.current_stage)
     
     review = ProjectReview.query.filter_by(project_id=project_id, stage_number=target_stage, status='Pending').first()
@@ -354,25 +331,6 @@ def approve_stage_disciplines(project_id, stage_id):
     comments = data.get('comments', '')
     user_id = get_jwt_identity()
     project = Project.query.get_or_404(project_id)
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
-    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
-        return jsonify({"msg": "Project not found"}), 404
-
-    is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
-    is_facilitator = (project.facilitator_id == user.id) or (ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None and user.role and user.role.name == 'Facilitator')
-    is_reviewer = (project.reviewer_id == user.id) or (ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None and user.role and user.role.name == 'Reviewer')
-
-    if stage_id in (1, 3):
-        if not (is_admin or is_facilitator):
-            return jsonify({"msg": "Unauthorized: Only the assigned facilitator or administrator can approve this stage"}), 403
-    elif stage_id == 8:
-        if not (is_admin or is_reviewer or (user.role and user.role.name == 'CEO')):
-            return jsonify({"msg": "Unauthorized: Only the assigned reviewer or administrator can approve the final stage"}), 403
-    else:
-        if not (is_admin or is_reviewer):
-            return jsonify({"msg": "Unauthorized: Only the assigned reviewer or administrator can review this stage"}), 403
     
     model = STAGE_MODEL_MAP.get(stage_id)
     if not model:
@@ -469,19 +427,6 @@ def advance_stage(project_id):
         user_id = user_id.get('id') or user_id.get('user_id')
 
     project = Project.query.get_or_404(project_id)
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
-    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
-        return jsonify({"msg": "Project not found"}), 404
-
-    is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
-    is_tl = (project.team_leader_id == user.id) or (project.creator_id == user.id)
-    is_member = ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None
-    is_facilitator = (project.facilitator_id == user.id)
-    is_reviewer = (project.reviewer_id == user.id)
-    if not (is_admin or is_tl or is_member or is_facilitator or is_reviewer):
-        return jsonify({"msg": "Unauthorized: You are not assigned to this project"}), 403
     
     if not new_stage:
         new_stage = project.current_stage + 1
@@ -739,17 +684,6 @@ def stage_presence_heartbeat(project_id, stage_id):
     if not user:
         return jsonify({"msg": "User not found"}), 404
     
-    project = db.session.get(Project, project_id)
-    if not project:
-        return jsonify({"msg": "Project not found"}), 404
-    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
-        return jsonify({"msg": "Project not found"}), 404
-
-    is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
-    is_assigned = (project.team_leader_id == user.id) or (project.creator_id == user.id) or (project.facilitator_id == user.id) or (project.reviewer_id == user.id) or (ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None)
-    if not (is_admin or is_assigned):
-        return jsonify({"msg": "Unauthorized: You are not assigned to this project"}), 403
-
     data = request.get_json() or {}
     is_editing = bool(data.get('is_editing', False))
     
@@ -795,17 +729,6 @@ def stage_presence_stream(project_id, stage_id):
     user = db.session.get(User, int(user_id)) if user_id else None
     if not user:
         return jsonify({"msg": "User not found"}), 404
-
-    project = db.session.get(Project, project_id)
-    if not project:
-        return jsonify({"msg": "Project not found"}), 404
-    if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
-        return jsonify({"msg": "Project not found"}), 404
-
-    is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
-    is_assigned = (project.team_leader_id == user.id) or (project.creator_id == user.id) or (project.facilitator_id == user.id) or (project.reviewer_id == user.id) or (ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None)
-    if not (is_admin or is_assigned):
-        return jsonify({"msg": "Unauthorized: You are not assigned to this project"}), 403
 
     # Extract user profile data while DB session is open and active
     user_data = _extract_user_presence_data(user)

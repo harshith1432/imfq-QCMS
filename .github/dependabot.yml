@@ -8,8 +8,6 @@ updates:
       day: "monday"
       time: "04:00"
       timezone: "UTC"
-    cooldown:
-      default-days: 7
     open-pull-requests-limit: 10
     commit-message:
       prefix: "chore(deps-frontend)"
@@ -30,8 +28,6 @@ updates:
       day: "monday"
       time: "04:00"
       timezone: "UTC"
-    cooldown:
-      default-days: 7
     open-pull-requests-limit: 10
     commit-message:
       prefix: "chore(deps-backend)"
@@ -53,8 +49,6 @@ updates:
       day: "monday"
       time: "04:00"
       timezone: "UTC"
-    cooldown:
-      default-days: 7
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(deps-root)"
@@ -70,8 +64,6 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-    cooldown:
-      default-days: 7
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(ci-actions)"

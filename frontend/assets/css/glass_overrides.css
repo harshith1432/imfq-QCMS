@@ -3013,12 +3013,3 @@ td.dropdown-open {
     z-index: 1050 !important;
 }
 
-/* Hide Helpdesk Support & Quality AI Assistant for SuperAdmin globally across all pages */
-body.role-superadmin #ai-chat-widget,
-body.role-superadmin #helpdesk-widget,
-[data-user-role="SuperAdmin"] #ai-chat-widget,
-[data-user-role="SuperAdmin"] #helpdesk-widget {
-    display: none !important;
-}
-
-

@@ -7,16 +7,16 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.003248ba8802.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.bca5f8498c05.min.js" as="script">
-    <script src="/assets/dist/auth-guard.bca5f8498c05.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Role-Based User Manual — Help &amp; Operating Guides | OctaQube Enterprise</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <link rel="stylesheet" href="/assets/dist/core.003248ba8802.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js" integrity="sha384-tTkFttkBclaU1cloKwOi9xk3pbao3VZxTjLNBt8iFABWDBQibbAbWpVmO28zMuxq" crossorigin="anonymous"></script>
-    <script src="/assets/dist/core-bundle.1abb5f54ddea.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <style>
         .manual-hero-card {
             background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(14, 165, 233, 0.04) 100%);
@@ -227,6 +227,10 @@
                                     <i data-lucide="printer" style="width:14px;height:14px;"></i>
                                     Print Manual
                                 </button>
+                                <a href="/admin/settings.html" class="ds-btn ds-btn-primary ds-btn-sm gap-1.5">
+                                    <i data-lucide="settings" style="width:14px;height:14px;"></i>
+                                    Settings &amp; 8S Manual
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -274,7 +278,7 @@
             "title": "To Fetch / Modify Organization Data",
             "category": "Tenant Management",
             "tagClass": "tag-blue",
-            "actionUrl": "/admin/super-admin.html?view=organizations",
+            "actionUrl": "/admin/super-admin-orgs.html",
             "actionText": "Organizations",
             "steps": [
                 {
@@ -300,7 +304,7 @@
             "title": "To Download the Overall Organization Data",
             "category": "Tenant Management",
             "tagClass": "tag-blue",
-            "actionUrl": "/admin/super-admin.html?view=organizations",
+            "actionUrl": "/admin/super-admin-orgs.html",
             "actionText": "Export Organizations",
             "steps": [
                 {
@@ -321,7 +325,7 @@
             "title": "To Create New Plan",
             "category": "Plans & Pricing",
             "tagClass": "tag-green",
-            "actionUrl": "/admin/super-admin.html?view=plans",
+            "actionUrl": "/admin/super-admin-plans.html",
             "actionText": "New Plan",
             "steps": [
                 {
@@ -352,7 +356,7 @@
             "title": "To Dispatch All Pay-As-You-Go Metered Bills",
             "category": "Plans & Pricing",
             "tagClass": "tag-green",
-            "actionUrl": "/admin/super-admin.html?view=plans",
+            "actionUrl": "/admin/super-admin-plans.html",
             "actionText": "Pay As You Go",
             "steps": [
                 {
@@ -388,7 +392,7 @@
             "title": "To View / Edit Existing Subscription Plan",
             "category": "Plans & Pricing",
             "tagClass": "tag-green",
-            "actionUrl": "/admin/super-admin.html?view=plans",
+            "actionUrl": "/admin/super-admin-plans.html",
             "actionText": "Manage Plans",
             "steps": [
                 {
@@ -419,7 +423,7 @@
             "title": "To Extend Organization Trial via Support",
             "category": "Support Helpdesk",
             "tagClass": "tag-amber",
-            "actionUrl": "/admin/super-admin.html?view=tickets",
+            "actionUrl": "/admin/super-admin-tickets.html",
             "actionText": "Support Tickets",
             "steps": [
                 {
@@ -440,7 +444,7 @@
             "title": "To Create Support Ticket",
             "category": "Support Helpdesk",
             "tagClass": "tag-amber",
-            "actionUrl": "/admin/super-admin.html?view=tickets",
+            "actionUrl": "/admin/super-admin-tickets.html",
             "actionText": "Create Ticket",
             "steps": [
                 {
@@ -476,7 +480,7 @@
             "title": "To Define New SMS / Email Notification Template",
             "category": "Announcements & Notifications",
             "tagClass": "tag-rose",
-            "actionUrl": "/admin/super-admin.html?view=announcements",
+            "actionUrl": "/admin/super-admin-announcements.html",
             "actionText": "Notification Rules",
             "steps": [
                 {
@@ -512,7 +516,7 @@
             "title": "To Create New Announcement Broadcast",
             "category": "Announcements & Notifications",
             "tagClass": "tag-rose",
-            "actionUrl": "/admin/super-admin.html?view=announcements",
+            "actionUrl": "/admin/super-admin-announcements.html",
             "actionText": "Compose Broadcast",
             "steps": [
                 {
@@ -548,7 +552,7 @@
             "title": "To View Billing Details & Payment Invoices",
             "category": "Billing & Invoicing",
             "tagClass": "tag-teal",
-            "actionUrl": "/admin/super-admin.html?view=billing",
+            "actionUrl": "/admin/super-admin-billing.html",
             "actionText": "Billing History",
             "steps": [
                 {
@@ -574,7 +578,7 @@
             "title": "To Delete / Purge Audit Logs",
             "category": "Audit & Compliance",
             "tagClass": "tag-blue",
-            "actionUrl": "/admin/super-admin.html?view=audit-logs",
+            "actionUrl": "/admin/super-admin-audit-logs.html",
             "actionText": "Purge Logs",
             "steps": [
                 {
@@ -605,7 +609,7 @@
             "title": "To Update Platform & Company Identity Details",
             "category": "Branding & Identity",
             "tagClass": "tag-purple",
-            "actionUrl": "/admin/super-admin.html?view=branding",
+            "actionUrl": "/admin/super-admin-doc-identity.html",
             "actionText": "Doc Identity",
             "steps": [
                 {
@@ -631,7 +635,7 @@
             "title": "To View & Adjust Storage Used by Individual Organization",
             "category": "Storage Infrastructure",
             "tagClass": "tag-purple",
-            "actionUrl": "/admin/super-admin.html?view=storage",
+            "actionUrl": "/admin/super-admin-storage-analytics.html",
             "actionText": "Storage Limits",
             "steps": [
                 {
@@ -667,7 +671,7 @@
             "title": "To Update Global 8-Stage Master Template",
             "category": "Global Templates",
             "tagClass": "tag-teal",
-            "actionUrl": "/admin/super-admin.html?view=stage-templates",
+            "actionUrl": "/admin/super-admin-stage-template.html",
             "actionText": "Stage Templates",
             "steps": [
                 {
@@ -703,7 +707,7 @@
             "title": "To Delete Organization Permanently from Recycle Bin",
             "category": "Data Recovery",
             "tagClass": "tag-rose",
-            "actionUrl": "/admin/super-admin.html?view=recycle-bin",
+            "actionUrl": "/admin/super-admin-recycle-bin.html",
             "actionText": "Empty Recycle Bin",
             "steps": [
                 {
@@ -729,7 +733,7 @@
             "title": "To Recover Organization from Recycle Bin",
             "category": "Data Recovery",
             "tagClass": "tag-green",
-            "actionUrl": "/admin/super-admin.html?view=recycle-bin",
+            "actionUrl": "/admin/super-admin-recycle-bin.html",
             "actionText": "Recover Org",
             "steps": [
                 {
@@ -755,7 +759,7 @@
             "title": "To Configure General Platform Settings (Self-Service, Email OTP, Phone OTP, Maintenance)",
             "category": "System Settings",
             "tagClass": "tag-blue",
-            "actionUrl": "/admin/super-admin.html?view=settings",
+            "actionUrl": "/admin/super-admin-settings.html",
             "actionText": "General Settings",
             "steps": [
                 {
@@ -786,7 +790,7 @@
             "title": "To Upload Platform Logos & Branding Assets",
             "category": "System Settings",
             "tagClass": "tag-purple",
-            "actionUrl": "/admin/super-admin.html?view=settings",
+            "actionUrl": "/admin/super-admin-settings.html",
             "actionText": "Branding Assets",
             "steps": [
                 {
@@ -812,7 +816,7 @@
             "title": "To Update Super Admin Password",
             "category": "System Settings",
             "tagClass": "tag-amber",
-            "actionUrl": "/admin/super-admin.html?view=settings",
+            "actionUrl": "/admin/super-admin-settings.html",
             "actionText": "Update Password",
             "steps": [
                 {
@@ -838,7 +842,7 @@
             "title": "To Add New Super Admin Account",
             "category": "System Settings",
             "tagClass": "tag-green",
-            "actionUrl": "/admin/super-admin.html?view=settings",
+            "actionUrl": "/admin/super-admin-settings.html",
             "actionText": "Add Super Admin",
             "steps": [
                 {
@@ -869,7 +873,7 @@
             "title": "To Modify Platform Landing Page",
             "category": "System Settings",
             "tagClass": "tag-teal",
-            "actionUrl": "/admin/super-admin.html?view=settings",
+            "actionUrl": "/admin/super-admin-settings.html",
             "actionText": "Landing CMS",
             "steps": [
                 {
@@ -2522,8 +2526,6 @@
                     </div>
                 `;
 
-                const isSuperAdmin = this.userRoleKey === 'super-admin';
-
                 role.cases.forEach(c => {
                     let stepsHtml = '';
                     c.steps.forEach(s => {
@@ -2536,12 +2538,6 @@
                         `;
                     });
 
-                    // Only show action button if applicable to the logged-in user's role
-                    // Super Admin has no tenant workspace context, so tenant action buttons are hidden
-                    const isApplicableAction = Boolean(c.actionUrl) && (
-                        isSuperAdmin ? c.actionUrl.startsWith('/admin/super-admin') : !c.actionUrl.startsWith('/admin/super-admin')
-                    );
-
                     html += `
                         <div class="manual-case-card" id="${c.id}">
                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-3 border-bottom">
@@ -2550,7 +2546,7 @@
                                     <h5 class="mb-0 fw-bold text-main">${c.title}</h5>
                                 </div>
                                 <div class="d-flex align-items-center gap-2 no-print">
-                                    ${isApplicableAction ? `
+                                    ${c.actionUrl ? `
                                         <a href="${c.actionUrl}" class="ds-btn ds-btn-primary ds-btn-sm quick-action-btn">
                                             <i data-lucide="external-link" style="width:12px;height:12px;"></i>
                                             ${c.actionText || 'Open Action'}

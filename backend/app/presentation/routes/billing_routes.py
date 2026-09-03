@@ -12,7 +12,7 @@ from app.infrastructure.database.models.models import (
     InvoiceItem, SubscriptionRefund, SubscriptionCreditNote, BillingSettings, TaxRule, BillingAudit,
     OfflinePaymentProof, IntegrationConfig, Notification, SaaSPlan, SaaSPlanPricing
 )
-from app.presentation.middleware.middleware import super_admin_required, sub_role_required, sub_role_write_required
+from app.presentation.middleware.middleware import super_admin_required
 from app.presentation.routes.error_helpers import internal_server_error
 
 billing_bp = Blueprint('billing', __name__)
@@ -119,7 +119,6 @@ def _audit_log(org_id, invoice_id, action, details):
 @billing_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('billing')
 def get_billing_dashboard():
     from app.domain.services.financial_metrics_engine import FinancialMetricsEngine
     kpis = FinancialMetricsEngine.get_consolidated_kpis()
@@ -148,7 +147,6 @@ def get_billing_dashboard():
 @billing_bp.route('/invoices', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('billing')
 def list_invoices():
     # Query parameters
     page = int(request.args.get('page', 1))
@@ -962,15 +960,13 @@ def submit_offline_payment_proof():
 
     # Notify SuperAdmins
     super_admins = User.query.join(User.role).filter(User.role.has(name='SuperAdmin')).all()
-    if super_admins:
-        db.session.add_all([
-            Notification(
-                org_id=sa.org_id or org_id,
-                user_id=sa.id,
-                title="New Offline Payment Submitted",
-                message=f"Org ID {org_id} submitted payment proof for {resolved_plan_name} (UTR: {transaction_id}). Please verify in SuperAdmin portal."
-            ) for sa in super_admins
-        ])
+    for sa in super_admins:
+        db.session.add(Notification(
+            org_id=sa.org_id or org_id,
+            user_id=sa.id,
+            title="New Offline Payment Submitted",
+            message=f"Org ID {org_id} submitted payment proof for {resolved_plan_name} (UTR: {transaction_id}). Please verify in SuperAdmin portal."
+        ))
 
     db.session.commit()
 
@@ -1221,10 +1217,10 @@ def get_proof_screenshot(proof_id):
     if not proof.screenshot_url:
         abort(404)
 
-    # Must be super admin OR org admin/CEO OR the uploader
+    # Must be super admin OR admin from the same organization
     is_super = bool(user.role and user.role.name in ('SuperAdmin', 'Super Admin'))
-    is_org_admin_or_uploader = bool(user.org_id and user.org_id == proof.org_id and ((user.role and user.role.name in ('Admin', 'CEO')) or user.id == proof.user_id))
-    if not (is_super or is_org_admin_or_uploader):
+    is_org_member = bool(user.org_id and user.org_id == proof.org_id)
+    if not (is_super or is_org_member):
         abort(403)
 
     # Extract just the filename from the stored URL (e.g. /uploads/payment_proof_org_3_xxx.png)

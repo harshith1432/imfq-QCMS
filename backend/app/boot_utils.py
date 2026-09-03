@@ -77,12 +77,7 @@ def bootstrap_database():
             if not exists:
                 logger.info(f"[QCMS] Database '{database}' not found. Attempting auto-creation...")
                 try:
-                    import re
-                    from psycopg2 import sql
-                    if not re.match(r'^[a-zA-Z0-9_-]+$', database):
-                        raise ValueError(f"Invalid database name: {database}")
-                    stmt = sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database))
-                    cur.execute(stmt)
+                    cur.execute(f'CREATE DATABASE "{database}"')
                     logger.info(f"[QCMS] SUCCESS: Database '{database}' created successfully.")
                 except Exception as e:
                     logger.info(f"[QCMS] FATAL: Failed to create database '{database}': {e}")

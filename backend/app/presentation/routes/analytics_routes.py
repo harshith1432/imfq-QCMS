@@ -68,10 +68,8 @@ def get_project_roster():
         to_date_str = request.args.get('to_date')
 
         proj_q = Project.query
-        if user.role and user.role.name != 'SuperAdmin':
-            proj_q = proj_q.filter(Project.org_id == org_id)
-        elif org_id:
-            proj_q = proj_q.filter(Project.org_id == org_id)
+        if org_id:
+            proj_q = proj_q.filter((Project.org_id == org_id) | (Project.org_id == None))
 
         if from_date_str and to_date_str:
             try:
@@ -233,10 +231,8 @@ def get_dashboard_data():
         # ALL PROJECTS PERFORMANCE TABLE & OVERALL CALCULATIONS
         # ---------------------------------------------------------
         proj_q = Project.query
-        if user.role and user.role.name != 'SuperAdmin':
-            proj_q = proj_q.filter(Project.org_id == org_id)
-        elif org_id:
-            proj_q = proj_q.filter(Project.org_id == org_id)
+        if org_id:
+            proj_q = proj_q.filter((Project.org_id == org_id) | (Project.org_id == None))
         if filter_from:
             proj_q = proj_q.filter(Project.created_at >= filter_from)
         if filter_to:
@@ -364,7 +360,7 @@ def get_dashboard_data():
 
         if target_project_id:
             proj = db.session.get(Project, target_project_id)
-            if not proj or (user.role and user.role.name != 'SuperAdmin' and proj.org_id != user.org_id):
+            if not proj:
                 return jsonify({"message": "Project not found"}), 404
 
             comp_pct = 100 if proj.status == 'Closed' else min(95, max(15, (int(proj.current_stage / 8.0) * 100)))
@@ -2954,10 +2950,31 @@ def export_analytics():
 
     log_analytics_action(user, f"Export Report - {report_type}", {"format": fmt, "filters": filters})
 
-    # Return download url for client to download with Authorization
+    # ── Stream the file directly by proxying to the download-mock route ────
+    token = request.headers.get('Authorization', '')
+    try:
+        import requests as _req
+        dl_url = f"http://127.0.0.1:5000 / api/reports/download-mock?type={report_type}&format={fmt}"
+        r = _req.get(dl_url, headers={"Authorization": token}, timeout=30)
+        if r.status_code == 200:
+            content_type = r.headers.get('Content-Type', 'application/octet-stream')
+            content_disp = r.headers.get(
+                'Content-Disposition',
+                f'attachment;filename=export_{report_type}.{fmt.lower().replace("excel","xlsx")}'
+            )
+            resp = Response(r.content, status=200, mimetype=content_type)
+            resp.headers['Content-Disposition'] = content_disp
+            resp.headers['Access-Control-Expose-Headers'] = 'Content-Disposition'
+            return resp
+        else:
+            print(f"[Export Proxy] download-mock returned {r.status_code}: {r.text[:200]}")
+    except Exception as e:
+        print(f"[Export Proxy Error] {e}")
+
+    # ── Fallback: return download_url for the JS to fetch with Bearer token ─
     return jsonify({
         "status": "success",
-        "download_url": f"/api/reports/download-mock?type={report_type}&format={fmt}",
+        "download_url": f"/api / reports/download-mock?type={report_type}&format={fmt}",
         "generated_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         "filters_applied": filters
     })

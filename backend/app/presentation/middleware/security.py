@@ -379,8 +379,8 @@ def register_security_middleware(app):
             # query string scanned. The JSON body is skipped to avoid false
             # positives from legitimate user content (project notes, audit data,
             # quality reports, etc. that may contain words like "select" or HTML).
-            auth_hdr = str(request.headers.get('Authorization') or '')
-            is_authenticated = len(auth_hdr.strip()) > 0
+            # Unauthenticated requests are fully scanned (login attempts, public APIs).
+            is_authenticated = bool(request.headers.get('Authorization', ''))
 
             payload_parts = []
             # Always scan URL query string

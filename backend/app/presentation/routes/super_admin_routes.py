@@ -1,11 +1,8 @@
 import os
-from flask import Blueprint, jsonify, request, current_app, render_template_string
+from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token, set_access_cookies
 from app.infrastructure.database.models.models import db, Organization, User, SupportTicket, Subscription, SubscriptionPayment, SubscriptionInvoice, PlatformSettings, SuperAdminLog, Role, AuditLog, SaaSPlan
-from app.presentation.middleware.middleware import (
-    super_admin_required, sub_role_write_required, sub_role_required,
-    get_sa_permissions, _get_sa_sub_role, SA_OWNER, SA_READ_PERMISSIONS, SA_WRITE_PERMISSIONS
-)
+from app.presentation.middleware.middleware import super_admin_required, sub_role_write_required, sub_role_required, get_sa_permissions, _get_sa_sub_role
 from app import bcrypt
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, text, or_
@@ -160,7 +157,6 @@ def get_my_permissions():
 @super_admin_bp.route('/companies/filter-options', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('organizations')
 def get_company_filter_options():
     """Return distinct options for Industry, Country, State, City, and Plan filter dropdowns based strictly on created plans and organizations"""
     try:
@@ -224,7 +220,6 @@ def _resolve_org_plan_type(org, plan_type_map=None):
 @super_admin_bp.route('/companies', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('organizations')
 def list_companies():
     """List all organizations with enriched subscription details, KPIs, filtering & pagination"""
     # --- Query Params ---
@@ -501,7 +496,6 @@ def list_companies():
 @super_admin_bp.route('/companies/<int:org_id>', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('organizations')
 def get_company_details(org_id):
     """Detailed company profile with usage stats"""
     org = Organization.query.get_or_404(org_id)
@@ -691,12 +685,9 @@ def create_company():
         
     # 1. Create Organization
     ps_settings = PlatformSettings.query.first()
+    default_trial = (ps_settings.trial_period_days if ps_settings and ps_settings.trial_period_days else 14)
     from app.domain.services.subscription_service import SubscriptionManager
     trial_plan_obj = SubscriptionManager.get_default_trial_plan()
-    default_trial = (
-        (trial_plan_obj.trial_duration_days if trial_plan_obj and trial_plan_obj.trial_duration_days else None) or
-        (ps_settings.trial_period_days if ps_settings and ps_settings.trial_period_days else 180)
-    )
     plan = sub_data.get('plan')
     if not plan or plan in ['Starter', 'Trial']:
         if trial_plan_obj:
@@ -901,213 +892,173 @@ def _hard_delete_organization(org):
       → custom fields → imported ideas → org identity/settings → analytics
       → users (reassign or delete) → organization
     """
-    org_id = int(org.id)
+    org_id = org.id
     try:
-        user_ids = [int(u.id) for u in org.users]
-        from sqlalchemy import bindparam
+        user_ids = [u.id for u in org.users]
+        u_clause = None
+        if user_ids:
+            u_clause = f"({user_ids[0]})" if len(user_ids) == 1 else str(tuple(user_ids))
 
         # ── STEP 1: Nullify cross-org/global FK references on non-org tables ──
-        if user_ids:
-            db.session.execute(
-                text("UPDATE subscriptions SET created_by_id = NULL WHERE created_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
-            db.session.execute(
-                text("UPDATE feature_versions SET created_by_id = NULL WHERE created_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
-            db.session.execute(
-                text("UPDATE modules SET created_by_id = NULL WHERE created_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
-            db.session.execute(
-                text("UPDATE saas_plan_versions SET created_by_id = NULL WHERE created_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
-            db.session.execute(
-                text("UPDATE support_knowledge SET created_by_id = NULL WHERE created_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
+        if u_clause:
+            db.session.execute(text(f"UPDATE subscriptions SET created_by_id = NULL WHERE created_by_id IN {u_clause};"))
+            db.session.execute(text(f"UPDATE feature_versions SET created_by_id = NULL WHERE created_by_id IN {u_clause};"))
+            db.session.execute(text(f"UPDATE modules SET created_by_id = NULL WHERE created_by_id IN {u_clause};"))
+            db.session.execute(text(f"UPDATE saas_plan_versions SET created_by_id = NULL WHERE created_by_id IN {u_clause};"))
+            db.session.execute(text(f"UPDATE support_knowledge SET created_by_id = NULL WHERE created_by_id IN {u_clause};"))
 
         # ── STEP 2: Subscription & billing ───────────────────────────────────
-        db.session.execute(text("DELETE FROM subscription_payments WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM subscription_invoices WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM subscription_credit_notes WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM offline_payment_proofs WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM subscriptions WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM subscription_payments WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM subscription_invoices WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM subscription_credit_notes WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM offline_payment_proofs WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM subscriptions WHERE org_id = {org_id};"))
 
         # ── STEP 3: Sessions & audit logs ────────────────────────────────────
-        db.session.execute(text("DELETE FROM saas_user_sessions WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM audit_export_logs WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM audit_logs WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM audit_risk_alerts WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM billing_audits WHERE org_id = :org_id"), {"org_id": org_id})
-        if user_ids:
-            db.session.execute(
-                text("DELETE FROM super_admin_logs WHERE admin_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
+        db.session.execute(text(f"DELETE FROM saas_user_sessions WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM audit_export_logs WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM audit_logs WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM audit_risk_alerts WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM billing_audits WHERE org_id = {org_id};"))
+        if u_clause:
+            db.session.execute(text(f"DELETE FROM super_admin_logs WHERE admin_id IN {u_clause};"))
 
         # ── STEP 4: Announcements (children before parent) ───────────────────
-        db.session.execute(text("DELETE FROM announcement_delivery WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM announcement_reads WHERE org_id = :org_id"), {"org_id": org_id})
-        if user_ids:
-            db.session.execute(
-                text("DELETE FROM announcement_attachments WHERE uploaded_by IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
-            db.session.execute(
-                text("DELETE FROM announcement_audit WHERE user_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
-        db.session.execute(text("DELETE FROM announcements WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM announcement_delivery WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM announcement_reads WHERE org_id = {org_id};"))
+        if u_clause:
+            db.session.execute(text(f"DELETE FROM announcement_attachments WHERE uploaded_by IN {u_clause};"))
+            db.session.execute(text(f"DELETE FROM announcement_audit WHERE user_id IN {u_clause};"))
+        db.session.execute(text(f"DELETE FROM announcements WHERE org_id = {org_id};"))
 
         # ── STEP 5: Notifications ─────────────────────────────────────────────
-        db.session.execute(text("DELETE FROM notifications WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM notifications WHERE org_id = {org_id};"))
 
         # ── STEP 6: Support tickets (CASCADE handles sub-records) ─────────────
-        db.session.execute(text("DELETE FROM support_tickets WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM support_tickets WHERE org_id = {org_id};"))
 
         # ── STEP 7: Employee & facilitator ────────────────────────────────────
-        db.session.execute(text("DELETE FROM employee_points WHERE organization_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM employee_leaderboard WHERE organization_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM facilitator_notes WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM facilitator_assistance_requests WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM employee_points WHERE organization_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM employee_leaderboard WHERE organization_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM facilitator_notes WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM facilitator_assistance_requests WHERE org_id = {org_id};"))
 
         # ── STEP 8: Assessment results (user-scoped, no org_id) ───────────────
-        if user_ids:
-            db.session.execute(
-                text("DELETE FROM assessment_results WHERE user_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
+        if u_clause:
+            db.session.execute(text(f"DELETE FROM assessment_results WHERE user_id IN {u_clause};"))
 
         # ── STEP 9: NULL plant_id on users & departments BEFORE deleting plants
-        db.session.execute(text("UPDATE users SET plant_id = NULL WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("UPDATE departments SET plant_id = NULL WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"UPDATE users SET plant_id = NULL WHERE org_id = {org_id};"))
+        db.session.execute(text(f"UPDATE departments SET plant_id = NULL WHERE org_id = {org_id};"))
 
         # ── STEP 10: Plants ───────────────────────────────────────────────────
-        db.session.execute(text("DELETE FROM plants WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM plants WHERE org_id = {org_id};"))
 
         # ── STEP 11: Project members (before deleting projects) ───────────────
-        db.session.execute(text("""
+        db.session.execute(text(f"""
             DELETE FROM project_members
-            WHERE project_id IN (SELECT id FROM projects WHERE org_id = :org_id)
-        """), {"org_id": org_id})
+            WHERE project_id IN (SELECT id FROM projects WHERE org_id = {org_id});
+        """))
 
         # ── STEP 12: Project stage trackers ───────────────────────────────────
-        db.session.execute(text("DELETE FROM stage_1_problem_definition_project_initiation WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM stage_2_observation_data_collection WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM stage_3_cause_identification WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM stage_4_root_cause_analysis_verification WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM stage_5_countermeasure_planning_solution_development WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM stage_6_implementation_change_management WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM stage_7_performance_verification_benefits_realization WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM stage_8_standardization_knowledge_sharing_project_closure WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM project_stage_tracker WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM stage_1_problem_definition_project_initiation WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM stage_2_observation_data_collection WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM stage_3_cause_identification WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM stage_4_root_cause_analysis_verification WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM stage_5_countermeasure_planning_solution_development WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM stage_6_implementation_change_management WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM stage_7_performance_verification_benefits_realization WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM stage_8_standardization_knowledge_sharing_project_closure WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM project_stage_tracker WHERE org_id = {org_id};"))
 
         # ── STEP 13: QC tools ─────────────────────────────────────────────────
-        db.session.execute(text("DELETE FROM qc_check_sheets WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM qc_control_charts WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM qc_fishbone_diagrams WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM qc_pareto_charts WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM qc_process_maps WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM qc_scatter_diagrams WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM qc_stratifications WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM qc_check_sheets WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM qc_control_charts WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM qc_fishbone_diagrams WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM qc_pareto_charts WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM qc_process_maps WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM qc_scatter_diagrams WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM qc_stratifications WHERE org_id = {org_id};"))
 
         # ── STEP 14: Project meetings, reviews, workflow ───────────────────────
-        db.session.execute(text("DELETE FROM project_meetings WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM project_reviews WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM project_workflow WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM project_meetings WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM project_reviews WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM project_workflow WHERE org_id = {org_id};"))
 
         # ── STEP 15: KPI ──────────────────────────────────────────────────────
-        db.session.execute(text("DELETE FROM kpi_metrics WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM kpi_dashboard_cache WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM kpi_metrics WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM kpi_dashboard_cache WHERE org_id = {org_id};"))
 
         # ── STEP 16: Training (user-scoped, most have no org_id) ──────────────
-        if user_ids:
-            db.session.execute(
-                text("DELETE FROM training_acknowledgements WHERE user_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
-            db.session.execute(
-                text("DELETE FROM training_archive WHERE archived_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
-            db.session.execute(
-                text("DELETE FROM training_assignments WHERE user_id IN :u_ids OR assigned_by_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
-            db.session.execute(
-                text("DELETE FROM training_notifications WHERE user_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
-        db.session.execute(text("DELETE FROM training_audit_reports WHERE org_id = :org_id"), {"org_id": org_id})
+        if u_clause:
+            db.session.execute(text(f"DELETE FROM training_acknowledgements WHERE user_id IN {u_clause};"))
+            db.session.execute(text(f"DELETE FROM training_archive WHERE archived_by_id IN {u_clause};"))
+            db.session.execute(text(f"DELETE FROM training_assignments WHERE user_id IN {u_clause} OR assigned_by_id IN {u_clause};"))
+            db.session.execute(text(f"DELETE FROM training_notifications WHERE user_id IN {u_clause};"))
+        db.session.execute(text(f"DELETE FROM training_audit_reports WHERE org_id = {org_id};"))
 
         # ── STEP 17: SOP children BEFORE sop_master ───────────────────────────
-        db.session.execute(text("""
+        db.session.execute(text(f"""
             DELETE FROM sop_approvals
-            WHERE sop_id IN (SELECT id FROM sop_master WHERE org_id = :org_id)
-        """), {"org_id": org_id})
-        db.session.execute(text("""
+            WHERE sop_id IN (SELECT id FROM sop_master WHERE org_id = {org_id});
+        """))
+        db.session.execute(text(f"""
             DELETE FROM sop_comments
-            WHERE sop_id IN (SELECT id FROM sop_master WHERE org_id = :org_id)
-        """), {"org_id": org_id})
-        db.session.execute(text("""
+            WHERE sop_id IN (SELECT id FROM sop_master WHERE org_id = {org_id});
+        """))
+        db.session.execute(text(f"""
             DELETE FROM sop_versions
-            WHERE sop_id IN (SELECT id FROM sop_master WHERE org_id = :org_id)
-        """), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM sop_master WHERE org_id = :org_id"), {"org_id": org_id})
+            WHERE sop_id IN (SELECT id FROM sop_master WHERE org_id = {org_id});
+        """))
+        db.session.execute(text(f"DELETE FROM sop_master WHERE org_id = {org_id};"))
 
         # ── STEP 18: Knowledge & compliance ───────────────────────────────────
-        db.session.execute(text("DELETE FROM knowledge_repository WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM compliance_standard_records WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM knowledge_repository WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM compliance_standard_records WHERE org_id = {org_id};"))
 
         # ── STEP 19: NULL department_id on users BEFORE deleting departments ──
-        db.session.execute(text("UPDATE users SET department_id = NULL WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"UPDATE users SET department_id = NULL WHERE org_id = {org_id};"))
 
         # ── STEP 20: Projects (all child tables already gone) ─────────────────
-        db.session.execute(text("DELETE FROM projects WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM projects WHERE org_id = {org_id};"))
 
         # ── STEP 21: Departments (after projects deleted, users dept-nulled) ──
-        db.session.execute(text("DELETE FROM departments WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM departments WHERE org_id = {org_id};"))
 
         # ── STEP 22: User custom fields & imported ideas ───────────────────────
-        db.session.execute(text("DELETE FROM user_custom_fields WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM imported_ideas WHERE organization_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM user_custom_fields WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM imported_ideas WHERE organization_id = {org_id};"))
 
         # ── STEP 23: Org identity & settings ──────────────────────────────────
-        db.session.execute(text("DELETE FROM platform_identity WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM company_information WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM company_addresses WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM company_contacts WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM branding_assets WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM document_templates WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM organization_features WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM billing_settings WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM org_api_keys WHERE organization_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM integration_api_logs WHERE organization_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM platform_identity WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM company_information WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM company_addresses WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM company_contacts WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM branding_assets WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM document_templates WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM organization_features WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM billing_settings WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM org_api_keys WHERE organization_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM integration_api_logs WHERE organization_id = {org_id};"))
 
         # ── STEP 24: Analytics ─────────────────────────────────────────────────
-        db.session.execute(text("DELETE FROM analytics_ai_insights WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM analytics_exports WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM analytics_reports WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM analytics_schedules WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("DELETE FROM analytics_usage WHERE org_id = :org_id"), {"org_id": org_id})
-        db.session.execute(text("UPDATE module_analytics SET org_id = NULL WHERE org_id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM analytics_ai_insights WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM analytics_exports WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM analytics_reports WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM analytics_schedules WHERE org_id = {org_id};"))
+        db.session.execute(text(f"DELETE FROM analytics_usage WHERE org_id = {org_id};"))
+        db.session.execute(text(f"UPDATE module_analytics SET org_id = NULL WHERE org_id = {org_id};"))
 
         # ── STEP 25: Delete all users belonging to this organization ──────────
         # NOTE: We do NOT reassign users to another org — all org users are
         # permanently removed. SuperAdmin users (org_id IS NULL) are unaffected.
         # First null-out any FK refs in global tables pointing to these users.
         if user_ids:
-            db.session.execute(
-                text("DELETE FROM saas_user_sessions WHERE user_id IN :u_ids").bindparams(bindparam('u_ids', expanding=True)),
-                {"u_ids": user_ids}
-            )
-        db.session.execute(text("DELETE FROM users WHERE org_id = :org_id"), {"org_id": org_id})
+            db.session.execute(text(f"DELETE FROM saas_user_sessions WHERE user_id IN {u_clause};"))
+        db.session.execute(text(f"DELETE FROM users WHERE org_id = {org_id};"))
 
         # ── STEP 26: Delete the organization itself ───────────────────────────
-        db.session.execute(text("DELETE FROM organizations WHERE id = :org_id"), {"org_id": org_id})
+        db.session.execute(text(f"DELETE FROM organizations WHERE id = {org_id};"))
 
         db.session.commit()
         print(f"[HARD DELETE] Organization ID {org_id} permanently purged.")
@@ -1174,7 +1125,6 @@ def delete_company(org_id):
 @super_admin_bp.route('/companies/<int:org_id>/restore', methods=['POST'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('organizations')
 def restore_company(org_id):
     """Restore a soft-deleted organization from Recycle Bin"""
     org = Organization.query.get_or_404(org_id)
@@ -1193,7 +1143,6 @@ def restore_company(org_id):
 @super_admin_bp.route('/recycle-bin', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('organizations')
 def get_recycle_bin():
     """List soft-deleted organizations in Recycle Bin with 30-day countdown"""
     _purge_expired_recycle_bin()
@@ -1319,7 +1268,6 @@ def empty_recycle_bin():
 @super_admin_bp.route('/companies/<int:org_id>/reset-admin-password', methods=['POST'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('organizations')
 def reset_admin_password(org_id):
     """Resets password of the main Admin user(s) of this organization to Welcome@123"""
     org = db.session.get(Organization, org_id) if hasattr(db.session, 'get') else db.session.get(Organization, org_id)
@@ -1388,7 +1336,6 @@ def reset_admin_password(org_id):
 @super_admin_bp.route('/companies/<int:org_id>/impersonate', methods=['POST'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('organizations')
 def impersonate_company_admin(org_id):
     """Generate a JWT token for the admin user of this organization to impersonate them"""
     org = Organization.query.get_or_404(org_id)
@@ -1407,7 +1354,7 @@ def impersonate_company_admin(org_id):
             full_name=org.admin_name or admin_email.split('@')[0].title(),
             role_id=role.id if role else None
         )
-        gen_pw = os.getenv('DEFAULT_ADMIN_PASSWORD') or f"Admin@{secrets.token_urlsafe(18)}!9Aa"
+        gen_pw = os.getenv('DEFAULT_ADMIN_PASSWORD') or secrets.token_urlsafe(16)
         admin_user.set_password(gen_pw)
         db.session.add(admin_user)
         db.session.commit()
@@ -1430,7 +1377,7 @@ def impersonate_company_admin(org_id):
         details=f"Impersonating admin '{admin_user.email}' of organization '{org.name}'"
     )
     
-    return jsonify({
+    resp = jsonify({
         "status": "success",
         "token": token,
         "data": {
@@ -1438,12 +1385,13 @@ def impersonate_company_admin(org_id):
             "admin_name": admin_user.full_name or admin_user.username
         },
         "admin_name": admin_user.full_name or admin_user.username
-    }), 200
+    })
+    set_access_cookies(resp, token)
+    return resp
 
 @super_admin_bp.route('/companies/bulk-action', methods=['POST'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('organizations')
 def bulk_action_companies():
     """Bulk suspend, activate, delete, or assign settings to multiple organizations"""
     data = request.json or {}
@@ -1497,110 +1445,107 @@ def bulk_action_companies():
     
     return jsonify({"status": "success", "message": f"Successfully performed action '{action}' on {count} organizations."})
 
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_company_users (Lines 1441-1503)
+# Reason: Tenant user sub-list; super-admin uses /companies details modal.
+# ==============================================================================
+# @super_admin_bp.route('/companies/<int:org_id>/users', methods=['GET'])
+# @jwt_required()
+# @super_admin_required()
+# def get_company_users(org_id):
+#     """List users belonging to this organization with search and pagination"""
+#     org = Organization.query.get_or_404(org_id)
 
-@super_admin_bp.route('/companies/<int:org_id>/users', methods=['GET'])
-@jwt_required()
-@super_admin_required()
-def get_company_users(org_id):
-    """List users belonging to this organization with search and pagination"""
-    from app.infrastructure.database.models.models import Organization, User
-    org = db.session.get(Organization, org_id)
-    if not org:
-        return jsonify({"status": "error", "message": "Organization not found"}), 404
+#     search_q = request.args.get('q', '').strip() or request.args.get('search', '').strip()
+#     page = request.args.get('page', type=int)
+#     per_page = request.args.get('per_page', 5, type=int)
 
-    search_q = request.args.get('q', '').strip() or request.args.get('search', '').strip()
-    page = request.args.get('page', type=int)
-    per_page = request.args.get('per_page', 5, type=int)
+#     query = User.query.filter(User.org_id == org_id)
 
-    query = User.query.filter(User.org_id == org_id)
+#     if search_q:
+#         search_pattern = f"%{search_q}%"
+#         query = query.filter(
+#             db.or_(
+#                 User.username.ilike(search_pattern),
+#                 User.email.ilike(search_pattern),
+#                 User.full_name.ilike(search_pattern)
+#             )
+#         )
 
-    if search_q:
-        search_pattern = f"%{search_q}%"
-        query = query.filter(
-            db.or_(
-                User.username.ilike(search_pattern),
-                User.email.ilike(search_pattern),
-                User.full_name.ilike(search_pattern)
-            )
-        )
+#     query = query.order_by(User.id.asc())
 
-    query = query.order_by(User.id.asc())
+#     if page is not None:
+#         paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+#         users = paginated.items
+#         total = paginated.total
+#         total_pages = paginated.pages
+#     else:
+#         users = query.all()
+#         total = len(users)
+#         total_pages = 1
+#         page = 1
+#         per_page = total if total > 0 else 5
 
-    if page is not None:
-        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-        users = paginated.items
-        total = paginated.total
-        total_pages = paginated.pages
-    else:
-        users = query.all()
-        total = len(users)
-        total_pages = 1
-        page = 1
-        per_page = total if total > 0 else 5
+#     output = []
+#     for u in users:
+#         role_name = u.role.name if hasattr(u, 'role') and hasattr(u.role, 'name') else (str(u.role) if getattr(u, 'role', None) else 'Member')
+#         status_name = u.status if hasattr(u, 'status') and u.status else ('Active' if u.is_active else 'Inactive')
+#         output.append({
+#             "id": u.id,
+#             "username": u.username,
+#             "email": u.email,
+#             "full_name": u.full_name or '—',
+#             "role": role_name,
+#             "status": status_name,
+#             "is_active": u.is_active,
+#             "created_at": u.created_at.isoformat() if u.created_at else None,
+#             "last_login": u.last_login.isoformat() if u.last_login else None
+#         })
 
-    output = []
-    for u in users:
-        role_name = u.role.name if hasattr(u, 'role') and hasattr(u.role, 'name') else (str(u.role) if getattr(u, 'role', None) else 'Member')
-        status_name = u.status if hasattr(u, 'status') and u.status else ('Active' if u.is_active else 'Inactive')
-        output.append({
-            "id": u.id,
-            "username": u.username,
-            "email": u.email,
-            "full_name": u.full_name or '—',
-            "role": role_name,
-            "status": status_name,
-            "is_active": u.is_active,
-            "created_at": u.created_at.isoformat() if u.created_at else None,
-            "last_login": u.last_login.isoformat() if u.last_login else None
-        })
-
-    return jsonify({
-        "status": "success",
-        "data": output,
-        "pagination": {
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "total_pages": total_pages
-        }
-    })
-
-
-@super_admin_bp.route('/companies/<int:org_id>/logs', methods=['GET'])
-@jwt_required()
-@super_admin_required()
-def get_company_logs(org_id):
-    """Get audit logs specific to this organization"""
-    from app.infrastructure.database.models.models import Organization, User, SuperAdminLog
-    org = db.session.get(Organization, org_id)
-    if not org:
-        return jsonify({"status": "error", "message": "Organization not found"}), 404
-
-    try:
-        user_ids_subq = db.session.query(User.id).filter_by(org_id=org_id)
-        logs = SuperAdminLog.query.filter(
-            db.or_(
-                db.and_(SuperAdminLog.target_type == 'Organization', SuperAdminLog.target_id == org_id),
-                db.and_(SuperAdminLog.target_type == 'User', SuperAdminLog.target_id.in_(user_ids_subq))
-            )
-        ).order_by(SuperAdminLog.created_at.desc()).limit(100).all()
-    except Exception:
-        # Fallback: return all logs without subquery filtering
-        logs = SuperAdminLog.query.order_by(SuperAdminLog.created_at.desc()).limit(50).all()
-
-    output = []
-    for log in logs:
-        output.append({
-            "id": log.id,
-            "admin": log.admin.username if log.admin else "System",
-            "action": log.action,
-            "target": f"{log.target_type} ({log.target_id})" if log.target_type else "System",
-            "ip": log.ip_address,
-            "timestamp": log.created_at.isoformat() if log.created_at else None
-        })
-    return jsonify({"status": "success", "data": output})
+#     return jsonify({
+#         "status": "success",
+#         "data": output,
+#         "pagination": {
+#             "page": page,
+#             "per_page": per_page,
+#             "total": total,
+#             "total_pages": total_pages
+#         }
+#     })
+# [END DEAD CODE: get_company_users]
 
 
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_company_logs (Lines 1505-1528)
+# Reason: Tenant log sub-list.
+# ==============================================================================
+# @super_admin_bp.route('/companies/<int:org_id>/logs', methods=['GET'])
+# @jwt_required()
+# @super_admin_required()
+# def get_company_logs(org_id):
+#     """Get audit logs specific to this organization"""
+#     org = Organization.query.get_or_404(org_id)
+#     logs = SuperAdminLog.query.filter(
+#         db.or_(
+#             db.and_(SuperAdminLog.target_type == 'Organization', SuperAdminLog.target_id == org_id),
+#             db.and_(SuperAdminLog.target_type == 'User', SuperAdminLog.target_id.in_(db.session.query(User.id).filter_by(org_id=org_id)))
+#         )
+#     ).order_by(SuperAdminLog.created_at.desc()).limit(100).all()
+
+#     output = []
+#     for log in logs:
+#         output.append({
+#             "id": log.id,
+#             "admin": log.admin.username if log.admin else "System",
+#             "action": log.action,
+#             "target": f"{log.target_type} ({log.target_id})" if log.target_type else "System",
+#             "ip": log.ip_address,
+#             "timestamp": log.created_at.isoformat()
+#         })
+#     return jsonify({"status": "success", "data": output})
+# [END DEAD CODE: get_company_logs]
 
 
 # ==============================================================================
@@ -1748,6 +1693,52 @@ def get_trial_extension_requests():
 #     data = request.json or {}
 
 #     days = data.get('days')
+#     new_date_str = data.get('trial_ends_at')
+
+#     if days is not None:
+#         try:
+#             days = int(days)
+#             new_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=days)
+#         except ValueError:
+#             return jsonify({"msg": "Invalid days value"}), 400
+#     elif new_date_str:
+#         try:
+#             new_date = datetime.fromisoformat(new_date_str.replace('Z', '+00:00')).replace(tzinfo=None)
+#         except (ValueError, AttributeError):
+#             return jsonify({"msg": "Invalid date format. Use ISO format (YYYY-MM-DD)"}), 400
+#     else:
+#         return jsonify({"msg": "Either 'days' or 'trial_ends_at' date is required"}), 400
+
+#     old_date = org.trial_ends_at.isoformat() if org.trial_ends_at else 'None'
+#     org.trial_ends_at = new_date
+#     org.license_expiry_date = new_date
+#     org.subscription_status = 'Trialing'
+
+#     # Update trial extension metrics in security_settings
+#     sec_settings = dict(getattr(org, 'security_settings', {}) or {})
+#     manual_count = sec_settings.get('manual_approved_trial_extensions', 0) + 1
+#     sec_settings['manual_approved_trial_extensions'] = manual_count
+
+#     pending = sec_settings.get('pending_trial_extension')
+#     if pending and pending.get('status') == 'Pending':
+#         pending['status'] = 'Approved'
+#         pending['approved_at'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+#         pending['approved_by'] = 'SuperAdmin'
+#         sec_settings['pending_trial_extension'] = pending
+
+#     total_reqs = sec_settings.get('total_trial_requests', 0)
+#     sec_settings['total_trial_requests'] = max(total_reqs, sec_settings.get('auto_approved_trial_extensions', 0) + manual_count)
+
+#     org.security_settings = sec_settings
+#     from sqlalchemy.orm.attributes import flag_modified
+#     flag_modified(org, 'security_settings')
+
+#     # Also sync subscription model if present
+#     sub = Subscription.query.filter_by(org_id=org.id).first()
+#     if not sub:
+#         sub = Subscription.query.filter_by(organization_id=org.id).first()
+#     if sub:
+#         sub.trial_end_date = org.trial_ends_at
 #         sub.end_date = org.trial_ends_at
 #         sub.subscription_status = 'Trial'
 
@@ -1766,7 +1757,6 @@ def get_trial_extension_requests():
 @super_admin_bp.route('/companies/<int:org_id>/status', methods=['PUT'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('organizations')
 def update_company_status(org_id):
     org = Organization.query.get_or_404(org_id)
     data = request.json
@@ -1794,7 +1784,6 @@ def update_company_status(org_id):
 @super_admin_bp.route('/companies/<int:org_id>/activate-subscription', methods=['POST'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('organizations')
 def activate_company_subscription(org_id):
     org = Organization.query.get_or_404(org_id)
     
@@ -2197,7 +2186,6 @@ def _calc_integration_health(s: PlatformSettings) -> tuple:
 @super_admin_bp.route('/settings/dashboard', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('settings')
 def settings_dashboard():
     from app.presentation.middleware.security import get_security_kpis
     s = _get_settings()
@@ -2304,7 +2292,6 @@ def settings_dashboard():
 @super_admin_bp.route('/alerts', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('overview')
 def super_admin_alerts():
     """Return real-time alerts across the platform for SuperAdmin dashboard:
        - Expiring subscriptions (within 7 days)
@@ -2368,7 +2355,6 @@ def super_admin_alerts():
 @super_admin_bp.route('/settings/security-kpis', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('security')
 def security_kpis():
     """Return real-time security counters: blocked IPs, threat alerts, etc."""
     from app.presentation.middleware.security import get_security_kpis
@@ -2391,10 +2377,33 @@ def security_kpis():
     })
 
 
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: security_threat_log (Lines 2345-2359)
+# Reason: Unused security threat list.
+# ==============================================================================
+# @super_admin_bp.route('/settings/security-threats', methods=['GET'])
+# @jwt_required()
+# @super_admin_required()
+# def security_threat_log():
+#     """Return a paginated list of recent WAF / firewall threat events."""
+#     from app.presentation.middleware.security import get_security_kpis
+#     kpis = get_security_kpis()
+#     return jsonify({
+#         "status": "success",
+#         "data": {
+#             "recent_threats": kpis['recent_threat_events'],
+#             "total_blocked_24h": kpis['blocked_ips_24h'],
+#             "total_critical_24h": kpis['critical_threat_alerts'],
+#         }
+#     })
+# [END DEAD CODE: security_threat_log]
+
+
+
 @super_admin_bp.route('/settings/auth-kpis', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('security')
 def auth_kpis():
     """Return real-time authentication statistics calculated from DB."""
     try:
@@ -2540,6 +2549,7 @@ def platform_settings():
                 "integrations_settings": integrations_d,
                 "ai_settings": _get_category(s, 'ai_settings'),
                 "feature_flags": _get_category(s, 'feature_flags'),
+                "developer_settings": _get_category(s, 'developer_settings'),
                 "audit_logs_settings": _get_category(s, 'audit_logs_settings'),
                 "system_health_settings": _get_category(s, 'system_health_settings'),
                 "about_settings": _get_category(s, 'about_settings'),
@@ -2561,6 +2571,9 @@ def platform_settings():
         }), 403
 
     data = request.json or {}
+
+    # Legacy scalar fields
+    if 'site_name' in data: s.site_name = data['site_name']
     if 'maintenance_mode' in data: s.maintenance_mode = bool(data['maintenance_mode'])
     if 'registration_open' in data: s.registration_open = bool(data['registration_open'])
     if 'require_email_otp' in data: s.require_email_otp = bool(data['require_email_otp'])
@@ -2617,7 +2630,6 @@ def platform_settings():
 @super_admin_bp.route('/settings/test-email', methods=['POST'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('settings')
 def test_email_config():
     s = _get_settings()
     email_cfg = _get_category(s, 'email_settings')
@@ -2690,7 +2702,6 @@ def test_email_config():
 @super_admin_bp.route('/settings/test-webhook', methods=['POST'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('settings')
 def test_webhook():
     body = request.json or {}
     url = body.get('url', '')
@@ -2704,17 +2715,10 @@ def test_webhook():
             "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             "message": "This is a test webhook ping from QCMS"
         }).encode()
-        if not (url.startswith('https://') or url.startswith('http://')):
-            return jsonify({"status": "error", "message": "Invalid webhook URL protocol"}), 400
-
-        import requests
-        resp = requests.post(
-            url,
-            data=payload,
-            headers={'Content-Type': 'application/json', 'X-QCMS-Event': 'test'},
-            timeout=10
-        )
-        status_code = resp.status_code
+        req = urlreq.Request(url, data=payload, method='POST',
+                             headers={'Content-Type': 'application/json', 'X-QCMS-Event': 'test'})
+        with urlreq.urlopen(req, timeout=10) as resp:
+            status_code = resp.getcode()
         log_admin_action(f"Tested webhook: {url}", target_type="WebhookSetting")
         return jsonify({"status": "success", "message": f"Webhook responded with HTTP {status_code}", "http_status": status_code})
     except Exception as e:
@@ -2729,7 +2733,6 @@ def test_webhook():
 @super_admin_bp.route('/settings/test-ai', methods=['POST'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('settings')
 def test_ai_connection():
     body = request.json or {}
     provider = body.get('provider', 'openrouter').lower()
@@ -2750,20 +2753,21 @@ def test_ai_connection():
     test_url = provider_urls.get(provider, 'https://openrouter.ai/api/v1/models')
 
     try:
-        import requests
-        req_headers = {'User-Agent': 'QCMS-Enterprise-AI/4.8'}
+        import urllib.request as urlreq
+        req = urlreq.Request(test_url)
+        req.add_header('User-Agent', 'QCMS-Enterprise-AI/4.8')
         if provider == 'openrouter':
             if api_key:
-                req_headers['Authorization'] = f'Bearer {api_key}'
+                req.add_header('Authorization', f'Bearer {api_key}')
             if body.get('openrouter_site_url'):
-                req_headers['HTTP-Referer'] = body.get('openrouter_site_url')
+                req.add_header('HTTP-Referer', body.get('openrouter_site_url'))
             if body.get('openrouter_app_name'):
-                req_headers['X-Title'] = body.get('openrouter_app_name')
+                req.add_header('X-Title', body.get('openrouter_app_name'))
         elif api_key:
-            req_headers['Authorization'] = f'Bearer {api_key}'
+            req.add_header('Authorization', f'Bearer {api_key}')
 
-        resp = requests.get(test_url, headers=req_headers, timeout=8)
-        status_code = resp.status_code
+        with urlreq.urlopen(req, timeout=8) as resp:
+            status_code = resp.getcode()
 
         log_admin_action(f"Tested AI API provider: {provider} ({model})", target_type="AISetting")
         return jsonify({
@@ -2789,7 +2793,6 @@ def test_ai_connection():
 @super_admin_bp.route('/settings/integration-health', methods=['POST'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('integrations')
 def integration_health_check():
     body = request.json or {}
     integration_name = body.get('integration', '')
@@ -2811,9 +2814,9 @@ def integration_health_check():
     check_url = health_url_map.get(integration_name)
     if check_url:
         try:
-            import requests
-            resp = requests.get(check_url, timeout=8)
-            status = resp.status_code
+            import urllib.request as urlreq
+            with urlreq.urlopen(check_url, timeout=8) as resp:
+                status = resp.getcode()
             return jsonify({"status": "success", "message": f"{integration_name} endpoint reachable (HTTP {status})", "http_status": status})
         except Exception as e:
             logger.error(f"Health check error: {e}", exc_info=True)
@@ -2831,25 +2834,6 @@ def integration_health_check():
 @jwt_required()
 @super_admin_required()
 def manage_api_keys(key_id=None):
-    user_id = get_jwt_identity()
-    user = db.session.get(User, user_id)
-    sub_role = _get_sa_sub_role(user)
-    
-    if request.method in ('POST', 'DELETE'):
-        if sub_role != SA_OWNER and sub_role not in SA_WRITE_PERMISSIONS.get('settings', []):
-            return jsonify({
-                "status": "error",
-                "message": f"Your sub-role '{sub_role}' does not have write access to the 'settings' section.",
-                "error_code": "SUB_ROLE_WRITE_DENIED"
-            }), 403
-    else:
-        if sub_role != SA_OWNER and sub_role not in SA_READ_PERMISSIONS.get('settings', []):
-            return jsonify({
-                "status": "error",
-                "message": f"Your sub-role '{sub_role}' does not have access to the 'settings' section.",
-                "error_code": "SUB_ROLE_ACCESS_DENIED"
-            }), 403
-
     s = _get_settings()
     api_cfg = _get_category(s, 'api_settings')
     keys = api_cfg.get('api_keys_active', [])
@@ -2963,7 +2947,6 @@ def super_admin_profile():
 @super_admin_bp.route('/logs', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('logs')
 def get_admin_logs():
     logs = SuperAdminLog.query.order_by(SuperAdminLog.created_at.desc()).limit(100).all()
     output = []
@@ -2981,7 +2964,6 @@ def get_admin_logs():
 @super_admin_bp.route('/tickets', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('support')
 def list_tickets():
     tickets = SupportTicket.query.order_by(SupportTicket.created_at.desc()).all()
     output = []
@@ -3002,24 +2984,6 @@ def list_tickets():
 @jwt_required()
 @super_admin_required()
 def manage_ticket(ticket_id):
-    user_id = get_jwt_identity()
-    user = db.session.get(User, user_id)
-    sub_role = _get_sa_sub_role(user)
-    if request.method == 'PUT':
-        if sub_role != SA_OWNER and sub_role not in SA_WRITE_PERMISSIONS.get('support', []):
-            return jsonify({
-                "status": "error",
-                "message": f"Your sub-role '{sub_role}' does not have write access to the 'support' section.",
-                "error_code": "SUB_ROLE_WRITE_DENIED"
-            }), 403
-    else:
-        if sub_role != SA_OWNER and sub_role not in SA_READ_PERMISSIONS.get('support', []):
-            return jsonify({
-                "status": "error",
-                "message": f"Your sub-role '{sub_role}' does not have access to the 'support' section.",
-                "error_code": "SUB_ROLE_ACCESS_DENIED"
-            }), 403
-
     ticket = SupportTicket.query.get_or_404(ticket_id)
     if request.method == 'GET':
         return jsonify({
@@ -3051,7 +3015,6 @@ def manage_ticket(ticket_id):
 @super_admin_bp.route('/payments', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('billing')
 def list_payments():
     payments = SubscriptionPayment.query.order_by(SubscriptionPayment.created_at.desc()).all()
     output = []
@@ -3195,7 +3158,6 @@ def get_system_health():
 @super_admin_bp.route('/admin-logins', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('admin-logins')
 def list_admin_logins():
     """Returns list of all Super Admin accounts and credentials info"""
     sa_role = Role.query.filter_by(name='SuperAdmin').first()
@@ -3276,7 +3238,6 @@ def update_own_admin_credentials():
 @super_admin_bp.route('/admin-logins', methods=['POST'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('admin-logins')
 def create_new_admin_login():
     """Creates a new Super Admin login account"""
     data = request.get_json() or {}
@@ -3340,17 +3301,12 @@ def create_new_admin_login():
 @super_admin_bp.route('/admin-logins/<int:admin_id>', methods=['PUT'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('admin-logins')
 def update_admin_login(admin_id):
     """Updates an existing Super Admin account details or password"""
     target = db.session.get(User, admin_id)
     if not target:
         return jsonify({"status": "error", "message": "Admin user not found"}), 404
         
-    is_target_sa = (target.role and target.role.name == 'SuperAdmin') or getattr(target, 'is_super_admin', False) or (target.custom_fields and 'super_admin_role' in target.custom_fields)
-    if not is_target_sa:
-        return jsonify({"status": "error", "message": "The selected account is not a Super Admin user."}), 400
-
     data = request.get_json() or {}
     email = data.get('email', '').strip()
     password = data.get('password', '').strip()
@@ -3386,7 +3342,6 @@ def update_admin_login(admin_id):
 @super_admin_bp.route('/admin-logins/<int:admin_id>', methods=['DELETE'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('admin-logins')
 def delete_admin_login(admin_id):
     """Deletes or removes a Super Admin account"""
     current_user_id = get_jwt_identity()
@@ -3396,10 +3351,6 @@ def delete_admin_login(admin_id):
     target = db.session.get(User, admin_id)
     if not target:
         return jsonify({"status": "error", "message": "Admin user not found"}), 404
-
-    is_target_sa = (target.role and target.role.name == 'SuperAdmin') or getattr(target, 'is_super_admin', False) or (target.custom_fields and 'super_admin_role' in target.custom_fields)
-    if not is_target_sa:
-        return jsonify({"status": "error", "message": "The selected account is not a Super Admin user."}), 400
         
     # Clean up and reassign all child foreign key dependencies before removing user
     try:
@@ -3442,8 +3393,6 @@ def delete_admin_login(admin_id):
 
 @super_admin_bp.route('/storage/breakdown', methods=['GET'])
 @jwt_required()
-@super_admin_required()
-@sub_role_required('analytics')
 def get_storage_breakdown_sa():
     from app.presentation.routes.super_admin_v1_routes import get_super_admin_user
     user = get_super_admin_user()
@@ -3461,9 +3410,14 @@ def get_storage_breakdown_sa():
 
 @super_admin_bp.route('/storage/update-limit', methods=['POST'])
 @jwt_required()
-@super_admin_required()
-@sub_role_write_required('organizations')
 def update_org_storage_limit_sa():
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id) if user_id else None
+    role_name = user.role.name if user and user.role else ''
+    is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role')) if user else False
+    if not user or (role_name not in ('SuperAdmin', 'Admin') and not is_sa_custom):
+        return jsonify({"error": "Unauthorized"}), 403
+
     data = request.get_json() or {}
     org_id = data.get('org_id')
     storage_limit_gb = data.get('storage_limit_gb')
@@ -3494,7 +3448,6 @@ def update_org_storage_limit_sa():
 @super_admin_bp.route('/global-stages-template', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('settings')
 def get_global_stages_template():
     """Return the global 8-stage workflow template designed by Super Admin."""
     ps = PlatformSettings.query.first()
@@ -3509,7 +3462,6 @@ def get_global_stages_template():
 @super_admin_bp.route('/global-stages-template', methods=['POST'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('settings')
 def save_global_stages_template():
     """Save or reset the Super Admin global 8-stage workflow template."""
     import base64, secrets, os
@@ -3615,13 +3567,8 @@ def save_global_stages_template():
         except Exception as img_err:
             print(f"[QCMS] Error saving template preview image: {img_err}")
             preview_image_url = None
-    # Freeze current baseline template for all active organizations whose stages_config was None
-    # so their workflows do not unexpectedly auto-mutate to the new global template version.
-    import copy
-    prev_global_stages = copy.deepcopy((ps and ps.global_stages_config) or Organization.DEFAULT_STAGES_CONFIG)
-    orgs_without_config = Organization.query.filter_by(is_deleted=False).filter(Organization.stages_config.is_(None)).all()
-    for o in orgs_without_config:
-        o.stages_config = copy.deepcopy(prev_global_stages)
+    elif preview_image and isinstance(preview_image, str) and not preview_image.startswith('data:'):
+        preview_image_url = preview_image
 
     ps.global_stages_config = stages
     ps.global_template_version = (ps.global_template_version or 1) + 1
@@ -3640,40 +3587,29 @@ def save_global_stages_template():
             ps.stage_weightage_config = new_weights
 
     # Compute structured change highlights
-    import html as html_lib
     change_highlights = []
     default_map = {d["stage_id"]: d for d in Organization.DEFAULT_STAGES_CONFIG}
     for s in stages:
         sid = s.get('stage_id')
-        stitle = html_lib.escape(str(s.get('title', f'Stage {sid}')))
+        stitle = s.get('title', f'Stage {sid}')
         d_stage = default_map.get(sid, {})
         d_sec_ids = {sec.get('id') for sec in d_stage.get('sections', [])}
         
         s_secs = s.get('sections', [])
         for sec in s_secs:
             sec_id = str(sec.get('id', ''))
-            sec_label = html_lib.escape(str(sec.get('label') or sec.get('title') or 'Section'))
+            sec_label = sec.get('label') or sec.get('title') or 'Section'
             if sec_id not in d_sec_ids or '_custom_sec_' in sec_id or sec_id.startswith('sec_') or sec.get('type') == 'custom':
                 fields_count = len(sec.get('fields', []))
-                field_names = [html_lib.escape(str(f.get('label') or f.get('type') or 'Field')) for f in (sec.get('fields') or [])]
+                field_names = [f.get('label') or f.get('type') or 'Field' for f in (sec.get('fields') or [])]
                 field_str = f" ({len(field_names)} input elements: {', '.join(field_names)})" if field_names else ""
-                change_item = render_template_string(
-                    "<strong>Stage {{ sid }} ({{ stitle }})</strong> &rarr; New Section: <strong>{{ sec_label }}</strong>{{ field_str }}",
-                    sid=sid, stitle=stitle, sec_label=sec_label, field_str=field_str
-                )
-                change_highlights.append(change_item)
+                change_highlights.append(f"<strong>Stage {sid} ({stitle})</strong> &rarr; New Section: <strong>{sec_label}</strong>{field_str}")
             else:
                 d_sec = next((ds for ds in d_stage.get('sections', []) if ds.get('id') == sec_id), None)
                 d_fields = {f.get('id') for f in (d_sec.get('fields') or [])} if d_sec else set()
                 for f in (sec.get('fields') or []):
                     if f.get('id') not in d_fields:
-                        f_label = html_lib.escape(str(f.get('label', 'Field')))
-                        f_type = html_lib.escape(str(f.get('type', 'text')))
-                        change_item = render_template_string(
-                            "<strong>Stage {{ sid }} ({{ stitle }}) &rarr; {{ sec_label }}</strong> &rarr; New element: <strong>{{ f_label }}</strong> ({{ f_type }})",
-                            sid=sid, stitle=stitle, sec_label=sec_label, f_label=f_label, f_type=f_type
-                        )
-                        change_highlights.append(change_item)
+                        change_highlights.append(f"<strong>Stage {sid} ({stitle}) &rarr; {sec_label}</strong> &rarr; New element: <strong>{f.get('label', 'Field')}</strong> ({f.get('type', 'text')})")
 
     # Mark all active organizations as having a pending template update
     Organization.query.filter_by(is_deleted=False).update({"has_pending_template_update": True})
@@ -3841,11 +3777,6 @@ def save_global_stages_template():
                         db.session.rollback()
             except Exception as bg_err:
                 print(f"[QCMS] Global template async notification error: {bg_err}")
-            finally:
-                try:
-                    db.session.remove()
-                except Exception:
-                    pass
 
     try:
         import threading
@@ -3924,7 +3855,6 @@ def _get_configured_stages_list(ps=None):
 @super_admin_bp.route('/stage-weightage', methods=['GET'])
 @jwt_required()
 @super_admin_required()
-@sub_role_required('settings')
 def get_stage_weightage():
     """Return the current per-stage progress weightage configuration matching global stage templates."""
     ps = PlatformSettings.query.first()
@@ -3938,9 +3868,9 @@ def get_stage_weightage():
         # Re-balance equal weights across all configured stages
         base_w = round(100.0 / num_stages, 1)
         weights = [base_w] * num_stages
-        diff = round(100.0 - sum(default_weights) if 'default_weights' in locals() else sum(weights))
+        diff = round(100.0 - sum(weights), 1)
         if diff != 0:
-            weights[-1] = round(weights[-1] + (100.0 - sum(weights)), 1)
+            weights[-1] = round(weights[-1] + diff, 1)
 
     stages = []
     for i, info in enumerate(stages_info):
@@ -3967,7 +3897,6 @@ def get_stage_weightage():
 @super_admin_bp.route('/stage-weightage', methods=['POST'])
 @jwt_required()
 @super_admin_required()
-@sub_role_write_required('settings')
 def save_stage_weightage():
     """Save or reset the per-stage progress weightage configuration."""
     ps = PlatformSettings.query.first()

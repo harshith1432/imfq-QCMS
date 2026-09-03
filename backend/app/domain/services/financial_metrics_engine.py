@@ -362,78 +362,32 @@ class FinancialMetricsEngine:
         trend_labels = list(bucket_data.keys())
         trend_values = [round(v, 2) for v in bucket_data.values()]
 
-        # 7. 3-Month Revenue Forecasting Engine
-        # Projects expected total monthly revenue for the next 3 consecutive calendar months
-        # based on active MRR, recurring subscription run-rates, and historical monthly collections.
+        # Forecast
         forecast_labels = []
         forecast_values = []
-
-        for i in range(1, 4):
-            nxt_month = (now.replace(day=28) + timedelta(days=31 * i)).replace(day=1)
-            forecast_labels.append(nxt_month.strftime('%b %Y'))
-
-        # Aggregate monthly historical totals over past 6 calendar months
-        hist_months = []
-        for i in range(5, -1, -1):
-            m_dt = (now.replace(day=28) - timedelta(days=31 * i)).replace(day=1)
-            hist_months.append(m_dt.strftime('%b %Y'))
-
-        hist_rev = {m: 0.0 for m in hist_months}
-        all_completed_pmts = _apply_org_filter(
-            db.session.query(SubscriptionPayment).filter(
-                SubscriptionPayment.payment_status.in_(['Completed', 'Paid', 'SUCCESS'])
-            ),
-            SubscriptionPayment
-        ).all()
-        for p in all_completed_pmts:
-            if p.created_at:
-                m_str = p.created_at.strftime('%b %Y')
-                if m_str in hist_rev:
-                    hist_rev[m_str] += float((p.final_amount if p.final_amount is not None else p.amount) or 0.0)
-
-        all_completed_invs = _apply_org_filter(
-            db.session.query(SubscriptionInvoice).filter(
-                SubscriptionInvoice.invoice_status.in_(['Paid', 'Completed', 'PAID']),
-                SubscriptionInvoice.payment_id == None
-            ),
-            SubscriptionInvoice
-        ).all()
-        for inv in all_completed_invs:
-            if inv.created_at:
-                m_str = inv.created_at.strftime('%b %Y')
-                if m_str in hist_rev:
-                    hist_rev[m_str] += float(inv.total_amount or 0.0)
-
-        # Baseline monthly revenue is the highest of:
-        # 1. Contractual active MRR
-        # 2. Maximum recent monthly collected revenue
-        # 3. Average non-zero monthly collected revenue
-        non_zero_months = [v for v in hist_rev.values() if v > 0]
-        recent_monthly_max = max(non_zero_months) if non_zero_months else 0.0
-        recent_monthly_avg = (sum(non_zero_months) / len(non_zero_months)) if non_zero_months else 0.0
-        
-        baseline_monthly = max(mrr, recent_monthly_max, recent_monthly_avg)
-
-        # Calculate monthly growth trajectory
-        if len(non_zero_months) >= 2:
-            m_vals = list(hist_rev.values())
-            xs = list(range(len(m_vals)))
-            ys = m_vals
+        if len(trend_values) >= 2:
+            xs = list(range(len(trend_values)))
+            ys = trend_values
             mean_x = sum(xs) / len(xs)
             mean_y = sum(ys) / len(ys)
             num = sum((xs[i] - mean_x) * (ys[i] - mean_y) for i in range(len(xs)))
             den = sum((xs[i] - mean_x) ** 2 for i in range(len(xs)))
-            m_slope = num / den if den != 0 else 0.0
+            slope = num / den if den != 0 else 0.0
+            intercept = mean_y - slope * mean_x
             
+            last_lbl = trend_labels[-1]
+            try:
+                last_date = datetime.strptime(last_lbl, '%b %Y')
+            except ValueError:
+                last_date = datetime.now(timezone.utc).replace(tzinfo=None)
+
             for i in range(1, 4):
-                proj = baseline_monthly + (m_slope * i)
-                proj = max(baseline_monthly * (1.0 + (0.05 * i)), proj)
-                forecast_values.append(round(proj, 2))
+                nxt = (last_date.replace(day=28) + timedelta(days=30 * i)).replace(day=1)
+                forecast_labels.append(nxt.strftime('%b %Y'))
+                forecast_values.append(max(0.0, round(slope * (len(xs) - 1 + i) + intercept, 2)))
         else:
-            growth_rates = [0.06, 0.12, 0.18]
-            for i, rate in enumerate(growth_rates):
-                proj = baseline_monthly * (1.0 + rate) if baseline_monthly > 0 else 0.0
-                forecast_values.append(round(proj, 2))
+            forecast_labels = ['Sep 2026', 'Oct 2026', 'Nov 2026']
+            forecast_values = [mrr] * 3
 
         return {
             "total_revenue": total_revenue,

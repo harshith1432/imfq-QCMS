@@ -1154,7 +1154,7 @@ const Stage4 = {
         const pVal = cleanVal(d.p_value || d.pval || d.p_val);
         const conf = cleanVal(d.confidence_level || d.confidence || d.conf_level);
         const conc = cleanVal(d.conclusion || d.result);
-        const cleanConf = String(conf).replace(/%/g, '').trim();
+        const cleanConf = String(conf).replace('%', '').trim();
         const esc = (s) => (window.OctaQube && OctaQube.escapeHtml) ? OctaQube.escapeHtml(String(s)) : String(s).replace(/"/g, '&quot;');
 
         this.addRowTemplate('s4_validationContainer', d, `

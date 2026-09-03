@@ -122,7 +122,7 @@ const Breadcrumbs = {
         let html = `
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb glass-breadcrumb m-0">
-                    <li class="breadcrumb-item"><a href="${this.escapeHtml(homeUrl)}" class="org-breadcrumb-root">${this.escapeHtml(rootName)}</a></li>
+                    <li class="breadcrumb-item"><a href="${homeUrl}" class="org-breadcrumb-root">${this.escapeHtml(rootName)}</a></li>
         `;
 
         // Logic for nested levels could go here if URLs were nested, 

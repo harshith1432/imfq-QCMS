@@ -6,8 +6,8 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.003248ba8802.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.bca5f8498c05.min.js" as="script">
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
     <script>
         (function() {
             function getActiveTheme() {
@@ -110,22 +110,22 @@
             });
         })();
     </script>
-    <script src="/assets/dist/auth-guard.bca5f8498c05.min.js"></script>
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Global 8-Stage Workflow Template | Super Admin Portal</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <link rel="stylesheet" href="/assets/dist/core.003248ba8802.min.css">
-    <script src="/assets/dist/breadcrumbs.ef74fb9c326e.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js" integrity="sha384-tTkFttkBclaU1cloKwOi9xk3pbao3VZxTjLNBt8iFABWDBQibbAbWpVmO28zMuxq" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js" integrity="sha384-e6cc9LaIG7xZ3XD5B+jtr1NhTWPQGQdRCh6xiZ+ZFUtWCpg4ycv3Sh+SkZoopvUY" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         // Stubs so stage modules don't crash during WYSIWYG loading
         window.StageModules = {};
         window.api = { get: () => Promise.resolve([]), post: () => Promise.resolve({}) };
         window.OctaQube = { toast: () => {} };
     </script>
-    <script src="/assets/dist/stages-bundle.313f6f88b48f.min.js"></script>
+    <script src="/assets/dist/stages-bundle.86ed3ea3.min.js"></script>
     <style>
         /* ── Full Width Studio Reset (No Phantom Sidebar Margin & Sticky Support) ── */
         html, body {
@@ -870,8 +870,8 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
-<script src="/assets/dist/core-bundle.1abb5f54ddea.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
 // ── Icon library ───────────────────────────────────────────────────────────────
 const ICON_LIBRARY = [
@@ -1172,31 +1172,6 @@ function openInspector(stageIdx, secIdx, fieldId, isPredefined = false) {
     workspace.classList.add('with-inspector');
     panel.classList.remove('d-none');
 
-    // Ensure target stage and section are expanded in DOM
-    try {
-        const list = document.getElementById('stageList');
-        const cont = list ? list.children[stageIdx] : null;
-        if (cont) {
-            const detail = cont.querySelector('.stage-sections-detail');
-            const toggleIcon = cont.querySelector('.collapse-toggle i');
-            if (detail && (detail.style.display === 'none' || !detail.style.display)) {
-                detail.style.display = 'block';
-                if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevron-up');
-            }
-            const wrappers = cont.querySelectorAll('.visual-card-wrapper');
-            const cw = wrappers[secIdx];
-            if (cw) {
-                const bc = cw.querySelector('.card-body-collapse');
-                const ti = cw.querySelector('.card-collapse-toggle i');
-                if (bc && (bc.style.display === 'none' || !bc.style.display)) {
-                    bc.style.display = 'block';
-                    if (ti) ti.setAttribute('data-lucide', 'chevron-up');
-                }
-            }
-            if (window.lucide) lucide.createIcons();
-        }
-    } catch (_) {}
-
     document.querySelectorAll('.poster-element-wrapper').forEach(el => el.classList.remove('active-editing'));
     const targetEl = document.querySelector(`[data-field-id="${fieldId}"]`);
     if (targetEl) targetEl.classList.add('active-editing');
@@ -1352,7 +1327,13 @@ function openInspector(stageIdx, secIdx, fieldId, isPredefined = false) {
             <label class="ds-label text-xs fw-semibold mb-1">Placeholder / Helper Text</label>
             <input type="text" class="ds-input text-xs" value="${esc(cfg.placeholder || '')}" oninput="updateInspectorField('placeholder', this.value)">
         </div>
-
+        ${!isPredefined ? `
+        <div class="mb-3">
+            <label class="ds-label text-xs fw-semibold mb-1">Input Component Type</label>
+            <select class="ds-input ds-select text-xs" onchange="updateInspectorField('type', this.value)">
+                ${typeOptionsHtml}
+            </select>
+        </div>` : ''}
         ${extraConfigHtml}
         <!-- 📘 8S User Manual Instructions / Usage Guide -->
         <div class="mb-3 p-3 rounded-3 border bg-primary bg-opacity-10" style="border-color: rgba(var(--ds-primary-rgb), 0.25) !important;">
@@ -1809,37 +1790,6 @@ function normalizeStagesSequence(rawStages) {
 function renderList() {
     stages = normalizeStagesSequence(stages);
     const list = document.getElementById('stageList');
-    if (!list) return;
-
-    // Capture currently expanded stages and section cards before clearing DOM
-    const openStages = new Set();
-    const openSections = new Set();
-    list.querySelectorAll('.stage-row-container').forEach(cont => {
-        const sIdx = parseInt(cont.dataset.idx);
-        const detail = cont.querySelector('.stage-sections-detail');
-        if (detail && detail.style.display !== 'none' && detail.style.display !== '') {
-            openStages.add(sIdx);
-        }
-        cont.querySelectorAll('.visual-card-wrapper').forEach(cw => {
-            const scIdx = parseInt(cw.dataset.secIdx);
-            const bc = cw.querySelector('.card-body-collapse');
-            if (bc && bc.style.display !== 'none' && bc.style.display !== '') {
-                openSections.add(`${sIdx}_${scIdx}`);
-            }
-        });
-    });
-
-    // If Property Inspector is targeting a specific element, ensure its stage and section are ALWAYS kept open
-    if (activeInspectorTarget) {
-        openStages.add(activeInspectorTarget.stageIdx);
-        openSections.add(`${activeInspectorTarget.stageIdx}_${activeInspectorTarget.secIdx}`);
-    }
-
-    // Capture current scroll positions
-    const workspace = document.getElementById('posterWorkspaceArea');
-    const wsScroll = workspace ? workspace.scrollTop : 0;
-    const winScroll = window.scrollY || document.documentElement.scrollTop;
-
     list.innerHTML = '';
 
     stages.forEach((s, i) => {
@@ -1910,7 +1860,7 @@ function renderList() {
                 ${reorderButtonsHtml}
             </div>
             <div class="collapse-toggle text-secondary" style="width:24px;text-align:center;">
-                <i data-lucide="${openStages.has(i) ? 'chevron-up' : 'chevron-down'}" style="width:18px;height:18px;"></i>
+                <i data-lucide="chevron-down" style="width:18px;height:18px;"></i>
             </div>
         `;
 
@@ -1964,10 +1914,9 @@ function renderList() {
         header.querySelector('.stage-icon-bubble').addEventListener('click', (e) => { e.stopPropagation(); openIconPicker(i); });
 
         // Section details area
-        const isStageExpanded = openStages.has(i);
         const detail = document.createElement('div');
         detail.className = 'stage-sections-detail';
-        detail.style.display = isStageExpanded ? 'block' : 'none';
+        detail.style.display = 'none';
 
         const secListId = `sectionList_${i}`;
         detail.innerHTML = `
@@ -2119,11 +2068,10 @@ function renderList() {
                     });
 
                     // Wrap card body in collapsible
-                    const isSectionExpanded = openSections.has(`${i}_${sIdx}`);
                     const cardBody = cardEl.querySelector('.ds-card-body');
                     const bodyCollapse = document.createElement('div');
                     bodyCollapse.className = 'card-body-collapse';
-                    bodyCollapse.style.display = isSectionExpanded ? 'block' : 'none';
+                    bodyCollapse.style.display = 'none';
                     if (cardBody) { cardBody.parentNode.insertBefore(bodyCollapse, cardBody); bodyCollapse.appendChild(cardBody); }
 
                     // ── Inject sample mockup rows into empty dynamic containers ──────────
@@ -2422,7 +2370,7 @@ function renderList() {
                                 <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
                             </button>
                             <div class="card-collapse-toggle text-secondary ms-2" style="width:20px;text-align:center;">
-                                <i data-lucide="${isSectionExpanded ? 'chevron-up' : 'chevron-down'}" style="width:16px;height:16px;"></i>
+                                <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
                             </div>
                         </div>
                     `;
@@ -3065,17 +3013,8 @@ function renderList() {
         list.appendChild(container);
     });
 
-    if (activeInspectorTarget) {
-        const targetEl = document.querySelector(`[data-field-id="${activeInspectorTarget.fieldId}"]`);
-        if (targetEl) targetEl.classList.add('active-editing');
-    }
-
-    if (window.lucide) lucide.createIcons();
+    lucide.createIcons();
     renderPreview();
-
-    // Restore scroll positions
-    if (workspace) workspace.scrollTop = wsScroll;
-    window.scrollTo(0, winScroll);
 }
 
 // ── Stage CRUD ─────────────────────────────────────────────────────────────────

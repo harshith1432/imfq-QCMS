@@ -39,15 +39,6 @@ class ProjectClosureService:
         if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
             raise PermissionError("Unauthorized access to project")
 
-        is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
-        is_assigned_reviewer = (project.reviewer_id == user.id)
-        is_assigned_tl = (project.team_leader_id == user.id) or (project.creator_id == user.id)
-        if not (is_admin or is_assigned_reviewer or is_assigned_tl):
-            raise PermissionError("Unauthorized: Only an Administrator, CEO, assigned Reviewer, or Team Leader can close this project.")
-
-        if project.current_stage < 8 and not is_admin:
-            raise ValueError(f"Project cannot be closed before reaching Stage 8 (Current Stage: {project.current_stage})")
-
         # 1. Update Project Status
         project.status = 'Closed'
         project.end_date = datetime.now(timezone.utc).replace(tzinfo=None).date()
@@ -128,10 +119,7 @@ class ProjectClosureService:
             action=f"PROJECT_CLOSED_BY_{sign_off_by_role.upper()}",
             target_table="projects",
             target_id=project.id,
-            details={"title": project.title, "comments": comments},
-            before_data={"workflow_status": "Stage 8 (Standardization & Closure Review)", "status": "In Review"},
-            after_data={"workflow_status": "Closed / Completed", "status": "Completed", "sign_off_by": sign_off_by_role, "comments": comments or "(None)"},
-            response_code=200
+            details={"title": project.title, "comments": comments}
         ))
 
         db.session.commit()
@@ -162,12 +150,6 @@ class ProjectClosureService:
                         EmailNotificationEngine.trigger_project_completed_notification(pid)
                 except Exception as em_err:
                     logger.warning(f"[ProjectClosureService Async Email] {em_err}")
-                finally:
-                    try:
-                        from app import db
-                        db.session.remove()
-                    except Exception:
-                        pass
 
             t = threading.Thread(target=_async_email, args=(app_obj, project.id))
             t.daemon = True
@@ -195,9 +177,6 @@ class ProjectClosureService:
         project = db.session.get(Project, project_id)
         if not project:
             raise ValueError("Project not found")
-
-        if user.role and user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
-            raise PermissionError("Unauthorized access to project")
 
         if project.status == 'Closed':
             raise ValueError("Cannot reject an already closed project")
@@ -259,10 +238,7 @@ class ProjectClosureService:
             action="PROJECT_CLOSURE_REJECTED",
             target_table="projects",
             target_id=project.id,
-            details={"title": project.title, "comments": comments},
-            before_data={"workflow_status": "Stage 8 (Standardization & Closure Review)", "status": "Under Review"},
-            after_data={"workflow_status": "Stage 1 (Project Definition - Reset)", "status": "Rejected & Reset", "rejection_reason": comments or "Need revision"},
-            response_code=400
+            details={"title": project.title, "comments": comments}
         ))
 
         db.session.commit()

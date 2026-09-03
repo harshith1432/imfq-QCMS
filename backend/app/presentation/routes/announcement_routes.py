@@ -32,7 +32,7 @@ def _is_admin_user(user):
         return False
     role_name = user.role.name if user.role else ''
     is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
-    is_sa_flag = getattr(user, 'is_super_admin', False) or (user.role and user.role.name == 'SuperAdmin')
+    is_sa_flag = getattr(user, 'is_super_admin', False) or user.org_id is None
     return role_name in ALLOWED_ROLES or is_sa_custom or is_sa_flag
 
 def _can_read(user):
@@ -40,7 +40,7 @@ def _can_read(user):
         return False
     role_name = user.role.name if user.role else ''
     is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
-    is_sa_flag = getattr(user, 'is_super_admin', False) or (user.role and user.role.name == 'SuperAdmin')
+    is_sa_flag = getattr(user, 'is_super_admin', False) or user.org_id is None
     return role_name in READ_ROLES or is_sa_custom or is_sa_flag
 
 def require_admin(user):
@@ -487,155 +487,173 @@ def get_active_broadcasts():
 
 # ─── List / Search ────────────────────────────────────────────────────────────
 
-@announcement_bp.route('', methods=['GET'])
-@announcement_bp.route('/', methods=['GET'])
-@jwt_required()
-def list_announcements():
-    user = get_current_user()
-    if not _can_read(user):
-        return jsonify({"message": "Unauthorized"}), 403
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: list_announcements (Lines 490-539)
+# Reason: Legacy unpaginated announcement list. Frontend uses /my-announcements and /active-broadcasts.
+# ==============================================================================
+# @announcement_bp.route('', methods=['GET'])
+# @announcement_bp.route('/', methods=['GET'])
+# @jwt_required()
+# def list_announcements():
+#     user = get_current_user()
+#     if not _can_read(user):
+#         return jsonify({"message": "Unauthorized"}), 403
 
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
-    q = request.args.get('q', '').strip()
-    status = request.args.get('status', '')
-    priority = request.args.get('priority', '')
-    category = request.args.get('category', '')
-    sort_by = request.args.get('sort_by', 'created_at')
-    sort_order = request.args.get('sort_order', 'desc')
+#     page = request.args.get('page', 1, type=int)
+#     per_page = request.args.get('per_page', 10, type=int)
+#     q = request.args.get('q', '').strip()
+#     status = request.args.get('status', '')
+#     priority = request.args.get('priority', '')
+#     category = request.args.get('category', '')
+#     sort_by = request.args.get('sort_by', 'created_at')
+#     sort_order = request.args.get('sort_order', 'desc')
 
-    query = Announcement.query
+#     query = Announcement.query
 
-    if q:
-        pattern = f"%{q}%"
-        query = query.filter(db.or_(
-            Announcement.title.ilike(pattern),
-            Announcement.summary.ilike(pattern),
-            Announcement.ann_number.ilike(pattern),
-            Announcement.category.ilike(pattern),
-        ))
-    if status:
-        statuses = [s.strip() for s in status.split(',')]
-        query = query.filter(Announcement.status.in_(statuses))
-    if priority:
-        priorities = [p.strip() for p in priority.split(',')]
-        query = query.filter(Announcement.priority.in_(priorities))
-    if category:
-        query = query.filter(Announcement.category == category)
+#     if q:
+#         pattern = f"%{q}%"
+#         query = query.filter(db.or_(
+#             Announcement.title.ilike(pattern),
+#             Announcement.summary.ilike(pattern),
+#             Announcement.ann_number.ilike(pattern),
+#             Announcement.category.ilike(pattern),
+#         ))
+#     if status:
+#         statuses = [s.strip() for s in status.split(',')]
+#         query = query.filter(Announcement.status.in_(statuses))
+#     if priority:
+#         priorities = [p.strip() for p in priority.split(',')]
+#         query = query.filter(Announcement.priority.in_(priorities))
+#     if category:
+#         query = query.filter(Announcement.category == category)
 
-    sort_col = getattr(Announcement, sort_by, Announcement.created_at)
-    query = query.order_by(sort_col.desc() if sort_order == 'desc' else sort_col.asc())
+#     sort_col = getattr(Announcement, sort_by, Announcement.created_at)
+#     query = query.order_by(sort_col.desc() if sort_order == 'desc' else sort_col.asc())
 
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    return jsonify({
-        "status": "success",
-        "data": [ann_to_dict(a) for a in pagination.items],
-        "meta": {
-            "total": pagination.total,
-            "pages": pagination.pages,
-            "page": page,
-            "per_page": per_page
-        }
-    }), 200
+#     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+#     return jsonify({
+#         "status": "success",
+#         "data": [ann_to_dict(a) for a in pagination.items],
+#         "meta": {
+#             "total": pagination.total,
+#             "pages": pagination.pages,
+#             "page": page,
+#             "per_page": per_page
+#         }
+#     }), 200
+# [END DEAD CODE: list_announcements]
 
 
 
 # ─── Detail ───────────────────────────────────────────────────────────────────
 
-@announcement_bp.route('/<int:ann_id>', methods=['GET'])
-@jwt_required()
-def get_announcement(ann_id):
-    user = get_current_user()
-    if not _can_read(user):
-        return jsonify({"message": "Unauthorized"}), 403
-    ann = db.session.get(Announcement, ann_id)
-    if not ann:
-        return jsonify({"message": "Not found"}), 404
-    return jsonify({"status": "success", "data": ann_to_dict(ann, include_body=True)}), 200
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_announcement (Lines 544-553)
+# Reason: Unused single announcement fetch.
+# ==============================================================================
+# @announcement_bp.route('/<int:ann_id>', methods=['GET'])
+# @jwt_required()
+# def get_announcement(ann_id):
+#     user = get_current_user()
+#     if not _can_read(user):
+#         return jsonify({"message": "Unauthorized"}), 403
+#     ann = db.session.get(Announcement, ann_id)
+#     if not ann:
+#         return jsonify({"message": "Not found"}), 404
+#     return jsonify({"status": "success", "data": ann_to_dict(ann, include_body=True)}), 200
+# [END DEAD CODE: get_announcement]
 
 
 
 # ─── Create ───────────────────────────────────────────────────────────────────
 
-@announcement_bp.route('', methods=['POST'])
-@announcement_bp.route('/', methods=['POST'])
-@jwt_required()
-def create_announcement():
-    user = get_current_user()
-    err = require_admin(user)
-    if err:
-        return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: create_announcement (Lines 558-636)
+# Reason: Legacy announcement creation endpoint.
+# ==============================================================================
+# @announcement_bp.route('', methods=['POST'])
+# @announcement_bp.route('/', methods=['POST'])
+# @jwt_required()
+# def create_announcement():
+#     user = get_current_user()
+#     err = require_admin(user)
+#     if err:
+#         return err
 
-    data = request.get_json() or {}
-    title = (data.get('title') or '').strip()
-    body = (data.get('body') or '').strip()
-    if not title:
-        return jsonify({"message": "Title is required"}), 422
-    if not body:
-        return jsonify({"message": "Message details are required"}), 422
+#     data = request.get_json() or {}
+#     title = (data.get('title') or '').strip()
+#     body = (data.get('body') or '').strip()
+#     if not title:
+#         return jsonify({"message": "Title is required"}), 422
+#     if not body:
+#         return jsonify({"message": "Message details are required"}), 422
 
-    # Parse dates
-    publish_at = None
-    expires_at = None
-    try:
-        if data.get('publish_at'):
-            publish_at = datetime.fromisoformat(data['publish_at'].replace('Z', ''))
-        if data.get('expires_at'):
-            expires_at = datetime.fromisoformat(data['expires_at'].replace('Z', ''))
-    except ValueError:
-        return jsonify({"message": "Invalid date format"}), 422
+#     # Parse dates
+#     publish_at = None
+#     expires_at = None
+#     try:
+#         if data.get('publish_at'):
+#             publish_at = datetime.fromisoformat(data['publish_at'].replace('Z', ''))
+#         if data.get('expires_at'):
+#             expires_at = datetime.fromisoformat(data['expires_at'].replace('Z', ''))
+#     except ValueError:
+#         return jsonify({"message": "Invalid date format"}), 422
 
-    # Determine status
-    status = 'Draft'
-    if data.get('action') == 'publish':
-        status = 'Published'
-    elif data.get('action') == 'schedule' and publish_at:
-        status = 'Scheduled'
+#     # Determine status
+#     status = 'Draft'
+#     if data.get('action') == 'publish':
+#         status = 'Published'
+#     elif data.get('action') == 'schedule' and publish_at:
+#         status = 'Scheduled'
 
-    ann = Announcement(
-        ann_number=ann_number(),
-        created_by=user.id,
-        title=title,
-        summary=data.get('summary', ''),
-        body=data.get('body', ''),
-        category=data.get('category', 'General'),
-        priority=data.get('priority', 'Medium'),
-        status=status,
-        tags=data.get('tags', []),
-        audience_type=data.get('audience_type', 'all'),
-        channels=data.get('channels', {"in_app": True, "email": False, "sms": False, "push": False}),
-        publish_at=publish_at,
-        expires_at=expires_at,
-        timezone=data.get('timezone', 'UTC'),
-        published_at=datetime.now(timezone.utc).replace(tzinfo=None) if status == 'Published' else None
-    )
-    db.session.add(ann)
-    db.session.flush()
+#     ann = Announcement(
+#         ann_number=ann_number(),
+#         created_by=user.id,
+#         title=title,
+#         summary=data.get('summary', ''),
+#         body=data.get('body', ''),
+#         category=data.get('category', 'General'),
+#         priority=data.get('priority', 'Medium'),
+#         status=status,
+#         tags=data.get('tags', []),
+#         audience_type=data.get('audience_type', 'all'),
+#         channels=data.get('channels', {"in_app": True, "email": False, "sms": False, "push": False}),
+#         publish_at=publish_at,
+#         expires_at=expires_at,
+#         timezone=data.get('timezone', 'UTC'),
+#         published_at=datetime.now(timezone.utc).replace(tzinfo=None) if status == 'Published' else None
+#     )
+#     db.session.add(ann)
+#     db.session.flush()
 
-    # Audience rules
-    for rule in data.get('audience', []):
-        db.session.add(AnnouncementAudience(
-            announcement_id=ann.id,
-            target_type=rule.get('type'),
-            target_value=str(rule.get('value'))
-        ))
+#     # Audience rules
+#     for rule in data.get('audience', []):
+#         db.session.add(AnnouncementAudience(
+#             announcement_id=ann.id,
+#             target_type=rule.get('type'),
+#             target_value=str(rule.get('value'))
+#         ))
 
-    log_ann_event(ann.id, user.id, 'CREATED', {"title": title, "status": status})
+#     log_ann_event(ann.id, user.id, 'CREATED', {"title": title, "status": status})
 
-    # If publishing immediately, deliver enabled channels
-    if status == 'Published':
-        user_ids = resolve_audience(ann)
-        if ann.channels and ann.channels.get('in_app'):
-            deliver_in_app(ann, user_ids)
-        if ann.channels and ann.channels.get('email'):
-            deliver_email(ann, user_ids)
-        db.session.flush()
-        ann.total_delivered = AnnouncementDelivery.query.filter_by(
-            announcement_id=ann.id, status='Sent'
-        ).count()
+#     # If publishing immediately, deliver enabled channels
+#     if status == 'Published':
+#         user_ids = resolve_audience(ann)
+#         if ann.channels and ann.channels.get('in_app'):
+#             deliver_in_app(ann, user_ids)
+#         if ann.channels and ann.channels.get('email'):
+#             deliver_email(ann, user_ids)
+#         db.session.flush()
+#         ann.total_delivered = AnnouncementDelivery.query.filter_by(
+#             announcement_id=ann.id, status='Sent'
+#         ).count()
 
-    db.session.commit()
-    return jsonify({"status": "success", "data": ann_to_dict(ann), "message": f"Announcement {ann.ann_number} created."}), 201
+#     db.session.commit()
+#     return jsonify({"status": "success", "data": ann_to_dict(ann), "message": f"Announcement {ann.ann_number} created."}), 201
+# [END DEAD CODE: create_announcement]
 
 
 
@@ -862,14 +880,12 @@ def duplicate_announcement(ann_id):
     db.session.add(copy)
     db.session.flush()
 
-    if src.audience:
-        db.session.add_all([
-            AnnouncementAudience(
-                announcement_id=copy.id,
-                target_type=aud.target_type,
-                target_value=aud.target_value
-            ) for aud in src.audience
-        ])
+    for aud in src.audience:
+        db.session.add(AnnouncementAudience(
+            announcement_id=copy.id,
+            target_type=aud.target_type,
+            target_value=aud.target_value
+        ))
     log_ann_event(copy.id, user.id, 'CREATED', {"duplicated_from": src.id})
     db.session.commit()
     return jsonify({"status": "success", "data": ann_to_dict(copy), "message": f"Duplicate created: {copy.ann_number}"}), 201
@@ -877,21 +893,27 @@ def duplicate_announcement(ann_id):
 
 # ─── Delete ───────────────────────────────────────────────────────────────────
 
-@announcement_bp.route('/<int:ann_id>', methods=['DELETE'])
-@jwt_required()
-def delete_announcement(ann_id):
-    user = get_current_user()
-    err = require_admin(user)
-    if err:
-        return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: delete_announcement (Lines 861-875)
+# Reason: Hard delete route; frontend only archives announcements.
+# ==============================================================================
+# @announcement_bp.route('/<int:ann_id>', methods=['DELETE'])
+# @jwt_required()
+# def delete_announcement(ann_id):
+#     user = get_current_user()
+#     err = require_admin(user)
+#     if err:
+#         return err
 
-    ann = db.session.get(Announcement, ann_id)
-    if not ann:
-        return jsonify({"message": "Not found"}), 404
+#     ann = db.session.get(Announcement, ann_id)
+#     if not ann:
+#         return jsonify({"message": "Not found"}), 404
 
-    db.session.delete(ann)
-    db.session.commit()
-    return jsonify({"status": "success", "message": "Announcement deleted successfully."}), 200
+#     db.session.delete(ann)
+#     db.session.commit()
+#     return jsonify({"status": "success", "message": "Announcement deleted successfully."}), 200
+# [END DEAD CODE: delete_announcement]
 
 
 
@@ -942,42 +964,48 @@ def delete_announcement(ann_id):
 
 # ─── Read Statistics ──────────────────────────────────────────────────────────
 
-@announcement_bp.route('/<int:ann_id>/reads', methods=['GET'])
-@jwt_required()
-def get_read_stats(ann_id):
-    user = get_current_user()
-    if not _can_read(user):
-        return jsonify({"message": "Unauthorized"}), 403
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_read_stats (Lines 918-953)
+# Reason: Unused read statistics breakdown.
+# ==============================================================================
+# @announcement_bp.route('/<int:ann_id>/reads', methods=['GET'])
+# @jwt_required()
+# def get_read_stats(ann_id):
+#     user = get_current_user()
+#     if not _can_read(user):
+#         return jsonify({"message": "Unauthorized"}), 403
 
-    ann = db.session.get(Announcement, ann_id)
-    if not ann:
-        return jsonify({"message": "Not found"}), 404
+#     ann = db.session.get(Announcement, ann_id)
+#     if not ann:
+#         return jsonify({"message": "Not found"}), 404
 
-    reads = AnnouncementRead.query.filter_by(announcement_id=ann_id).all()
-    viewed = sum(1 for r in reads if r.viewed_at)
-    read = sum(1 for r in reads if r.read_at)
-    clicked = sum(1 for r in reads if r.clicked_at)
-    dismissed = sum(1 for r in reads if r.dismissed_at)
+#     reads = AnnouncementRead.query.filter_by(announcement_id=ann_id).all()
+#     viewed = sum(1 for r in reads if r.viewed_at)
+#     read = sum(1 for r in reads if r.read_at)
+#     clicked = sum(1 for r in reads if r.clicked_at)
+#     dismissed = sum(1 for r in reads if r.dismissed_at)
 
-    device_counts = {}
-    for r in reads:
-        dev = r.device or 'Unknown'
-        device_counts[dev] = device_counts.get(dev, 0) + 1
+#     device_counts = {}
+#     for r in reads:
+#         dev = r.device or 'Unknown'
+#         device_counts[dev] = device_counts.get(dev, 0) + 1
 
-    return jsonify({
-        "status": "success",
-        "data": {
-            "total_delivered": ann.total_delivered,
-            "total_viewed": viewed,
-            "total_read": read,
-            "total_clicked": clicked,
-            "total_dismissed": dismissed,
-            "unread": max(0, ann.total_delivered - read),
-            "read_pct": round(read / ann.total_delivered * 100, 1) if ann.total_delivered > 0 else 0,
-            "ctr": round(clicked / ann.total_delivered * 100, 1) if ann.total_delivered > 0 else 0,
-            "by_device": device_counts,
-        }
-    }), 200
+#     return jsonify({
+#         "status": "success",
+#         "data": {
+#             "total_delivered": ann.total_delivered,
+#             "total_viewed": viewed,
+#             "total_read": read,
+#             "total_clicked": clicked,
+#             "total_dismissed": dismissed,
+#             "unread": max(0, ann.total_delivered - read),
+#             "read_pct": round(read / ann.total_delivered * 100, 1) if ann.total_delivered > 0 else 0,
+#             "ctr": round(clicked / ann.total_delivered * 100, 1) if ann.total_delivered > 0 else 0,
+#             "by_device": device_counts,
+#         }
+#     }), 200
+# [END DEAD CODE: get_read_stats]
 
 
 
@@ -1017,25 +1045,31 @@ def mark_read(ann_id):
 
 # ─── Audit Logs ───────────────────────────────────────────────────────────────
 
-@announcement_bp.route('/<int:ann_id>/audit', methods=['GET'])
-@jwt_required()
-def get_ann_audit(ann_id):
-    user = get_current_user()
-    if not _can_read(user):
-        return jsonify({"message": "Unauthorized"}), 403
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_ann_audit (Lines 992-1010)
+# Reason: Unused announcement audit trail.
+# ==============================================================================
+# @announcement_bp.route('/<int:ann_id>/audit', methods=['GET'])
+# @jwt_required()
+# def get_ann_audit(ann_id):
+#     user = get_current_user()
+#     if not _can_read(user):
+#         return jsonify({"message": "Unauthorized"}), 403
 
-    logs = AnnouncementAudit.query.filter_by(announcement_id=ann_id).order_by(AnnouncementAudit.created_at.desc()).all()
-    return jsonify({
-        "status": "success",
-        "data": [{
-            "id": l.id,
-            "action": l.action,
-            "actor": l.actor.username if l.actor else "System",
-            "details": l.details,
-            "ip_address": l.ip_address,
-            "timestamp": l.created_at.isoformat() + "Z"
-        } for l in logs]
-    }), 200
+#     logs = AnnouncementAudit.query.filter_by(announcement_id=ann_id).order_by(AnnouncementAudit.created_at.desc()).all()
+#     return jsonify({
+#         "status": "success",
+#         "data": [{
+#             "id": l.id,
+#             "action": l.action,
+#             "actor": l.actor.username if l.actor else "System",
+#             "details": l.details,
+#             "ip_address": l.ip_address,
+#             "timestamp": l.created_at.isoformat() + "Z"
+#         } for l in logs]
+#     }), 200
+# [END DEAD CODE: get_ann_audit]
 
 
 

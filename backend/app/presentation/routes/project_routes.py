@@ -1,8 +1,5 @@
-from flask import Blueprint, request, jsonify, current_app, send_file
+from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-import os
-import io
-import zipfile
 from app.infrastructure.database.models.models import Project, User, ProjectMember, KPIMetric, ProjectStageTracker, ProjectWorkflow, Department, db
 from app.presentation.middleware.middleware import role_required
 from app.domain.services.subscription_service import SubscriptionManager
@@ -492,12 +489,6 @@ def create_project():
     team_leader_id = data.get('team_leader_id') or user_id
     dept_id = data.get('department_id') or user.department_id
 
-    # Verify assignees belong to current organization
-    if team_leader_id:
-        tl_chk = db.session.get(User, team_leader_id)
-        if not tl_chk or (user.role.name != 'SuperAdmin' and tl_chk.org_id != user.org_id):
-            return jsonify({"msg": "Selected Team Leader does not belong to your organization."}), 400
-
     def _safe_parse_date(d_val):
         if not d_val or not str(d_val).strip():
             return None
@@ -518,18 +509,10 @@ def create_project():
         # Check if facilitator_id is provided and valid (not empty string)
         fid_val = data.get('facilitator_id')
         facilitator_id = int(fid_val) if fid_val is not None and str(fid_val).strip() != "" else None
-        if facilitator_id:
-            fac_chk = db.session.get(User, facilitator_id)
-            if not fac_chk or (user.role.name != 'SuperAdmin' and fac_chk.org_id != user.org_id):
-                return jsonify({"msg": "Selected Facilitator does not belong to your organization."}), 400
 
         # Check if reviewer_id is provided and valid (not empty string)
         rid_val = data.get('reviewer_id')
         reviewer_id = int(rid_val) if rid_val is not None and str(rid_val).strip() != "" else None
-        if reviewer_id:
-            rev_chk = db.session.get(User, reviewer_id)
-            if not rev_chk or (user.role.name != 'SuperAdmin' and rev_chk.org_id != user.org_id):
-                return jsonify({"msg": "Selected Reviewer does not belong to your organization."}), 400
 
         # Parse planned dates
         init_data = data.get('init_data', {})
@@ -790,117 +773,122 @@ def create_project():
 # STAGE 1 – QC STORY ROUTES (Save / Submit / Review)
 # ─────────────────────────────────────────────────────────────────────────
 
-@project_bp.route('/<int:id>/stage1/save', methods=['POST'])
-@jwt_required()
-def save_stage1(id):
-    """Save Stage 1 progress without submitting for review."""
-    user_id = get_jwt_identity()
-    user = db.session.get(User, user_id)
-    project = db.session.get(Project, id)
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: save_stage1 (Lines 776-885)
+# Reason: Legacy stage1 saving route. Frontend saves via generic /stage/1/submit or dynamic workflow renderer.
+# ==============================================================================
+# @project_bp.route('/<int:id>/stage1/save', methods=['POST'])
+# @jwt_required()
+# def save_stage1(id):
+#     """Save Stage 1 progress without submitting for review."""
+#     user_id = get_jwt_identity()
+#     user = db.session.get(User, user_id)
+#     project = db.session.get(Project, id)
 
-    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
-    if not project or (not user_is_sa and project.org_id != user.org_id):
-        return jsonify({"msg": "Project not found"}), 404
+#     user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+#     if not project or (not user_is_sa and project.org_id != user.org_id):
+#         return jsonify({"msg": "Project not found"}), 404
 
-    # Check if project is permanently rejected
-    if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
-        return jsonify({"msg": "This project has been permanently rejected and cannot be modified or re-submitted."}), 400
+#     # Check if project is permanently rejected
+#     if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
+#         return jsonify({"msg": "This project has been permanently rejected and cannot be modified or re-submitted."}), 400
 
-    is_member = ProjectMember.query.filter_by(project_id=id, user_id=user_id).first() is not None
-    is_assigned = (project.creator_id == user.id) or (project.team_leader_id == user.id) or (project.facilitator_id == user.id) or is_member
-    is_admin = user.role and user.role.name in ('Admin', 'SuperAdmin', 'CEO')
-    if not (is_assigned or is_admin):
-        return jsonify({"msg": "Access denied. Only assigned team members can edit project details."}), 403
+#     # STRICT RULE: Only assigned Team Leader or Team Member can edit Stage 1 (Admin is read-only)
+#     is_authorized = user.role.name in ('Team Leader', 'Team Member')
+#     if not is_authorized:
+#         return jsonify({"msg": "Access denied. Only assigned Team Leaders and Team Members can edit project details."}), 403
 
-    payload = request.get_json() or {}
-    workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=1).first()
+#     payload = request.get_json() or {}
+#     workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=1).first()
 
-    if not workflow:
-        workflow = ProjectWorkflow(project_id=id, org_id=user.org_id, stage_id=1, data={})
-        db.session.add(workflow)
+#     if not workflow:
+#         workflow = ProjectWorkflow(project_id=id, org_id=user.org_id, stage_id=1, data={})
+#         db.session.add(workflow)
 
-    # Merge incoming sections into existing data
-    existing = dict(workflow.data or {})
-    for section, section_data in payload.items():
-        existing[section] = section_data
-    workflow.data = existing
-    flag_modified(workflow, 'data')
-    workflow.updated_by = user_id
-    workflow.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+#     # Merge incoming sections into existing data
+#     existing = dict(workflow.data or {})
+#     for section, section_data in payload.items():
+#         existing[section] = section_data
+#     workflow.data = existing
+#     flag_modified(workflow, 'data')
+#     workflow.updated_by = user_id
+#     workflow.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    # Sync Team Members, Facilitator, and Reviewer to the database so access control works
-    team_data = payload.get('team')
-    if team_data:
-        from app.infrastructure.database.models.models import ProjectMember
+#     # Sync Team Members, Facilitator, and Reviewer to the database so access control works
+#     team_data = payload.get('team')
+#     if team_data:
+#         from app.infrastructure.database.models.models import ProjectMember
 
-        # 1. Sync Team Members
-        if 'team_members' in team_data and isinstance(team_data['team_members'], list):
-            old_member_ids = set([m.user_id for m in ProjectMember.query.filter_by(project_id=id).all()])
-            new_member_ids = set()
-            if project.team_leader_id:
-                new_member_ids.add(project.team_leader_id)
-            for mem in team_data['team_members']:
-                uid = mem.get('user_id') if isinstance(mem, dict) else mem
-                if uid:
-                    try:
-                        uid_int = int(uid)
-                        if uid_int > 0:
-                            new_member_ids.add(uid_int)
-                    except (ValueError, TypeError):
-                        pass
+#         # 1. Sync Team Members
+#         if 'team_members' in team_data and isinstance(team_data['team_members'], list):
+#             old_member_ids = set([m.user_id for m in ProjectMember.query.filter_by(project_id=id).all()])
+#             new_member_ids = set()
+#             if project.team_leader_id:
+#                 new_member_ids.add(project.team_leader_id)
+#             for mem in team_data['team_members']:
+#                 uid = mem.get('user_id') if isinstance(mem, dict) else mem
+#                 if uid:
+#                     try:
+#                         uid_int = int(uid)
+#                         if uid_int > 0:
+#                             new_member_ids.add(uid_int)
+#                     except (ValueError, TypeError):
+#                         pass
 
-            now_dt = datetime.now(timezone.utc).replace(tzinfo=None)
-            added_ids = new_member_ids - old_member_ids
-            removed_ids = old_member_ids - new_member_ids
+#             now_dt = datetime.now(timezone.utc).replace(tzinfo=None)
+#             added_ids = new_member_ids - old_member_ids
+#             removed_ids = old_member_ids - new_member_ids
 
-            for added_id in added_ids:
-                u_obj = db.session.get(User, added_id)
-                u_name = (u_obj.full_name or u_obj.username) if u_obj else f"User #{added_id}"
-                db.session.add(AuditLog(
-                    org_id=user.org_id, project_id=id, user_id=user_id,
-                    action="Team Member Joined Project",
-                    details=f"{u_name} was added and joined the active project team.",
-                    ip_address=request.remote_addr if hasattr(request, 'remote_addr') else None,
-                    target_table="project_members", target_id=added_id,
-                    created_at=now_dt
-                ))
+#             for added_id in added_ids:
+#                 u_obj = db.session.get(User, added_id)
+#                 u_name = (u_obj.full_name or u_obj.username) if u_obj else f"User #{added_id}"
+#                 db.session.add(AuditLog(
+#                     org_id=user.org_id, project_id=id, user_id=user_id,
+#                     action="Team Member Joined Project",
+#                     details=f"{u_name} was added and joined the active project team.",
+#                     ip_address=request.remote_addr if hasattr(request, 'remote_addr') else None,
+#                     target_table="project_members", target_id=added_id,
+#                     created_at=now_dt
+#                 ))
 
-            for rem_id in removed_ids:
-                u_obj = db.session.get(User, rem_id)
-                u_name = (u_obj.full_name or u_obj.username) if u_obj else f"User #{rem_id}"
-                db.session.add(AuditLog(
-                    org_id=user.org_id, project_id=id, user_id=user_id,
-                    action="Team Member Left Project (Transitioned in Middle)",
-                    details=f"{u_name} left the project team / membership was removed from active roster.",
-                    ip_address=request.remote_addr if hasattr(request, 'remote_addr') else None,
-                    target_table="project_members", target_id=rem_id,
-                    created_at=now_dt
-                ))
+#             for rem_id in removed_ids:
+#                 u_obj = db.session.get(User, rem_id)
+#                 u_name = (u_obj.full_name or u_obj.username) if u_obj else f"User #{rem_id}"
+#                 db.session.add(AuditLog(
+#                     org_id=user.org_id, project_id=id, user_id=user_id,
+#                     action="Team Member Left Project (Transitioned in Middle)",
+#                     details=f"{u_name} left the project team / membership was removed from active roster.",
+#                     ip_address=request.remote_addr if hasattr(request, 'remote_addr') else None,
+#                     target_table="project_members", target_id=rem_id,
+#                     created_at=now_dt
+#                 ))
 
-            ProjectMember.query.filter_by(project_id=id).delete()
-            for uid in new_member_ids:
-                db.session.add(ProjectMember(project_id=id, user_id=uid))
+#             ProjectMember.query.filter_by(project_id=id).delete()
+#             for uid in new_member_ids:
+#                 db.session.add(ProjectMember(project_id=id, user_id=uid))
 
-    init_data = payload.get('init')
-    if init_data and isinstance(init_data, dict):
-        if 'facilitator_id' in init_data:
-            fid = init_data.get('facilitator_id')
-            project.facilitator_id = int(fid) if fid else None
-        if 'reviewer_id' in init_data:
-            rid = init_data.get('reviewer_id')
-            project.reviewer_id = int(rid) if rid else None
+#     init_data = payload.get('init')
+#     if init_data and isinstance(init_data, dict):
+#         if 'facilitator_id' in init_data:
+#             fid = init_data.get('facilitator_id')
+#             project.facilitator_id = int(fid) if fid else None
+#         if 'reviewer_id' in init_data:
+#             rid = init_data.get('reviewer_id')
+#             project.reviewer_id = int(rid) if rid else None
 
-    # Log
-    from app.infrastructure.database.models.models import AuditLog
-    db.session.add(AuditLog(
-        org_id=user.org_id, project_id=id, user_id=user_id,
-        action="Stage 1 Draft Saved",
-        details=f"Stage 1 data draft saved by {user.username}.",
-        ip_address=request.remote_addr, user_agent=request.user_agent.string,
-        target_table="project_workflow", target_id=workflow.id
-    ))
-    db.session.commit()
-    return jsonify({"msg": "Stage 1 progress saved.", "status": "Draft"}), 200
+#     # Log
+#     from app.infrastructure.database.models.models import AuditLog
+#     db.session.add(AuditLog(
+#         org_id=user.org_id, project_id=id, user_id=user_id,
+#         action="Stage 1 Draft Saved",
+#         details=f"Stage 1 data draft saved by {user.username}.",
+#         ip_address=request.remote_addr, user_agent=request.user_agent.string,
+#         target_table="project_workflow", target_id=workflow.id
+#     ))
+#     db.session.commit()
+#     return jsonify({"msg": "Stage 1 progress saved.", "status": "Draft"}), 200
+# [END DEAD CODE: save_stage1]
 
 
 
@@ -924,10 +912,6 @@ def submit_stage1(id):
     is_authorized = user.role.name in ('Team Leader', 'Team Member')
     if not is_authorized:
         return jsonify({"msg": "Access denied. Only assigned Team Leaders and Team Members can submit project stages for review."}), 403
-
-    is_assigned = (project.creator_id == user.id) or (project.team_leader_id == user.id) or (ProjectMember.query.filter_by(project_id=id, user_id=user.id).first() is not None)
-    if not (user_is_sa or is_assigned):
-        return jsonify({"msg": "Unauthorized: You are not assigned to this project."}), 403
 
     workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=1).first()
     if not workflow:
@@ -1038,9 +1022,6 @@ def review_stage1(id):
 
     if user.role.name != 'Reviewer':
         return jsonify({"msg": "Only a Reviewer can review Stage 1."}), 403
-
-    if not user_is_sa and project.reviewer_id != user.id and not ProjectMember.query.filter_by(project_id=id, user_id=user.id).first():
-        return jsonify({"msg": "Unauthorized: You are not the assigned reviewer for this project."}), 403
 
     payload = request.get_json()
     decision = payload.get('decision')  # 'approve' | 'reject' | 'send_back'
@@ -1210,61 +1191,65 @@ def sync_sop_from_stage8(project_id, sop_data, user_id):
 # ── GENERIC ROUTES FOR STAGES 2-N (DYNAMIC) ──
 
 # ==============================================================================
-@project_bp.route('/<int:id>/stage/<int:stage_id>/save', methods=['POST'])
-@jwt_required()
-def save_stage_generic(id, stage_id):
-    """Save Stage progress without submitting for review."""
-    if stage_id < 2:
-        return jsonify({"msg": "Invalid stage ID for generic route."}), 400
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: save_stage_generic (Lines 1186-1239)
+# Reason: Redundant stage draft save route.
+# ==============================================================================
+# @project_bp.route('/<int:id>/stage/<int:stage_id>/save', methods=['POST'])
+# @jwt_required()
+# def save_stage_generic(id, stage_id):
+#     """Save Stage progress without submitting for review."""
+#     if stage_id < 2:
+#         return jsonify({"msg": "Invalid stage ID for generic route."}), 400
 
-    user_id = get_jwt_identity()
-    user = db.session.get(User, user_id)
-    project = db.session.get(Project, id)
+#     user_id = get_jwt_identity()
+#     user = db.session.get(User, user_id)
+#     project = db.session.get(Project, id)
 
-    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
-    if not project or (not user_is_sa and project.org_id != user.org_id):
-        return jsonify({"msg": "Project not found"}), 404
+#     user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+#     if not project or (not user_is_sa and project.org_id != user.org_id):
+#         return jsonify({"msg": "Project not found"}), 404
 
-    # Check if project is permanently rejected
-    if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
-        return jsonify({"msg": "This project has been permanently rejected and cannot be modified or re-submitted."}), 400
+#     # Check if project is permanently rejected
+#     if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
+#         return jsonify({"msg": "This project has been permanently rejected and cannot be modified or re-submitted."}), 400
 
-    is_member = ProjectMember.query.filter_by(project_id=id, user_id=user_id).first() is not None
-    is_assigned = (project.creator_id == user.id) or (project.team_leader_id == user.id) or (project.facilitator_id == user.id) or is_member
-    is_admin = user.role and user.role.name in ('Admin', 'SuperAdmin', 'CEO')
-    if not (is_assigned or is_admin):
-        return jsonify({"msg": f"Access denied. Only assigned team members can edit Stage {stage_id} details."}), 403
+#     # STRICT RULE: Only assigned Team Leader or Team Member can edit stage details (Admin is read-only)
+#     is_authorized = user.role.name in ('Team Leader', 'Team Member')
+#     if not is_authorized:
+#         return jsonify({"msg": f"Access denied. Only assigned Team Leaders and Team Members can edit Stage {stage_id} details."}), 403
 
-    payload = request.get_json() or {}
-    workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=stage_id).first()
+#     payload = request.get_json() or {}
+#     workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=stage_id).first()
 
-    if not workflow:
-        workflow = ProjectWorkflow(project_id=id, org_id=user.org_id, stage_id=stage_id, data={})
-        db.session.add(workflow)
+#     if not workflow:
+#         workflow = ProjectWorkflow(project_id=id, org_id=user.org_id, stage_id=stage_id, data={})
+#         db.session.add(workflow)
 
-    # Merge incoming sections into existing data
-    existing = dict(workflow.data or {})
-    for section, section_data in payload.items():
-        existing[section] = section_data
-    workflow.data = existing
-    flag_modified(workflow, 'data')
-    workflow.updated_by = user_id
-    workflow.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+#     # Merge incoming sections into existing data
+#     existing = dict(workflow.data or {})
+#     for section, section_data in payload.items():
+#         existing[section] = section_data
+#     workflow.data = existing
+#     flag_modified(workflow, 'data')
+#     workflow.updated_by = user_id
+#     workflow.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    # Sync SOP if payload includes SOP data
-    if 'sop' in payload:
-        sync_sop_from_stage8(id, payload['sop'], user_id)
+#     # Sync SOP if payload includes SOP data
+#     if 'sop' in payload:
+#         sync_sop_from_stage8(id, payload['sop'], user_id)
 
-    from app.infrastructure.database.models.models import AuditLog
-    db.session.add(AuditLog(
-        org_id=user.org_id, project_id=id, user_id=user_id,
-        action=f"Stage {stage_id} Draft Saved",
-        details=f"Stage {stage_id} data draft saved by {user.username}.",
-        ip_address=request.remote_addr, user_agent=request.user_agent.string if hasattr(request, 'user_agent') and request.user_agent else None,
-        target_table="project_workflow", target_id=workflow.id
-    ))
-    db.session.commit()
-    return jsonify({"msg": f"Stage {stage_id} progress saved."}), 200
+#     from app.infrastructure.database.models.models import AuditLog
+#     db.session.add(AuditLog(
+#         org_id=user.org_id, project_id=id, user_id=user_id,
+#         action=f"Stage {stage_id} Draft Saved",
+#         details=f"Stage {stage_id} data draft saved by {user.username}.",
+#         ip_address=request.remote_addr, user_agent=request.user_agent.string,
+#         target_table="project_workflow", target_id=workflow.id
+#     ))
+#     db.session.commit()
+#     return jsonify({"msg": f"Stage {stage_id} progress saved."}), 200
+# [END DEAD CODE: save_stage_generic]
 
 
 @project_bp.route('/<int:id>/stage/<int:stage_id>/submit', methods=['POST'])
@@ -1290,10 +1275,6 @@ def submit_stage_generic(id, stage_id):
     is_authorized = user.role.name in ('Team Leader', 'Team Member')
     if not is_authorized:
         return jsonify({"msg": f"Access denied. Only assigned Team Leaders and Team Members can submit Stage {stage_id} for review."}), 403
-
-    is_assigned = (project.creator_id == user.id) or (project.team_leader_id == user.id) or (ProjectMember.query.filter_by(project_id=id, user_id=user.id).first() is not None)
-    if not (user_is_sa or is_assigned):
-        return jsonify({"msg": "Unauthorized: You are not assigned to this project."}), 403
 
     org_stages = project.stages_config or (project.organization.get_stages_config() if project.organization else [])
     total_stages = len(org_stages) if org_stages else 8
@@ -1444,10 +1425,6 @@ def request_facilitator_assistance(id):
     user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
     if not project or (not user_is_sa and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
-
-    is_assigned = (project.creator_id == user.id) or (project.team_leader_id == user.id) or (ProjectMember.query.filter_by(project_id=id, user_id=user.id).first() is not None)
-    if not (user_is_sa or is_assigned):
-        return jsonify({"msg": "Unauthorized: Only assigned project team members can request facilitator assistance."}), 403
 
     from app.infrastructure.database.models.models import Role, FacilitatorAssistanceRequest
     fac_user = project.facilitator
@@ -1763,11 +1740,6 @@ def get_stage_meetings(project_id, stage_id):
     if not project or (user.role.name != 'SuperAdmin' and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
         
-    is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
-    is_assigned = (project.creator_id == user.id) or (project.team_leader_id == user.id) or (project.facilitator_id == user.id) or (project.reviewer_id == user.id) or (ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None)
-    if not (is_admin or is_assigned):
-        return jsonify({"msg": "Unauthorized: You are not assigned to this project"}), 403
-
     from app.infrastructure.database.models.models import ProjectMeeting
     meetings = ProjectMeeting.query.filter_by(project_id=project_id, stage_id=stage_id).order_by(ProjectMeeting.scheduled_at.asc()).all()
     
@@ -1789,11 +1761,6 @@ def create_stage_meeting(project_id, stage_id):
     
     if not project or (user.role.name != 'SuperAdmin' and project.org_id != user.org_id):
         return jsonify({"msg": "Project not found"}), 404
-
-    is_admin = user.role and user.role.name in ['Admin', 'SuperAdmin', 'CEO']
-    is_assigned = (project.creator_id == user.id) or (project.team_leader_id == user.id) or (project.facilitator_id == user.id) or (project.reviewer_id == user.id) or (ProjectMember.query.filter_by(project_id=project_id, user_id=user.id).first() is not None)
-    if not (is_admin or is_assigned):
-        return jsonify({"msg": "Unauthorized: You are not assigned to this project"}), 403
         
     data = request.get_json() or {}
     title = data.get('title')
@@ -2240,60 +2207,65 @@ def delete_project(id):
         import logging
 
         # ── DELETE order: grandchild tables first, then child tables, then projects ──
-        cleanup_queries = [
-            # Grandchild rows
-            text("DELETE FROM qc_check_sheet_entries WHERE qc_check_sheet_row_id IN (SELECT id FROM qc_check_sheet_rows WHERE qc_check_sheet_id IN (SELECT id FROM qc_check_sheets WHERE project_id = :pid))"),
-            text("DELETE FROM qc_check_sheet_rows WHERE qc_check_sheet_id IN (SELECT id FROM qc_check_sheets WHERE project_id = :pid)"),
-            text("DELETE FROM qc_pareto_items WHERE qc_pareto_id IN (SELECT id FROM qc_pareto_charts WHERE project_id = :pid)"),
-            text("DELETE FROM qc_stratification_items WHERE stratification_id IN (SELECT id FROM qc_stratifications WHERE project_id = :pid)"),
-            text("DELETE FROM qc_process_steps WHERE process_map_id IN (SELECT id FROM qc_process_maps WHERE project_id = :pid)"),
-            text("DELETE FROM qc_fishbone_branches WHERE diagram_id IN (SELECT id FROM qc_fishbone_diagrams WHERE project_id = :pid)"),
-            text("DELETE FROM qc_scatter_points WHERE scatter_id IN (SELECT id FROM qc_scatter_diagrams WHERE project_id = :pid)"),
-            text("DELETE FROM qc_control_points WHERE control_chart_id IN (SELECT id FROM qc_control_charts WHERE project_id = :pid)"),
+        # Ordered so that tables referencing other child tables come before the parent child
+        tables_to_clean = [
+            # ── Grandchild rows (rows that reference child table PKs) ──
+            'qc_check_sheet_entries',   # -> qc_check_sheet_rows -> qc_check_sheets -> projects
+            'qc_check_sheet_rows',      # -> qc_check_sheets -> projects
+            'qc_pareto_items',          # -> qc_pareto_charts -> projects
+            'qc_stratification_items',  # -> qc_stratifications -> projects
+            'qc_process_steps',         # -> qc_process_maps -> projects
+            'qc_fishbone_branches',     # -> qc_fishbone_diagrams -> projects
+            'qc_scatter_points',        # -> qc_scatter_diagrams -> projects
+            'qc_control_points',        # -> qc_control_charts -> projects
 
-            # Direct child tables
-            text("DELETE FROM audit_logs WHERE project_id = :pid"),
-            text("DELETE FROM facilitator_notes WHERE project_id = :pid"),
-            text("DELETE FROM facilitator_assistance_requests WHERE project_id = :pid"),
-            text("DELETE FROM project_reviews WHERE project_id = :pid"),
-            text("DELETE FROM project_workflow WHERE project_id = :pid"),
-            text("DELETE FROM project_meetings WHERE project_id = :pid"),
-            text("DELETE FROM project_members WHERE project_id = :pid"),
-            text("DELETE FROM kpi_metrics WHERE project_id = :pid"),
-            text("DELETE FROM kpi_dashboard_cache WHERE project_id = :pid"),
-            text("DELETE FROM project_stage_tracker WHERE project_id = :pid"),
-            text("DELETE FROM knowledge_repository WHERE project_id = :pid"),
-            text("DELETE FROM employee_points WHERE project_id = :pid"),
+            # ── Direct child tables (FK -> projects.id) ──
+            'audit_logs',
+            'facilitator_notes',
+            'facilitator_assistance_requests',
+            'project_reviews',
+            'project_workflow',
+            'project_meetings',
+            'project_members',
+            'kpi_metrics',
+            'kpi_dashboard_cache',
+            'project_stage_tracker',
+            'knowledge_repository',
+            'employee_points',
 
-            # QC tool parent tables
-            text("DELETE FROM qc_check_sheets WHERE project_id = :pid"),
-            text("DELETE FROM qc_pareto_charts WHERE project_id = :pid"),
-            text("DELETE FROM qc_stratifications WHERE project_id = :pid"),
-            text("DELETE FROM qc_process_maps WHERE project_id = :pid"),
-            text("DELETE FROM qc_fishbone_diagrams WHERE project_id = :pid"),
-            text("DELETE FROM qc_scatter_diagrams WHERE project_id = :pid"),
-            text("DELETE FROM qc_control_charts WHERE project_id = :pid"),
+            # ── QC tool parent tables ──
+            'qc_check_sheets',
+            'qc_pareto_charts',
+            'qc_stratifications',
+            'qc_process_maps',
+            'qc_fishbone_diagrams',
+            'qc_scatter_diagrams',
+            'qc_control_charts',
 
-            # Stage data tables
-            text("DELETE FROM stage_1_problem_definition_project_initiation WHERE project_id = :pid"),
-            text("DELETE FROM stage_2_observation_data_collection WHERE project_id = :pid"),
-            text("DELETE FROM stage_3_cause_identification WHERE project_id = :pid"),
-            text("DELETE FROM stage_4_root_cause_analysis_verification WHERE project_id = :pid"),
-            text("DELETE FROM stage_5_countermeasure_planning_solution_development WHERE project_id = :pid"),
-            text("DELETE FROM stage_6_implementation_change_management WHERE project_id = :pid"),
-            text("DELETE FROM stage_7_performance_verification_benefits_realization WHERE project_id = :pid"),
-            text("DELETE FROM stage_8_standardization_knowledge_sharing_project_closure WHERE project_id = :pid"),
+            # ── Stage data tables ──
+            'stage_1_problem_definition_project_initiation',
+            'stage_2_observation_data_collection',
+            'stage_3_cause_identification',
+            'stage_4_root_cause_analysis_verification',
+            'stage_5_countermeasure_planning_solution_development',
+            'stage_6_implementation_change_management',
+            'stage_7_performance_verification_benefits_realization',
+            'stage_8_standardization_knowledge_sharing_project_closure',
         ]
         
-        for stmt in cleanup_queries:
+        for table in tables_to_clean:
             try:
                 with db.session.begin_nested():
-                    db.session.execute(stmt, {"pid": id})
+                    db.session.execute(
+                        text(f"DELETE FROM {table} WHERE project_id = :pid"),
+                        {"pid": id}
+                    )
             except Exception as e:
                 err_str = str(e).lower()
+                # Ignore if table doesn't exist yet (feature not used by this org)
                 if "does not exist" not in err_str and "no such table" not in err_str and "undefined" not in err_str:
                     import logging
-                    logging.warning(f"[delete_project] Failed to clean child table data: {e}")
+                    logging.warning(f"[delete_project] Failed to delete from '{table}': {e}")
         
         # Finally delete the project row itself
         db.session.execute(text("DELETE FROM projects WHERE id = :pid"), {"pid": id})
@@ -2386,279 +2358,4 @@ def close_project(project_id):
     except Exception as err:
         db.session.rollback()
         return internal_server_error(err, "Project closure failed.")
-
-
-@project_bp.route('/<int:project_id>/documents', methods=['GET'])
-@jwt_required()
-def get_project_documents(project_id):
-    """
-    Retrieve all documents, attachments, SOPs, and media uploaded across all 8 stages of a project.
-    """
-    current_user_id = int(get_jwt_identity())
-    user = db.session.get(User, current_user_id)
-    if not user:
-        return jsonify({"status": "error", "message": "User not found"}), 404
-
-    project = db.session.get(Project, project_id)
-    if not project:
-        return jsonify({"status": "error", "message": "Project not found"}), 404
-
-    if user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
-        return jsonify({"status": "error", "message": "Unauthorized access to project documents."}), 403
-
-    from app.infrastructure.database.models.workflow import (
-        Stage1ProblemDefinitionProjectInitiation,
-        Stage2ObservationDataCollection,
-        Stage3CauseIdentification,
-        Stage4RootCauseAnalysisVerification,
-        Stage5CountermeasurePlanningSolutionDevelopment,
-        Stage6ImplementationChangeManagement,
-        Stage7PerformanceVerificationBenefitsRealization,
-        Stage8StandardizationKnowledgeSharingProjectClosure
-    )
-    from app.infrastructure.database.models.audit import KnowledgeRepository
-
-    stage_names = {
-        1: 'Stage 1: Problem Definition',
-        2: 'Stage 2: Observation & Data Collection',
-        3: 'Stage 3: Cause Identification',
-        4: 'Stage 4: Root Cause Analysis',
-        5: 'Stage 5: Countermeasure Planning',
-        6: 'Stage 6: Implementation & Change Mgmt',
-        7: 'Stage 7: Performance Verification',
-        8: 'Stage 8: Standardization & Closure'
-    }
-
-    stage_models = [
-        (Stage1ProblemDefinitionProjectInitiation, 1),
-        (Stage2ObservationDataCollection, 2),
-        (Stage3CauseIdentification, 3),
-        (Stage4RootCauseAnalysisVerification, 4),
-        (Stage5CountermeasurePlanningSolutionDevelopment, 5),
-        (Stage6ImplementationChangeManagement, 6),
-        (Stage7PerformanceVerificationBenefitsRealization, 7),
-        (Stage8StandardizationKnowledgeSharingProjectClosure, 8)
-    ]
-
-    docs = []
-    seen_urls = set()
-    upload_base_dir = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'uploads'))
-
-    def format_size(bytes_val):
-        if not bytes_val or bytes_val <= 0:
-            return None
-        if bytes_val < 1024:
-            return f"{bytes_val} B"
-        elif bytes_val < 1024 * 1024:
-            return f"{round(bytes_val / 1024, 1)} KB"
-        else:
-            return f"{round(bytes_val / (1024 * 1024), 2)} MB"
-
-    def get_file_type(ext):
-        ext = ext.lower()
-        if ext == 'pdf':
-            return 'PDF Document'
-        elif ext in ('doc', 'docx', 'rtf'):
-            return 'Word Document'
-        elif ext in ('xls', 'xlsx', 'csv'):
-            return 'Spreadsheet'
-        elif ext in ('ppt', 'pptx'):
-            return 'Presentation'
-        elif ext in ('png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'):
-            return 'Image'
-        elif ext in ('mp4', 'mkv', 'avi', 'webm', 'mov'):
-            return 'Video'
-        elif ext in ('zip', 'rar', '7z', 'tar', 'gz'):
-            return 'Archive'
-        elif ext in ('txt', 'log'):
-            return 'Text File'
-        return 'Document'
-
-    def process_val(val, stage_num, section_name, label=''):
-        if not val:
-            return
-        if isinstance(val, str):
-            val_str = val.strip()
-            file_extensions = ('.pdf', '.docx', '.doc', '.xlsx', '.xls', '.csv', '.pptx', '.ppt', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.mp4', '.txt', '.zip')
-            is_file_like = (
-                any(ext in val_str.lower() for ext in file_extensions) or 
-                '/uploads/' in val_str or 
-                val_str.startswith('http://') or 
-                val_str.startswith('https://') or 
-                val_str.startswith('/uploads/') or 
-                val_str.startswith('uploads/')
-            )
-            
-            # Validate URL/path format
-            if is_file_like and (val_str.startswith('http://') or val_str.startswith('https://') or val_str.startswith('/uploads/') or val_str.startswith('uploads/') or val_str.startswith('/')):
-                if val_str not in seen_urls:
-                    seen_urls.add(val_str)
-                    clean_path = val_str.split('?')[0]
-                    raw_filename = clean_path.split('/')[-1]
-                    ext = raw_filename.split('.')[-1].lower() if '.' in raw_filename else 'file'
-                    
-                    is_external = val_str.startswith('http://') or val_str.startswith('https://')
-                    if is_external and request.host in val_str:
-                        is_external = False
-
-                    # Attempt to resolve local file size
-                    file_size_str = None
-                    if not is_external and ('/uploads/' in val_str or val_str.startswith('uploads/')):
-                        rel_path = val_str.split('uploads/', 1)[-1]
-                        possible_paths = [
-                            os.path.join(upload_base_dir, rel_path),
-                            os.path.join(os.getcwd(), 'uploads', rel_path),
-                            os.path.join(os.getcwd(), 'backend', 'uploads', rel_path),
-                            os.path.join(os.path.abspath(os.path.join(current_app.root_path, '..', 'uploads')), rel_path)
-                        ]
-                        for p in possible_paths:
-                            if os.path.isfile(p):
-                                file_size_str = format_size(os.path.getsize(p))
-                                break
-
-                    display_name = label if label and label != val_str else raw_filename
-                    if display_name.startswith('ev_') and len(display_name) > 20:
-                        # strip timestamp prefix from uploaded filename for cleaner display
-                        parts = display_name.split('_', 2)
-                        if len(parts) == 3 and parts[0] == 'ev':
-                            display_name = parts[2]
-
-                    docs.append({
-                        "id": f"doc_{len(docs) + 1}",
-                        "stage_number": stage_num,
-                        "stage_title": stage_names.get(stage_num, f"Stage {stage_num}"),
-                        "section": section_name.replace('_', ' ').title(),
-                        "label": display_name,
-                        "filename": raw_filename,
-                        "url": val_str,
-                        "is_external": is_external,
-                        "extension": ext,
-                        "file_type": get_file_type(ext),
-                        "file_size": file_size_str or "External / Remote"
-                    })
-        elif isinstance(val, dict):
-            doc_label = val.get('document') or val.get('title') or val.get('name') or val.get('keyword') or val.get('summary') or val.get('file_name') or label
-            for k, v in val.items():
-                process_val(v, stage_num, section_name, doc_label)
-        elif isinstance(val, list):
-            for item in val:
-                process_val(item, stage_num, section_name, label)
-
-    # 1. Scan All 8 Workflow Stages
-    for sm, snum in stage_models:
-        rec = sm.query.filter_by(project_id=project.id).first()
-        if not rec:
-            continue
-        for col in rec.__table__.columns:
-            if col.name in ('id', 'org_id', 'project_id', 'created_at', 'facilitator_approver_id', 'reviewer_id', 'approver_id', 'approved_by', 'facilitator_approved', 'reviewer_approval', 'is_approved', 'final_approval', 'admin_closure', 'facilitator_validation'):
-                continue
-            val = getattr(rec, col.name)
-            process_val(val, snum, col.name)
-
-    # 2. Scan Knowledge Repository Entry
-    kr_entry = KnowledgeRepository.query.filter_by(project_id=project.id).first()
-    if kr_entry:
-        if kr_entry.sop_path:
-            process_val(kr_entry.sop_path, 8, "SOP Standardization", "Standard Operating Procedure")
-        if kr_entry.closure_report_path:
-            process_val(kr_entry.closure_report_path, 8, "Project Closure Report", "Executive Closure Report")
-        if kr_entry.tags:
-            process_val(kr_entry.tags, 8, "Knowledge Repository Tags")
-
-    return jsonify({
-        "status": "success",
-        "project_id": project.id,
-        "project_uid": project.project_uid,
-        "project_title": project.title,
-        "total_documents": len(docs),
-        "documents": docs
-    }), 200
-
-
-@project_bp.route('/<int:project_id>/documents/download-all', methods=['GET'])
-@jwt_required()
-def download_all_project_documents(project_id):
-    """
-    Bundle and download all local project documents and attachments in a structured ZIP archive.
-    """
-    import io
-    import zipfile
-    from flask import send_file
-
-    current_user_id = int(get_jwt_identity())
-    user = db.session.get(User, current_user_id)
-    if not user:
-        return jsonify({"status": "error", "message": "User not found"}), 404
-
-    project = db.session.get(Project, project_id)
-    if not project:
-        return jsonify({"status": "error", "message": "Project not found"}), 404
-
-    if user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
-        return jsonify({"status": "error", "message": "Unauthorized access to project documents."}), 403
-
-    # Call get_project_documents logic to get the list
-    docs_resp, status_code = get_project_documents(project_id)
-    if status_code != 200:
-        return docs_resp, status_code
-
-    docs_data = docs_resp.get_json() or {}
-    documents = docs_data.get('documents', [])
-
-    if not documents:
-        return jsonify({"status": "error", "message": "No documents uploaded for this project."}), 404
-
-    zip_buffer = io.BytesIO()
-    upload_base_dir = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'uploads'))
-    added_count = 0
-
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for doc in documents:
-            url = doc.get('url', '')
-            if doc.get('is_external') or not ('/uploads/' in url or url.startswith('uploads/')):
-                continue
-
-            rel_path = url.split('uploads/', 1)[-1]
-            possible_paths = [
-                os.path.join(upload_base_dir, rel_path),
-                os.path.join(os.getcwd(), 'uploads', rel_path),
-                os.path.join(os.getcwd(), 'backend', 'uploads', rel_path),
-                os.path.join(os.path.abspath(os.path.join(current_app.root_path, '..', 'uploads')), rel_path)
-            ]
-            file_disk_path = None
-            for p in possible_paths:
-                if os.path.isfile(p):
-                    file_disk_path = p
-                    break
-
-            if file_disk_path:
-                stage_folder = f"Stage_{doc.get('stage_number', 1)}"
-                safe_name = os.path.basename(file_disk_path)
-                arcname = f"{stage_folder}/{safe_name}"
-                zf.write(file_disk_path, arcname=arcname)
-                added_count += 1
-
-        # Also write a manifest.txt inside the zip
-        manifest_lines = [
-            f"Project UID: {project.project_uid}",
-            f"Project Title: {project.title}",
-            f"Total Documents: {len(documents)}",
-            f"Exported At: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
-            "",
-            "=== Document List ==="
-        ]
-        for d in documents:
-            manifest_lines.append(f"- [{d.get('stage_title')}] {d.get('label')} ({d.get('filename')}) -> {d.get('url')}")
-
-        zf.writestr("project_documents_manifest.txt", "\n".join(manifest_lines))
-
-    zip_buffer.seek(0)
-    zip_filename = f"{project.project_uid}_Documents.zip"
-    return send_file(
-        zip_buffer,
-        mimetype="application/zip",
-        as_attachment=True,
-        download_name=zip_filename
-    )
-
 

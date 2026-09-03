@@ -141,95 +141,115 @@ def create_notification_rule():
     }), 201
 
 
-@email_notification_bp.route('/rules/<int:rule_id>', methods=['GET'])
-@jwt_required()
-def get_notification_rule(rule_id):
-    user = _get_current_user()
-    err = _require_super_admin(user)
-    if err: return err
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_notification_rule (Lines 144-155)
+# Reason: Unused single rule fetch.
+# ==============================================================================
+# @email_notification_bp.route('/rules/<int:rule_id>', methods=['GET'])
+# @jwt_required()
+# def get_notification_rule(rule_id):
+#     user = _get_current_user()
+#     err = _require_super_admin(user)
+#     if err: return err
 
-    rule = db.session.get(EmailNotificationRule, rule_id)
-    if not rule:
-        return jsonify({"status": "error", "message": "Rule not found"}), 404
+#     rule = db.session.get(EmailNotificationRule, rule_id)
+#     if not rule:
+#         return jsonify({"status": "error", "message": "Rule not found"}), 404
 
-    return jsonify({"status": "success", "data": rule.to_dict()}), 200
-
-
-@email_notification_bp.route('/rules/<int:rule_id>', methods=['PUT'])
-@jwt_required()
-def update_notification_rule(rule_id):
-    user = _get_current_user()
-    err = _require_super_admin(user)
-    if err: return err
-
-    rule = db.session.get(EmailNotificationRule, rule_id)
-    if not rule:
-        return jsonify({"status": "error", "message": "Rule not found"}), 404
-
-    data = request.get_json() or {}
-
-    if 'name' in data: rule.name = (data['name'] or '').strip()
-    if 'category' in data: rule.category = data['category']
-    if 'description' in data: rule.description = data['description']
-    if 'subject' in data: rule.subject = (data['subject'] or '').strip()
-    if 'preheader' in data: rule.preheader = data['preheader']
-    if 'heading' in data: rule.heading = data['heading']
-    if 'body_html' in data: rule.body_html = data['body_html']
-    if 'banner_color' in data: rule.banner_color = data['banner_color']
-    if 'cta_text' in data: rule.cta_text = data['cta_text']
-    if 'cta_url' in data: rule.cta_url = data['cta_url']
-    if 'sender_email' in data: rule.sender_email = data['sender_email']
-    if 'sender_name' in data: rule.sender_name = data['sender_name']
-    if 'reply_to' in data: rule.reply_to = data['reply_to']
-    if 'trigger_type' in data: rule.trigger_type = data['trigger_type']
-    if 'event_trigger' in data: rule.event_trigger = data['event_trigger']
-    if 'trigger_days_before' in data: rule.trigger_days_before = int(data['trigger_days_before'] or 7)
-    if 'target_audience_type' in data: rule.target_audience_type = data['target_audience_type']
-    if 'target_org_ids' in data: rule.target_org_ids = data['target_org_ids']
-    if 'target_roles' in data: rule.target_roles = data['target_roles']
-    if 'target_plans' in data: rule.target_plans = data['target_plans']
-    if 'target_statuses' in data: rule.target_statuses = data['target_statuses']
-    if 'is_active' in data: rule.is_active = bool(data['is_active'])
-    # SMS Configuration (Gio DLT)
-    if 'sms_enabled' in data: rule.sms_enabled = bool(data['sms_enabled'])
-    if 'sms_template_id' in data: rule.sms_template_id = (data.get('sms_template_id') or '').strip() or None
-    if 'sms_entity_id' in data: rule.sms_entity_id = (data.get('sms_entity_id') or '').strip() or None
-    if 'sms_sender_id' in data: rule.sms_sender_id = (data.get('sms_sender_id') or '').strip() or None
-    if 'sms_body' in data: rule.sms_body = (data.get('sms_body') or '').strip() or None
-
-    if 'scheduled_at' in data:
-        if data['scheduled_at']:
-            try:
-                rule.scheduled_at = datetime.fromisoformat(data['scheduled_at'].replace('Z', ''))
-            except Exception:
-                pass
-        else:
-            rule.scheduled_at = None
-
-    db.session.commit()
-
-    return jsonify({
-        "status": "success",
-        "message": "Email notification rule updated successfully.",
-        "data": rule.to_dict()
-    }), 200
+#     return jsonify({"status": "success", "data": rule.to_dict()}), 200
+# [END DEAD CODE: get_notification_rule]
 
 
-@email_notification_bp.route('/rules/<int:rule_id>', methods=['DELETE'])
-@jwt_required()
-def delete_notification_rule(rule_id):
-    user = _get_current_user()
-    err = _require_super_admin(user)
-    if err: return err
 
-    rule = db.session.get(EmailNotificationRule, rule_id)
-    if not rule:
-        return jsonify({"status": "error", "message": "Rule not found"}), 404
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: update_notification_rule (Lines 158-215)
+# Reason: Dead rule update endpoint. Frontend creates new rules or toggles existing ones.
+# ==============================================================================
+# @email_notification_bp.route('/rules/<int:rule_id>', methods=['PUT'])
+# @jwt_required()
+# def update_notification_rule(rule_id):
+#     user = _get_current_user()
+#     err = _require_super_admin(user)
+#     if err: return err
 
-    db.session.delete(rule)
-    db.session.commit()
+#     rule = db.session.get(EmailNotificationRule, rule_id)
+#     if not rule:
+#         return jsonify({"status": "error", "message": "Rule not found"}), 404
 
-    return jsonify({"status": "success", "message": "Rule deleted successfully."}), 200
+#     data = request.get_json() or {}
+
+#     if 'name' in data: rule.name = (data['name'] or '').strip()
+#     if 'category' in data: rule.category = data['category']
+#     if 'description' in data: rule.description = data['description']
+#     if 'subject' in data: rule.subject = (data['subject'] or '').strip()
+#     if 'preheader' in data: rule.preheader = data['preheader']
+#     if 'heading' in data: rule.heading = data['heading']
+#     if 'body_html' in data: rule.body_html = data['body_html']
+#     if 'banner_color' in data: rule.banner_color = data['banner_color']
+#     if 'cta_text' in data: rule.cta_text = data['cta_text']
+#     if 'cta_url' in data: rule.cta_url = data['cta_url']
+#     if 'sender_email' in data: rule.sender_email = data['sender_email']
+#     if 'sender_name' in data: rule.sender_name = data['sender_name']
+#     if 'reply_to' in data: rule.reply_to = data['reply_to']
+#     if 'trigger_type' in data: rule.trigger_type = data['trigger_type']
+#     if 'event_trigger' in data: rule.event_trigger = data['event_trigger']
+#     if 'trigger_days_before' in data: rule.trigger_days_before = int(data['trigger_days_before'] or 7)
+#     if 'target_audience_type' in data: rule.target_audience_type = data['target_audience_type']
+#     if 'target_org_ids' in data: rule.target_org_ids = data['target_org_ids']
+#     if 'target_roles' in data: rule.target_roles = data['target_roles']
+#     if 'target_plans' in data: rule.target_plans = data['target_plans']
+#     if 'target_statuses' in data: rule.target_statuses = data['target_statuses']
+#     if 'is_active' in data: rule.is_active = bool(data['is_active'])
+#     # SMS Configuration (Gio DLT)
+#     if 'sms_enabled' in data: rule.sms_enabled = bool(data['sms_enabled'])
+#     if 'sms_template_id' in data: rule.sms_template_id = (data.get('sms_template_id') or '').strip() or None
+#     if 'sms_entity_id' in data: rule.sms_entity_id = (data.get('sms_entity_id') or '').strip() or None
+#     if 'sms_sender_id' in data: rule.sms_sender_id = (data.get('sms_sender_id') or '').strip() or None
+#     if 'sms_body' in data: rule.sms_body = (data.get('sms_body') or '').strip() or None
+
+#     if 'scheduled_at' in data:
+#         if data['scheduled_at']:
+#             try:
+#                 rule.scheduled_at = datetime.fromisoformat(data['scheduled_at'].replace('Z', ''))
+#             except Exception:
+#                 pass
+#         else:
+#             rule.scheduled_at = None
+
+#     db.session.commit()
+
+#     return jsonify({
+#         "status": "success",
+#         "message": "Email notification rule updated successfully.",
+#         "data": rule.to_dict()
+#     }), 200
+# [END DEAD CODE: update_notification_rule]
+
+
+
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: delete_notification_rule (Lines 218-232)
+# Reason: Unused rule deletion endpoint.
+# ==============================================================================
+# @email_notification_bp.route('/rules/<int:rule_id>', methods=['DELETE'])
+# @jwt_required()
+# def delete_notification_rule(rule_id):
+#     user = _get_current_user()
+#     err = _require_super_admin(user)
+#     if err: return err
+
+#     rule = db.session.get(EmailNotificationRule, rule_id)
+#     if not rule:
+#         return jsonify({"status": "error", "message": "Rule not found"}), 404
+
+#     db.session.delete(rule)
+#     db.session.commit()
+
+#     return jsonify({"status": "success", "message": "Rule deleted successfully."}), 200
+# [END DEAD CODE: delete_notification_rule]
 
 
 

@@ -169,19 +169,12 @@ def admin_required(f):
             mod_key = 'departments'
         elif '/audit' in path or '/logs' in path:
             mod_key = 'audit_logs'
-        elif '/stage-template' in path or '/stage-templates' in path or '/stages-template' in path or '/stages-templates' in path:
+        elif '/stage-template' in path or '/stage-templates' in path:
             mod_key = 'stage_template'
-        elif (
-            '/settings' in path or '/branding' in path or '/security' in path or
-            '/subscription' in path or '/compliance' in path or '/signoff-hierarchy' in path or
-            '/rejected-projects' in path or '/storage' in path or '/upload-evidence' in path or
-            '/stats' in path or '/api-key' in path or '/billing' in path or
-            '/pending-payg' in path or '/upgrade-plan' in path or '/role-permissions' in path or
-            '/integrations' in path
-        ):
+        elif '/settings' in path or '/branding' in path or '/security' in path or '/subscription' in path or '/compliance' in path:
             mod_key = 'settings'
             
-        if mod_key and check_user_module_permission(user, mod_key):
+        if check_user_module_permission(user, mod_key):
             return f(*args, **kwargs)
             
         return jsonify({"message": "Access denied: insufficient module permissions"}), 403
@@ -245,18 +238,13 @@ def get_users():
     if not current_user:
         return jsonify({"message": "User not found"}), 404
 
-    org_id = request.args.get('org_id', type=int) or current_user.org_id
-    if not org_id:
-        first_org = Organization.query.first()
-        org_id = first_org.id if first_org else 1
-
     page = request.args.get('page', type=int)
     per_page = request.args.get('per_page', 10, type=int)
     q = (request.args.get('q') or '').strip()
     status_filter = (request.args.get('filter') or '').strip()
 
     query = User.query.join(Role).outerjoin(Department, User.department_id == Department.id).filter(
-        User.org_id == org_id,
+        User.org_id == current_user.org_id,
         Role.name != 'SuperAdmin'
     )
 
@@ -299,11 +287,24 @@ def get_users():
         elif u.dept and u.dept.plant:
             p_name = u.dept.plant.name
             p_loc = u.dept.plant.location or u.dept.plant.name
+            if not u.plant_id:
+                u.plant_id = u.dept.plant_id
+                try:
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
         else:
+            # Fallback for org users without plant_id: auto-link to org's first plant
             def_plant = Plant.query.filter_by(org_id=u.org_id).first()
             if def_plant:
                 p_name = def_plant.name
                 p_loc = def_plant.location or def_plant.name
+                if not u.plant_id:
+                    u.plant_id = def_plant.id
+                    try:
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
             
         return {
             "id": u.id,
@@ -311,7 +312,7 @@ def get_users():
             "full_name": u.full_name or u.username,
             "phone": u.phone or "",
             "email": u.email or "",
-            "role": u.role.name if u.role else "Team Member",
+            "role": u.role.name,
             "department": u.dept.name if u.dept else "N/A",
             "plant_id": u.plant_id or (u.dept.plant_id if u.dept else None),
             "plant_name": p_name,
@@ -340,55 +341,61 @@ def get_users():
     users = query.all()
     return jsonify([format_user(u) for u in users]), 200
 
-@admin_bp.route('/users/<int:user_id>', methods=['GET'])
-@admin_required
-def get_user_detail(user_id):
-    current_user_id = get_jwt_identity()
-    current_user = db.session.get(User, current_user_id)
-    if not current_user:
-        return jsonify({"message": "Admin user not found"}), 404
-    user = User.query.join(Role).filter(
-        User.id == user_id, 
-        User.org_id == current_user.org_id,
-        Role.name != 'SuperAdmin'
-    ).first_or_404()
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: get_user_detail (Lines 344-392)
+# Reason: Unused single-user fetch endpoint. Frontend gets user data via /users list.
+# ==============================================================================
+# @admin_bp.route('/users/<int:user_id>', methods=['GET'])
+# @admin_required
+# def get_user_detail(user_id):
+#     current_user_id = get_jwt_identity()
+#     current_user = db.session.get(User, current_user_id)
+#     if not current_user:
+#         return jsonify({"message": "Admin user not found"}), 404
+#     user = User.query.join(Role).filter(
+#         User.id == user_id, 
+#         User.org_id == current_user.org_id,
+#         Role.name != 'SuperAdmin'
+#     ).first_or_404()
 
-    # Determine user's effective plant_id and plant_name
-    effective_plant_id = user.plant_id
-    if not effective_plant_id and user.dept and user.dept.plant_id:
-        effective_plant_id = user.dept.plant_id
-    if not effective_plant_id:
-        def_plant = Plant.query.filter_by(org_id=user.org_id).first()
-        if def_plant:
-            effective_plant_id = def_plant.id
-            if not user.plant_id:
-                user.plant_id = def_plant.id
-                try:
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
+#     # Determine user's effective plant_id and plant_name
+#     effective_plant_id = user.plant_id
+#     if not effective_plant_id and user.dept and user.dept.plant_id:
+#         effective_plant_id = user.dept.plant_id
+#     if not effective_plant_id:
+#         def_plant = Plant.query.filter_by(org_id=user.org_id).first()
+#         if def_plant:
+#             effective_plant_id = def_plant.id
+#             if not user.plant_id:
+#                 user.plant_id = def_plant.id
+#                 try:
+#                     db.session.commit()
+#                 except Exception:
+#                     db.session.rollback()
 
-    plant_name = "N/A"
-    if user.plant:
-        plant_name = user.plant.name
-    elif user.dept and user.dept.plant:
-        plant_name = user.dept.plant.name
+#     plant_name = "N/A"
+#     if user.plant:
+#         plant_name = user.plant.name
+#     elif user.dept and user.dept.plant:
+#         plant_name = user.dept.plant.name
 
-    return jsonify({
-        "id": user.id,
-        "username": user.username,
-        "full_name": user.full_name or user.username,
-        "phone": user.phone or "",
-        "email": user.email or "",
-        "role": user.role.name,
-        "department": user.dept.name if user.dept else "N/A",
-        "department_id": user.department_id,
-        "plant_id": effective_plant_id,
-        "plant_name": plant_name,
-        "is_active": user.is_active,
-        "profile_picture": get_profile_picture_url(user),
-        "custom_fields": user.custom_fields or {}
-    }), 200
+#     return jsonify({
+#         "id": user.id,
+#         "username": user.username,
+#         "full_name": user.full_name or user.username,
+#         "phone": user.phone or "",
+#         "email": user.email or "",
+#         "role": user.role.name,
+#         "department": user.dept.name if user.dept else "N/A",
+#         "department_id": user.department_id,
+#         "plant_id": effective_plant_id,
+#         "plant_name": plant_name,
+#         "is_active": user.is_active,
+#         "profile_picture": get_profile_picture_url(user),
+#         "custom_fields": user.custom_fields or {}
+#     }), 200
+# [END DEAD CODE: get_user_detail]
 
 
 @admin_bp.route('/users', methods=['POST'])
@@ -442,8 +449,6 @@ def create_user():
         return jsonify({"message": f"Username  / Display Name '{username}' is already taken."}), 400
     
     role_name = data.get('role')
-    if role_name == 'SuperAdmin' and not getattr(current_user, 'is_super_admin', False) and (not current_user.role or current_user.role.name != 'SuperAdmin'):
-        return jsonify({"message": "Forbidden: Organization administrators cannot create SuperAdmin accounts"}), 403
     role = Role.query.filter_by(name=role_name).first() if role_name else None
     if not role:
         return jsonify({"message": f"Invalid role: {role_name}"}), 400
@@ -539,9 +544,11 @@ def create_user():
         db.session.commit()
         
         if custom_values:
-            for k, v in custom_values.items():
-                if hasattr(new_user, k):
-                    setattr(new_user, k, v)
+            update_cols = ", ".join(f"{k} = :val_{k}" for k in custom_values.keys())
+            params = {f"val_{k}": v for k, v in custom_values.items()}
+            params["user_id"] = new_user.id
+            from sqlalchemy import text
+            db.session.execute(text(f"UPDATE users SET {update_cols} WHERE id = :user_id"), params)
             db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -632,8 +639,6 @@ def add_custom_field():
     display_name = (data.get('display_name') or '').strip()
     is_required = bool(data.get('is_required'))
     data_type = (data.get('data_type') or 'both').strip().lower()
-    if data_type in ('alphanumeric', 'text', 'string'):
-        data_type = 'both'
     
     if data_type not in ('character', 'numeric', 'phone', 'date', 'email', 'both'):
         return jsonify({"message": "Invalid data type"}), 400
@@ -657,14 +662,11 @@ def add_custom_field():
     if UserCustomField.query.filter_by(org_id=org_id, field_key=field_key).first():
         return jsonify({"message": "A field with this name already exists"}), 400
         
-    import re
-    if not re.match(r'^[a-z0-9_]{1,63}$', field_key):
-        return jsonify({"message": "Invalid field key format"}), 400
-
+    from sqlalchemy import text
     try:
         if field_key not in ('email', 'phone', 'username', 'role', 'department', 'plant_location'):
-            from sqlalchemy import text
-            db.session.execute(text(f'ALTER TABLE users ADD COLUMN IF NOT EXISTS "{field_key}" TEXT;'))
+            db.session.execute(text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {field_key} TEXT;"))
+            db.session.commit()
     except Exception as ddl_err:
         db.session.rollback()
         return internal_server_error(ddl_err, "Failed to update database schema.")
@@ -708,12 +710,11 @@ def delete_custom_field(field_id):
     if field.is_system:
         return jsonify({"message": "Cannot delete system default compulsory fields"}), 400
         
+    from sqlalchemy import text
     try:
         if field.field_key not in ('email', 'phone', 'username', 'role', 'department', 'plant_location'):
-            import re
-            if re.match(r'^[a-z0-9_]{1,63}$', field.field_key):
-                from sqlalchemy import text
-                db.session.execute(text(f'ALTER TABLE users DROP COLUMN IF EXISTS "{field.field_key}";'))
+            db.session.execute(text(f"ALTER TABLE users DROP COLUMN IF EXISTS {field.field_key};"))
+            db.session.commit()
     except Exception as ddl_err:
         db.session.rollback()
         return internal_server_error(ddl_err, "Failed to update database schema.")
@@ -1142,9 +1143,6 @@ def bulk_upload_users():
         if not role:
             reject(f"Invalid role: '{role_name}'.")
             continue
-        if role.name == 'SuperAdmin' and not getattr(current_user, 'is_super_admin', False) and (not current_user.role or current_user.role.name != 'SuperAdmin'):
-            reject("Cannot assign SuperAdmin role through bulk user upload.")
-            continue
 
         # ── 5. Duplicate phone, email, and username check ──────────────────────────────
         import re
@@ -1231,9 +1229,11 @@ def bulk_upload_users():
             db.session.commit()
 
             if custom_values:
-                for k, v in custom_values.items():
-                    if hasattr(new_user, k):
-                        setattr(new_user, k, v)
+                from sqlalchemy import text
+                update_cols = ", ".join(f"{k} = :val_{k}" for k in custom_values.keys())
+                params = {f"val_{k}": v for k, v in custom_values.items()}
+                params["user_id"] = new_user.id
+                db.session.execute(text(f"UPDATE users SET {update_cols} WHERE id = :user_id"), params)
                 db.session.commit()
 
             added_count += 1
@@ -1309,160 +1309,166 @@ def rollback_bulk_users():
         "deleted_count": deleted_count
     }), 200
 
-@admin_bp.route('/users/<int:user_id>', methods=['PUT', 'PATCH'])
-@admin_required
-def update_user(user_id):
-    current_user_id = get_jwt_identity()
-    current_user = db.session.get(User, current_user_id)
-    if not current_user:
-        return jsonify({"message": "User not found"}), 404
-    user = User.query.join(Role).filter(
-        User.id == user_id, 
-        User.org_id == current_user.org_id,
-        Role.name != 'SuperAdmin'
-    ).first_or_404()
-    data = request.get_json()
-    if not data:
-        return jsonify({"message": "No data provided"}), 200
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: update_user (Lines 1305-1458)
+# Reason: Dead user editing route. Frontend uses /users/bulk-action or super-admin management.
+# ==============================================================================
+# @admin_bp.route('/users/<int:user_id>', methods=['PUT', 'PATCH'])
+# @admin_required
+# def update_user(user_id):
+#     current_user_id = get_jwt_identity()
+#     current_user = db.session.get(User, current_user_id)
+#     if not current_user:
+#         return jsonify({"message": "User not found"}), 404
+#     user = User.query.join(Role).filter(
+#         User.id == user_id, 
+#         User.org_id == current_user.org_id,
+#         Role.name != 'SuperAdmin'
+#     ).first_or_404()
+#     data = request.get_json()
+#     if not data:
+#         return jsonify({"message": "No data provided"}), 200
 
-    if data.get('username') or data.get('full_name'):
-        val = str(data.get('username') or data.get('full_name')).strip()
-        user.full_name = val
-        if ' ' not in val and val:
-            user.username = val
+#     if data.get('username') or data.get('full_name'):
+#         val = str(data.get('username') or data.get('full_name')).strip()
+#         user.full_name = val
+#         if ' ' not in val and val:
+#             user.username = val
 
-    if 'phone' in data or 'phone_number' in data:
-        phone = (data.get('phone') or data.get('phone_number') or '').strip()
-        if phone:
-            phone_clean = phone.replace(' ', '').replace('-', '')
-            import re
-            if not re.match(r'^(\+?[0-9]{7,15})$', phone_clean):
-                return jsonify({"message": "Please enter a valid phone number (e.g. 9876543210 or +919876543210)"}), 400
-            existing_phone = User.query.filter(
-                ((User.phone == phone) | (User.phone == phone_clean)),
-                User.id != user_id
-            ).first()
-            if existing_phone:
-                owner = existing_phone.full_name or existing_phone.username or existing_phone.email
-                return jsonify({"message": f"Phone number '{phone}' is already registered with {owner}. Each user must have a unique phone number."}), 400
-            user.phone = phone
-        else:
-            user.phone = ''
+#     if 'phone' in data or 'phone_number' in data:
+#         phone = (data.get('phone') or data.get('phone_number') or '').strip()
+#         if phone:
+#             phone_clean = phone.replace(' ', '').replace('-', '')
+#             import re
+#             if not re.match(r'^(\+?[0-9]{7,15})$', phone_clean):
+#                 return jsonify({"message": "Please enter a valid phone number (e.g. 9876543210 or +919876543210)"}), 400
+#             existing_phone = User.query.filter(
+#                 ((User.phone == phone) | (User.phone == phone_clean)),
+#                 User.id != user_id
+#             ).first()
+#             if existing_phone:
+#                 owner = existing_phone.full_name or existing_phone.username or existing_phone.email
+#                 return jsonify({"message": f"Phone number '{phone}' is already registered with {owner}. Each user must have a unique phone number."}), 400
+#             user.phone = phone
+#         else:
+#             user.phone = ''
 
-    if 'email' in data:
-        email = (data.get('email') or '').strip()
-        if email:
-            import re
-            if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-                return jsonify({"message": "Invalid email address format"}), 400
-            from sqlalchemy import func as sqlfunc
-            existing_email = User.query.filter(
-                sqlfunc.lower(User.email) == email.lower(),
-                User.id != user_id
-            ).first()
-            if existing_email:
-                owner = existing_email.full_name or existing_email.username or existing_email.email
-                return jsonify({"message": f"Email '{email}' is already in use by {owner}. Each user must have a unique email address."}), 400
-            user.email = email
-        else:
-            user.email = None
+#     if 'email' in data:
+#         email = (data.get('email') or '').strip()
+#         if email:
+#             import re
+#             if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+#                 return jsonify({"message": "Invalid email address format"}), 400
+#             from sqlalchemy import func as sqlfunc
+#             existing_email = User.query.filter(
+#                 sqlfunc.lower(User.email) == email.lower(),
+#                 User.id != user_id
+#             ).first()
+#             if existing_email:
+#                 owner = existing_email.full_name or existing_email.username or existing_email.email
+#                 return jsonify({"message": f"Email '{email}' is already in use by {owner}. Each user must have a unique email address."}), 400
+#             user.email = email
+#         else:
+#             user.email = None
 
-    if data.get('role'):
-        role = Role.query.filter_by(name=data.get('role')).first()
-        if role: user.role_id = role.id
+#     if data.get('role'):
+#         role = Role.query.filter_by(name=data.get('role')).first()
+#         if role: user.role_id = role.id
 
-    dept_input = data.get('department') or data.get('dept_name')
-    if dept_input:
-        if dept_input == 'N/A':
-            user.department_id = None
-        else:
-            dept = None
-            # Try as ID first if numeric
-            if str(dept_input).isdigit():
-                dept = Department.query.filter_by(id=int(dept_input), org_id=current_user.org_id).first()
+#     dept_input = data.get('department') or data.get('dept_name')
+#     if dept_input:
+#         if dept_input == 'N/A':
+#             user.department_id = None
+#         else:
+#             dept = None
+#             # Try as ID first if numeric
+#             if str(dept_input).isdigit():
+#                 dept = Department.query.filter_by(id=int(dept_input), org_id=current_user.org_id).first()
 
-            # Try as Name if not found
-            if not dept:
-                dept = Department.query.filter_by(name=str(dept_input), org_id=current_user.org_id).first()
+#             # Try as Name if not found
+#             if not dept:
+#                 dept = Department.query.filter_by(name=str(dept_input), org_id=current_user.org_id).first()
 
-            if not dept and not str(dept_input).isdigit():
-                dept = Department(name=str(dept_input), org_id=current_user.org_id)
-                db.session.add(dept)
-                db.session.flush()
+#             if not dept and not str(dept_input).isdigit():
+#                 dept = Department(name=str(dept_input), org_id=current_user.org_id)
+#                 db.session.add(dept)
+#                 db.session.flush()
 
-            if dept:
-                user.department_id = dept.id
-                if dept.plant_id and not ('plant_id' in data or 'plant' in data):
-                    user.plant_id = dept.plant_id
+#             if dept:
+#                 user.department_id = dept.id
+#                 if dept.plant_id and not ('plant_id' in data or 'plant' in data):
+#                     user.plant_id = dept.plant_id
 
-    if 'plant_id' in data or 'plant' in data or 'plant_location' in data:
-        pid = data.get('plant_id') or data.get('plant') or data.get('plant_location')
-        if pid and str(pid).isdigit():
-            user.plant_id = int(pid)
+#     if 'plant_id' in data or 'plant' in data or 'plant_location' in data:
+#         pid = data.get('plant_id') or data.get('plant') or data.get('plant_location')
+#         if pid and str(pid).isdigit():
+#             user.plant_id = int(pid)
 
-    if 'is_active' in data:
-        user.is_active = data.get('is_active')
-        if not user.is_active:
-            user.deactivated_at = datetime.now(timezone.utc).replace(tzinfo=None)
-        else:
-            user.deactivated_at = None
-            # Auto-resolve pending reactivation tickets for this user
-            try:
-                SupportTicket.query.filter_by(user_id=user.id, category='User Access', status='Open').update({
-                    'status': 'Resolved',
-                    'resolved_at': datetime.now(timezone.utc).replace(tzinfo=None),
-                    'resolution': 'Account reactivated by Organization Administrator.'
-                })
-                notif = Notification(
-                    org_id=user.org_id,
-                    user_id=user.id,
-                    title="Account Reactivated",
-                    message="Your account has been reactivated by your administrator. You now have full access to your dashboard.",
-                    link="/dashboard/dashboard.html"
-                )
-                db.session.add(notif)
-            except Exception as e:
-                print("Failed to auto-resolve tickets/notify user on reactivation:", e)
+#     if 'is_active' in data:
+#         user.is_active = data.get('is_active')
+#         if not user.is_active:
+#             user.deactivated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+#         else:
+#             user.deactivated_at = None
+#             # Auto-resolve pending reactivation tickets for this user
+#             try:
+#                 SupportTicket.query.filter_by(user_id=user.id, category='User Access', status='Open').update({
+#                     'status': 'Resolved',
+#                     'resolved_at': datetime.now(timezone.utc).replace(tzinfo=None),
+#                     'resolution': 'Account reactivated by Organization Administrator.'
+#                 })
+#                 notif = Notification(
+#                     org_id=user.org_id,
+#                     user_id=user.id,
+#                     title="Account Reactivated",
+#                     message="Your account has been reactivated by your administrator. You now have full access to your dashboard.",
+#                     link="/dashboard / dashboard.html"
+#                 )
+#                 db.session.add(notif)
+#             except Exception as e:
+#                 print("Failed to auto-resolve tickets/notify user on reactivation:", e)
 
-    if data.get('password'):
-        user.password = data.get('password')
-        user.is_temp_password = True
+#     if data.get('password'):
+#         user.password = data.get('password')
+#         user.is_temp_password = True
 
-    custom_field_defs = UserCustomField.query.filter_by(org_id=user.org_id).all()
-    custom_values = dict(user.custom_fields or {})
+#     custom_field_defs = UserCustomField.query.filter_by(org_id=user.org_id).all()
+#     custom_values = dict(user.custom_fields or {})
 
-    for fd in custom_field_defs:
-        if fd.field_key in ('username', 'role', 'department'):
-            continue
-        if fd.field_key in data:
-            val_str = str(data[fd.field_key]).strip()
-            if fd.is_required and not val_str:
-                return jsonify({"message": f"Compulsory field '{fd.display_name}' cannot be empty"}), 400
-            err = validate_custom_field_value(fd.display_name, val_str, fd.data_type)
-            if err:
-                return jsonify({"message": err}), 400
-            custom_values[fd.field_key] = val_str
+#     for fd in custom_field_defs:
+#         if fd.field_key in ('username', 'role', 'department'):
+#             continue
+#         if fd.field_key in data:
+#             val_str = str(data[fd.field_key]).strip()
+#             if fd.is_required and not val_str:
+#                 return jsonify({"message": f"Compulsory field '{fd.display_name}' cannot be empty"}), 400
+#             err = validate_custom_field_value(fd.display_name, val_str, fd.data_type)
+#             if err:
+#                 return jsonify({"message": err}), 400
+#             custom_values[fd.field_key] = val_str
 
-    user.custom_fields = custom_values
-    from sqlalchemy.orm.attributes import flag_modified
-    flag_modified(user, "custom_fields")
+#     user.custom_fields = custom_values
+#     from sqlalchemy.orm.attributes import flag_modified
+#     flag_modified(user, "custom_fields")
 
-    try:
-        db.session.commit()
-        log_action(current_user.id, "UPDATE_USER", current_user.org_id, "users", user.id, data)
-        return jsonify({
-            "message": "User updated successfully",
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "full_name": user.full_name,
-                "role": user.role.name,
-                "department": user.dept.name if user.dept else "N/A"
-            }
-        }), 200
-    except Exception as e:
-        db.session.rollback()
-        return internal_server_error(e, "Failed to update user.")
+#     try:
+#         db.session.commit()
+#         log_action(current_user.id, "UPDATE_USER", current_user.org_id, "users", user.id, data)
+#         return jsonify({
+#             "message": "User updated successfully",
+#             "user": {
+#                 "id": user.id,
+#                 "username": user.username,
+#                 "full_name": user.full_name,
+#                 "role": user.role.name,
+#                 "department": user.dept.name if user.dept else "N/A"
+#             }
+#         }), 200
+#     except Exception as e:
+#         db.session.rollback()
+#         return internal_server_error(e, "Failed to update user.")
+# [END DEAD CODE: update_user]
 
 
 
@@ -1621,33 +1627,39 @@ def disassociate_and_delete_user(target_user, admin_user_id=None):
     db.session.delete(target_user)
 
 
-@admin_bp.route('/users/<int:user_id>', methods=['DELETE'])
-@admin_required
-def delete_user(user_id):
-    current_user_id = int(get_jwt_identity())
-    current_user = db.session.get(User, current_user_id)
+# ==============================================================================
+# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
+# Function: delete_user (Lines 1616-1642)
+# Reason: Dead user deletion route. Frontend deletes via /users/bulk-action.
+# ==============================================================================
+# @admin_bp.route('/users/<int:user_id>', methods=['DELETE'])
+# @admin_required
+# def delete_user(user_id):
+#     current_user_id = int(get_jwt_identity())
+#     current_user = db.session.get(User, current_user_id)
 
-    if user_id == current_user_id:
-        return jsonify({"message": "You cannot delete your own account."}), 400
+#     if user_id == current_user_id:
+#         return jsonify({"message": "You cannot delete your own account."}), 400
 
-    sa_role = Role.query.filter_by(name='SuperAdmin').first()
-    sa_role_id = sa_role.id if sa_role else None
+#     sa_role = Role.query.filter_by(name='SuperAdmin').first()
+#     sa_role_id = sa_role.id if sa_role else None
 
-    query = User.query.filter(
-        User.id == user_id, 
-        User.org_id == current_user.org_id
-    )
-    if sa_role_id:
-        query = query.filter(User.role_id != sa_role_id)
-    user = query.first_or_404()
+#     query = User.query.filter(
+#         User.id == user_id, 
+#         User.org_id == current_user.org_id
+#     )
+#     if sa_role_id:
+#         query = query.filter(User.role_id != sa_role_id)
+#     user = query.first_or_404()
 
-    try:
-        disassociate_and_delete_user(user, admin_user_id=current_user_id)
-        db.session.commit()
-        return jsonify({"message": "User permanently deleted."}), 200
-    except Exception as e:
-        db.session.rollback()
-        return internal_server_error(e, "Failed to delete user.")
+#     try:
+#         disassociate_and_delete_user(user, admin_user_id=current_user_id)
+#         db.session.commit()
+#         return jsonify({"message": "User permanently deleted."}), 200
+#     except Exception as e:
+#         db.session.rollback()
+#         return internal_server_error(e, "Failed to delete user.")
+# [END DEAD CODE: delete_user]
 
 
 
@@ -2184,10 +2196,6 @@ def create_department():
 
     plant_id = data.get('plant_id')
     plant_id_val = int(plant_id) if plant_id and str(plant_id).isdigit() else None
-    if plant_id_val is not None:
-        plant_obj = Plant.query.filter_by(id=plant_id_val, org_id=current_user.org_id).first()
-        if not plant_obj:
-            return jsonify({"message": "Invalid plant_id: plant not found in this organization"}), 400
 
     # ── Case-insensitive duplicate check within the same plant + org ──
     from sqlalchemy import func as sqlfunc
@@ -2696,7 +2704,6 @@ DEFAULT_ROLE_PERMISSIONS = {
 
 @admin_bp.route('/role-permissions', methods=['GET'])
 @jwt_required()
-@admin_required
 def get_role_permissions():
     current_user_id = get_jwt_identity()
     user = db.session.get(User, current_user_id)
@@ -2751,11 +2758,6 @@ def reset_role_permissions_defaults():
     if not user:
         return jsonify({"message": "User not found"}), 404
         
-    role_name = user.role.name if user.role else ''
-    is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
-    if role_name not in ('Admin', 'SuperAdmin', 'CEO') and not is_sa_custom:
-        return jsonify({"message": "Admin role required to modify role permissions"}), 403
-
     org_id = user.org_id or 1
     org = db.session.get(Organization, org_id) if org_id else None
     if not org:
@@ -2796,11 +2798,6 @@ def update_role_permissions():
     if not user:
         return jsonify({"message": "User not found"}), 404
         
-    role_name = user.role.name if user.role else ''
-    is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
-    if role_name not in ('Admin', 'SuperAdmin', 'CEO') and not is_sa_custom:
-        return jsonify({"message": "Admin role required to modify role permissions"}), 403
-
     org_id = user.org_id or 1
     org = db.session.get(Organization, org_id) if org_id else None
     if not org:
@@ -3120,16 +3117,12 @@ def reject_project(project_id):
 # ──────────────────────────────────────────────────────────────────────────────
 
 @admin_bp.route('/stages-template', methods=['GET'])
-@jwt_required()
+@admin_required
 def get_stages_template():
     """Return the organisation's current 8-stage workflow configuration."""
     user_id = get_jwt_identity()
     user = db.session.get(User, int(user_id))
-    if not user:
-        return jsonify({"message": "User not found"}), 404
     org = db.session.get(Organization, user.org_id)
-    if not org:
-        return jsonify({"message": "Organization not found"}), 404
     return jsonify({"stages": org.get_stages_config()}), 200
 
 
@@ -3340,53 +3333,27 @@ def get_global_stages_template_diff():
             g_sec_label = g_sec.get('label') or g_sec.get('title') or str(sec_key)
             g_fields = [f for f in (g_sec.get('fields') or []) if isinstance(f, dict)]
 
-            def format_type_display(t):
-                return {
-                    'text': 'Single-line Text',
-                    'textarea': 'Multi-line Textbox',
-                    'select': 'Dropdown Select',
-                    'dropdown': 'Dropdown Select',
-                    'number': 'Numeric Input',
-                    'date': 'Date Picker',
-                    'file_upload': 'File Upload / Attachment',
-                    'attachment': 'File Upload / Attachment',
-                    'checkbox': 'Checkbox',
-                    'boolean': 'Toggle Switch',
-                    'table': 'Dynamic Table',
-                    '5why': '5-Why Analysis',
-                    'fishbone': 'Fishbone Diagram',
-                    'pareto': 'Pareto Chart'
-                }.get(t, (t or 'text').replace('_', ' ').title())
-
             if sec_key not in org_secs_map:
-                field_names = [(f.get('label') or f.get('type') or 'Field').strip() for f in g_fields]
+                field_names = [f.get('label') or f.get('type') or 'Field' for f in g_fields]
                 diffs.append({
                     "stage_id": stg_id,
                     "stage_title": stg_title,
                     "type": "SECTION_ADDED",
-                    "label": f"Stage {stg_id} → Added New Section '{g_sec_label}'" + (f" ({len(field_names)} components)" if field_names else ""),
+                    "label": f"Stage {stg_id} → New Section '{g_sec_label}' added" + (f" ({len(field_names)} elements)" if field_names else ""),
                     "section_id": g_sec.get('id') or sec_key,
-                    "section_label": g_sec_label,
                     "sub_fields": field_names,
                     "details": g_sec
                 })
                 # List each sub-field added inside the new section
                 for gf in g_fields:
-                    gf_label = (gf.get('label') or gf.get('id') or 'Component').strip()
-                    gf_type = gf.get('type', 'text')
-                    type_display = format_type_display(gf_type)
+                    gf_label = gf.get('label') or gf.get('type') or 'Input Field'
                     diffs.append({
                         "stage_id": stg_id,
                         "stage_title": stg_title,
                         "type": "FIELD_ADDED",
-                        "label": f"Stage {stg_id} → Section '{g_sec_label}': Added new field '{gf_label}' (Type: {type_display})",
+                        "label": f"Stage {stg_id} → '{g_sec_label}': Added element '{gf_label}' ({gf.get('type', 'text')})",
                         "section_id": g_sec.get('id') or sec_key,
-                        "section_label": g_sec_label,
-                        "field_id": gf.get('id'),
-                        "field_label": gf_label,
-                        "field_type": gf_type,
-                        "field_type_display": type_display,
-                        "details": gf
+                        "field_id": gf.get('id')
                     })
             else:
                 o_sec = org_secs_map[sec_key]
@@ -3397,11 +3364,7 @@ def get_global_stages_template_diff():
                         "stage_title": stg_title,
                         "type": "SECTION_MODIFIED",
                         "label": f"Stage {stg_id} → Section '{o_sec_label}' renamed to '{g_sec_label}'",
-                        "section_id": g_sec.get('id') or sec_key,
-                        "section_label": g_sec_label,
-                        "old_val": o_sec_label,
-                        "new_val": g_sec_label,
-                        "details": g_sec
+                        "section_id": g_sec.get('id') or sec_key
                     })
 
                 # Compare sub-fields inside existing section
@@ -3414,71 +3377,27 @@ def get_global_stages_template_diff():
                 g_f_map = {get_f_key(f, f_idx): f for f_idx, f in enumerate(g_fields)}
 
                 for f_key, gf in g_f_map.items():
-                    gf_label = (gf.get('label') or f_key).strip()
-                    gf_type = gf.get('type', 'text')
-                    type_display = format_type_display(gf_type)
-
+                    gf_label = gf.get('label') or f_key
                     if f_key not in o_f_map:
                         diffs.append({
                             "stage_id": stg_id,
                             "stage_title": stg_title,
                             "type": "FIELD_ADDED",
-                            "label": f"Stage {stg_id} → Section '{g_sec_label}': Added new field '{gf_label}' (Type: {type_display})",
+                            "label": f"Stage {stg_id} → '{g_sec_label}': New field '{gf_label}' ({gf.get('type','text')}) added",
                             "section_id": g_sec.get('id') or sec_key,
-                            "section_label": g_sec_label,
-                            "field_id": gf.get('id') or f_key,
-                            "field_label": gf_label,
-                            "field_type": gf_type,
-                            "field_type_display": type_display,
-                            "details": gf
+                            "field_id": gf.get('id') or f_key
                         })
-                    else:
-                        of = o_f_map[f_key]
-                        changes = []
-                        if (of.get('label') or '').strip() != (gf.get('label') or '').strip():
-                            changes.append(f"Label changed from '{of.get('label')}' to '{gf.get('label')}'")
-                        if of.get('type') != gf.get('type') and gf.get('type'):
-                            changes.append(f"Type changed from {of.get('type')} to {gf.get('type')}")
-                        if (of.get('placeholder') or '').strip() != (gf.get('placeholder') or '').strip():
-                            changes.append(f"Placeholder set to '{gf.get('placeholder')}'")
-                        if of.get('required') != gf.get('required') and gf.get('required') is not None:
-                            changes.append("Set to Mandatory (*)" if gf.get('required') is not False else "Set to Optional")
-                        if of.get('options') != gf.get('options') and gf.get('options'):
-                            opts_cnt = len(gf.get('options')) if isinstance(gf.get('options'), list) else 'custom'
-                            changes.append(f"Dropdown options updated ({opts_cnt} choices)")
-                        if (of.get('manual_description') or of.get('help_text') or '') != (gf.get('manual_description') or gf.get('help_text') or '') and (gf.get('manual_description') or gf.get('help_text')):
-                            changes.append("8S User Guide instructions updated")
-
-                        if changes:
-                            diffs.append({
-                                "stage_id": stg_id,
-                                "stage_title": stg_title,
-                                "type": "FIELD_MODIFIED",
-                                "label": f"Stage {stg_id} → Section '{g_sec_label}': Field '{gf_label}' updated ({'; '.join(changes)})",
-                                "section_id": g_sec.get('id') or sec_key,
-                                "section_label": g_sec_label,
-                                "field_id": gf.get('id') or f_key,
-                                "field_label": gf_label,
-                                "field_type": gf_type,
-                                "field_type_display": type_display,
-                                "changes": changes,
-                                "details": gf,
-                                "old_details": of
-                            })
 
                 for f_key, of in o_f_map.items():
-                    of_label = (of.get('label') or f_key).strip()
+                    of_label = of.get('label') or f_key
                     if f_key not in g_f_map:
                         diffs.append({
                             "stage_id": stg_id,
                             "stage_title": stg_title,
                             "type": "FIELD_REMOVED",
-                            "label": f"Stage {stg_id} → Section '{g_sec_label}': Field '{of_label}' removed in Global Template",
+                            "label": f"Stage {stg_id} → '{g_sec_label}': Field '{of_label}' removed in Global Template",
                             "section_id": o_sec.get('id') or sec_key,
-                            "section_label": g_sec_label,
-                            "field_id": of.get('id') or f_key,
-                            "field_label": of_label,
-                            "details": of
+                            "field_id": of.get('id') or f_key
                         })
 
         for sec_key, o_sec in org_secs_map.items():
@@ -3489,9 +3408,7 @@ def get_global_stages_template_diff():
                     "stage_title": stg_title,
                     "type": "SECTION_REMOVED",
                     "label": f"Stage {stg_id} → Section '{o_sec_label}' removed in Global Template",
-                    "section_id": o_sec.get('id') or sec_key,
-                    "section_label": o_sec_label,
-                    "details": o_sec
+                    "section_id": o_sec.get('id') or sec_key
                 })
 
     return jsonify({
@@ -3586,60 +3503,6 @@ def sync_global_stages_template():
         "apply_to_active": apply_to_active,
         "updated_projects_count": updated_count
     }), 200
-
-
-@admin_bp.route('/stages-template/skip-global', methods=['POST'])
-@admin_required
-def skip_global_stages_template():
-    """Skip and dismiss the pending global template update without changing the organization's template."""
-    user_id = get_jwt_identity()
-    user = db.session.get(User, int(user_id))
-    org = db.session.get(Organization, user.org_id)
-    if not org:
-        return jsonify({"msg": "Organization not found"}), 404
-
-    ps = PlatformSettings.query.first()
-    global_ver = (ps and ps.global_template_version) or 1
-
-    import copy
-    # Ensure organization has a frozen snapshot of its template so it never adopts skipped global changes
-    if org.stages_config is None:
-        org.stages_config = copy.deepcopy(Organization.DEFAULT_STAGES_CONFIG)
-    else:
-        org.stages_config = copy.deepcopy(org.stages_config)
-
-    # Mark update as acknowledged / dismissed by matching the applied version to global version
-    org.applied_template_version = global_ver
-    org.has_pending_template_update = False
-
-    # Mark in-app template update notifications for this org as read
-    try:
-        from app.infrastructure.database.models.models import Notification
-        Notification.query.filter(
-            Notification.org_id == org.id,
-            db.or_(
-                Notification.title.ilike('%Workflow Template%'),
-                Notification.title.ilike('%Stage Template%'),
-                Notification.link.ilike('%stage-template%')
-            )
-        ).update({"is_read": True}, synchronize_session=False)
-    except Exception as notif_err:
-        print(f"[QCMS] Error marking notifications read on skip: {notif_err}")
-
-    db.session.commit()
-
-    log_action(user_id, 'STAGES_TEMPLATE_UPDATE_SKIPPED', user.org_id,
-               target_table='organizations', target_id=org.id,
-               details={"skipped_version": global_ver, "applied_version": org.applied_template_version})
-
-    return jsonify({
-        "status": "success",
-        "message": f"Global template update (v{global_ver}) skipped. Your organization template remains unchanged.",
-        "applied_template_version": org.applied_template_version,
-        "has_pending_template_update": False,
-        "stages": org.get_stages_config()
-    }), 200
-
 
 
 # ===========================================================================
@@ -3814,7 +3677,6 @@ def _hash_api_key(key: str) -> str:
 
 @admin_bp.route('/integrations/api-key', methods=['GET'])
 @jwt_required()
-@admin_required
 def get_org_api_key():
     identity = get_jwt_identity()
     try:
@@ -3865,7 +3727,6 @@ def get_org_api_key():
 
 @admin_bp.route('/integrations/api-key/generate', methods=['POST'])
 @jwt_required()
-@admin_required
 def generate_org_api_key():
     identity = get_jwt_identity()
     try:
@@ -3918,7 +3779,6 @@ def generate_org_api_key():
 
 @admin_bp.route('/integrations/api-key/regenerate', methods=['POST'])
 @jwt_required()
-@admin_required
 def regenerate_org_api_key():
     identity = get_jwt_identity()
     try:
@@ -3968,7 +3828,6 @@ def regenerate_org_api_key():
 
 @admin_bp.route('/integrations/api-key/toggle-status', methods=['POST'])
 @jwt_required()
-@admin_required
 def toggle_org_api_key_status():
     identity = get_jwt_identity()
     try:
@@ -4005,7 +3864,6 @@ def toggle_org_api_key_status():
 
 @admin_bp.route('/integrations/api-key', methods=['DELETE'])
 @jwt_required()
-@admin_required
 def delete_org_api_key():
     identity = get_jwt_identity()
     try:

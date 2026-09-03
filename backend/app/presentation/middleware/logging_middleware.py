@@ -74,20 +74,12 @@ def init_logging_middleware(app):
             return response
 
         duration = round((time.time() - getattr(g, 'start_time', time.time())) * 1000, 2)
-        raw_req_id = str(getattr(g, 'request_id', '-'))
-        safe_req_id = raw_req_id.replace('\r', '').replace('\n', '')
-        safe_method = str(request.method).replace('\r', '').replace('\n', '')
-        safe_path = str(request.path).replace('\r', '').replace('\n', '')
+        req_id = getattr(g, 'request_id', '-')
         
         # Log structured request completion
         logger.info(
-            "[%s] %s %s -> %s (%sms)",
-            safe_req_id,
-            safe_method,
-            safe_path,
-            response.status_code,
-            duration
+            f"[{req_id}] {request.method} {request.path} -> {response.status_code} ({duration}ms)"
         )
         
-        response.headers['X-Request-ID'] = safe_req_id
+        response.headers['X-Request-ID'] = req_id
         return response

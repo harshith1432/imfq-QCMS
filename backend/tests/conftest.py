@@ -48,10 +48,10 @@ def auth_context(app):
         # Find or create active user
         user = User.query.filter_by(org_id=org.id, is_active=True).first()
         if not user:
-            uid = uuid.uuid4().hex[:8]
+            ts = int(time.time())
             user = User(
-                email=f"test_{uid}@pytest.org",
-                username=f"pytest_admin_{uid}",
+                email=f"test_{ts}@pytest.org",
+                username=f"pytest_admin_{ts}",
                 full_name="Pytest Admin",
                 org_id=org.id,
                 role_id=admin_role.id,
@@ -62,29 +62,7 @@ def auth_context(app):
             db.session.add(user)
             db.session.commit()
 
-        from app.infrastructure.database.models.auth import SaaSUserSession
-        import datetime
-
-        # Ensure user status is Active
-        user.status = "Active"
-        user.is_active = True
-        
-        # Clean up any old terminated sessions and ensure an active session exists
-        sess_id = f"pytest_sess_{user.id}_{uuid.uuid4().hex}"
-        session_entry = SaaSUserSession(
-            user_id=user.id,
-            org_id=user.org_id,
-            session_id=sess_id,
-            ip_address="127.0.0.1",
-            browser="Pytest",
-            status="Active",
-            login_time=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
-            last_activity=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
-        )
-        db.session.add(session_entry)
-        db.session.commit()
-
-        token = create_access_token(identity=str(user.id), additional_claims={"session_id": sess_id})
+        token = create_access_token(identity=str(user.id))
         headers = {
             'Authorization': f'Bearer {token}',
             'Content-Type': 'application/json'
@@ -104,9 +82,6 @@ def auth_context(app):
 def super_admin_context(app):
     """Provides authenticated SuperAdmin user and headers."""
     with app.app_context():
-        from app.infrastructure.database.models.auth import SaaSUserSession
-        import datetime
-
         sa_role = Role.query.filter_by(name='SuperAdmin').first()
         if not sa_role:
             sa_role = Role(name='SuperAdmin', description='Super Administrator')
@@ -132,25 +107,11 @@ def super_admin_context(app):
             sa_user.custom_fields = {"super_admin_role": "Owner"}
             sa_user.is_active = True
             sa_user.status = "Active"
-
-        sess_id = f"pytest_sa_sess_{sa_user.id}_{uuid.uuid4().hex}"
-        session_entry = SaaSUserSession(
-            user_id=sa_user.id,
-            org_id=None,
-            session_id=sess_id,
-            ip_address="127.0.0.1",
-            browser="Pytest",
-            status="Active",
-            login_time=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
-            last_activity=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
-        )
-        db.session.add(session_entry)
-        db.session.commit()
+            db.session.commit()
 
         token = create_access_token(
             identity=str(sa_user.id),
             additional_claims={
-                "session_id": sess_id,
                 "role": "SuperAdmin",
                 "org_id": None
             }

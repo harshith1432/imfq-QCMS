@@ -1602,169 +1602,163 @@ const SuperAdmin = {
     executeAlertFixAction() {},
     renderAlertCenter() {},
 
-    renderStatsData(data) {
-        if (!data) return;
-        this.lastStats = data;
-        const kpiGrid = document.getElementById('superKpiGrid');
-        if (kpiGrid) {
-            kpiGrid.innerHTML = `
-                <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>🏢 TOTAL ORGANIZATIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Total registered customer tenant organizations on OctaQube.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>organizations</code> table (active tenant accounts).</div><div style='color:#93c5fd;'>👉 Click to manage organizations</div></div>">
-                    <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                        <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
-                    </div>
-                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(var(--ds-primary-rgb),0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
-                        <i data-lucide="building" style="width:18px;height:18px;color:var(--ds-accent);"></i>
-                    </div>
-                    <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.total_organizations || 0}</div>
-                    <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">TOTAL ORGANIZATIONS</div>
-                </div>
-                
-                <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>✅ PAID ORGANIZATIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Client organizations with an active paid SaaS subscription plan.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>subscriptions</code> & <code>organizations</code> (status = Active).</div><div style='color:#93c5fd;'>👉 Click to view paid accounts</div></div>">
-                    <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                        <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
-                    </div>
-                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
-                        <i data-lucide="check-circle" style="width:18px;height:18px;color:#22c55e;"></i>
-                    </div>
-                    <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.paid_orgs !== undefined ? data.paid_orgs : (data.active_organizations || 0)}</div>
-                    <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">PAID ORGANIZATIONS</div>
-                </div>
-
-                <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>⏳ ON TRIAL ORGANIZATIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Tenants currently evaluating the platform within their trial window.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>organizations</code> (subscription_status = Trialing).</div><div style='color:#93c5fd;'>👉 Click to inspect trial tenants</div></div>">
-                    <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                        <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
-                    </div>
-                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
-                        <i data-lucide="clock" style="width:18px;height:18px;color:#f59e0b;"></i>
-                    </div>
-                    <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.trial_organizations || 0}</div>
-                    <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">ON TRIAL ORGANIZATIONS</div>
-                </div>
-
-                <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations'); setTimeout(() => SuperAdmin.filterByKpi('license_status', 'Inactive 20d'), 100);" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>👤 INACTIVE (20D)</div><div class='text-white-50 mb-1'><strong>Data:</strong> Organizations created >20 days ago with zero login activity in last 20 days.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>users.last_login</code> & <code>organizations.created_at</code>.</div><div style='color:#93c5fd;'>👉 Click to view inactive accounts</div></div>">
-                    <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                        <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
-                    </div>
-                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
-                        <i data-lucide="user-x" style="width:18px;height:18px;color:#ef4444;"></i>
-                    </div>
-                    <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.inactive_20d_orgs || 0}</div>
-                    <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">INACTIVE (20D)</div>
-                </div>
-
-                <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations'); setTimeout(() => SuperAdmin.filterByKpi('status', 'Expired'), 100);" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>❌ EXPIRED SUBSCRIPTIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Client accounts whose trial period or SaaS subscription has elapsed.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>license_expiry_date &lt; NOW()</code> or status Expired.</div><div style='color:#93c5fd;'>👉 Click to view expired tenants</div></div>">
-                    <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                        <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
-                    </div>
-                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
-                        <i data-lucide="x-circle" style="width:18px;height:18px;color:#ef4444;"></i>
-                    </div>
-                    <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.expired_licenses || 0}</div>
-                    <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">EXPIRED SUBSCRIPTIONS</div>
-                </div>
-
-                <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('storage')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>💾 PLATFORM STORAGE USAGE</div><div class='text-white-50 mb-1'><strong>Data:</strong> Aggregate disk and database storage consumed by all tenants.</div><div class='text-white-50 mb-1'><strong>Source:</strong> Real-time storage engine & database metrics.</div><div style='color:#93c5fd;'>👉 Click to open storage dashboard</div></div>">
-                    <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                        <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
-                    </div>
-                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(139,92,246,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
-                        <i data-lucide="hard-drive" style="width:18px;height:18px;color:#8b5cf6;"></i>
-                    </div>
-                    <div class="text-xl fw-bold" style="color:var(--ds-text-main);" id="saStorageKpiVal">${data.storage_used_fmt || (data.storage_used ? data.storage_used + ' MB' : '0 MB')}</div>
-                    <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">PLATFORM STORAGE USAGE</div>
-                </div>
-
-                <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('billing')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>💳 REVENUE (${(data.range_label || 'Selected Period').toUpperCase()})</div><div class='text-white-50 mb-1'><strong>Data:</strong> Total invoice collection amount received in selected period.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>subscription_payments</code> (status = Completed/Paid).</div><div style='color:#93c5fd;'>👉 Click to open billing & financial transactions</div></div>">
-                    <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                        <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
-                    </div>
-                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
-                        <i data-lucide="credit-card" style="width:18px;height:18px;color:#22c55e;"></i>
-                    </div>
-                    <div class="text-xl fw-bold" style="color:var(--ds-text-main);">₹${SuperAdmin.formatINR(data.revenue_in_period || data.revenue_this_month || 0)}</div>
-                    <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">REVENUE (${(data.range_label || 'Selected Period').toUpperCase()})</div>
-                </div>
-
-                <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('support')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>🛟 PENDING TICKETS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Customer support tickets currently in Open or In-Progress status.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>support_tickets</code> table.</div><div style='color:#93c5fd;'>👉 Click to open support desk</div></div>">
-                    <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
-                        <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
-                    </div>
-                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
-                        <i data-lucide="life-buoy" style="width:18px;height:18px;color:#ef4444;"></i>
-                    </div>
-                    <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.pending_support_tickets || data.pending_tickets || 0}</div>
-                    <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">PENDING TICKETS</div>
-                </div>
-            `;
-
-            kpiGrid.style.gridTemplateColumns = `repeat(${kpiGrid.children.length}, minmax(100px, 1fr))`;
-            kpiGrid.style.overflowX = 'auto';
-
-            const mrr = data.mrr !== undefined ? data.mrr : (data.revenue_in_period ?? data.revenue_this_month ?? 0);
-            const arr = data.arr !== undefined ? data.arr : mrr * 12;
-            const paidOrgs = data.paid_orgs !== undefined ? data.paid_orgs : (data.active_organizations || 0);
-            const growthVal = data.growth_pct !== undefined ? data.growth_pct : 0;
-
-            const mrrEl = document.getElementById('dashMrr');
-            if (mrrEl) mrrEl.textContent = `₹${SuperAdmin.formatINR(mrr)}`;
-            const arrEl = document.getElementById('dashArr');
-            if (arrEl) arrEl.textContent = `₹${SuperAdmin.formatINR(arr)}`;
-            const paidOrgsEl = document.getElementById('dashPaidOrgs');
-            if (paidOrgsEl) paidOrgsEl.textContent = paidOrgs;
-            const dashGrowthEl = document.getElementById('dashGrowth');
-            if (dashGrowthEl) {
-                dashGrowthEl.textContent = `${growthVal >= 0 ? '+' : ''}${growthVal}%`;
-            }
-
-            if (window.OctaQube && OctaQube.initTooltips) {
-                OctaQube.initTooltips(kpiGrid);
-            }
-            if (window.lucide) {
-                lucide.createIcons();
-            }
-
-            this.renderOverviewCharts(data);
-        }
-    },
-
     async loadOverview() {
+        this.showSkeletons();
+        
         // Update header date
         const dateEl = document.getElementById('dashboardDateDisplay');
         if (dateEl) {
             dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         }
 
-        // 1. Instant Cache/Optimistic Paint (eliminates initial blank delay)
-        if (!this.lastStats) {
-            try {
-                const cached = localStorage.getItem('octaqube_sa_overview_cache');
-                if (cached) {
-                    const parsed = JSON.parse(cached);
-                    this.renderStatsData(parsed);
-                } else {
-                    this.showSkeletons();
+        try {
+            // Fetch overview endpoints concurrently to eliminate Vercel serverless cold-start timeouts
+            const [statsRes, logsRes, healthRes, ticketsRes] = await Promise.allSettled([
+                api.get(`/v1/dashboard/stats?range=${this.selectedDateRange}`),
+                api.get('/super-admin/logs'),
+                api.get('/v1/dashboard/health'),
+                api.get('/super-admin/tickets')
+            ]);
+
+            const stats = statsRes.status === 'fulfilled' ? statsRes.value : null;
+            const logs = logsRes.status === 'fulfilled' ? logsRes.value : null;
+            const health = healthRes.status === 'fulfilled' ? healthRes.value : null;
+            const tickets = ticketsRes.status === 'fulfilled' ? ticketsRes.value : null;
+
+            const data = (stats && stats.status === 'success') ? stats.data : {
+                total_organizations: 0,
+                active_organizations: 0,
+                trial_organizations: 0,
+                inactive_20d_orgs: 0,
+                expired_licenses: 0,
+                storage_used: '0 MB',
+                revenue_in_period: 0,
+                pending_tickets: 0,
+                mrr: 0,
+                arr: 0,
+                growth_pct: 0
+            };
+
+            this.lastStats = data;
+            const kpiGrid = document.getElementById('superKpiGrid');
+            if (kpiGrid) {
+                
+                // Construct KPI cards with interactive click handlers and rich hover tooltips on the entire card
+                kpiGrid.innerHTML = `
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>🏢 TOTAL ORGANIZATIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Total registered customer tenant organizations on OctaQube.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>organizations</code> table (active tenant accounts).</div><div style='color:#93c5fd;'>👉 Click to manage organizations</div></div>">
+                        <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
+                        </div>
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(var(--ds-primary-rgb),0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
+                            <i data-lucide="building" style="width:18px;height:18px;color:var(--ds-accent);"></i>
+                        </div>
+                        <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.total_organizations || 0}</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">TOTAL ORGANIZATIONS</div>
+                    </div>
+                    
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>✅ PAID ORGANIZATIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Client organizations with an active paid SaaS subscription plan.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>subscriptions</code> & <code>organizations</code> (status = Active).</div><div style='color:#93c5fd;'>👉 Click to view paid accounts</div></div>">
+                        <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
+                        </div>
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
+                            <i data-lucide="check-circle" style="width:18px;height:18px;color:#22c55e;"></i>
+                        </div>
+                        <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.paid_orgs !== undefined ? data.paid_orgs : (data.active_organizations || 0)}</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">PAID ORGANIZATIONS</div>
+                    </div>
+
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>⏳ ON TRIAL ORGANIZATIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Tenants currently evaluating the platform within their trial window.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>organizations</code> (subscription_status = Trialing).</div><div style='color:#93c5fd;'>👉 Click to inspect trial tenants</div></div>">
+                        <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
+                        </div>
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
+                            <i data-lucide="clock" style="width:18px;height:18px;color:#f59e0b;"></i>
+                        </div>
+                        <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.trial_organizations || 0}</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">ON TRIAL ORGANIZATIONS</div>
+                    </div>
+
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations'); setTimeout(() => SuperAdmin.filterByKpi('license_status', 'Inactive 20d'), 100);" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>👤 INACTIVE (20D)</div><div class='text-white-50 mb-1'><strong>Data:</strong> Organizations created >20 days ago with zero login activity in last 20 days.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>users.last_login</code> & <code>organizations.created_at</code>.</div><div style='color:#93c5fd;'>👉 Click to view inactive accounts</div></div>">
+                        <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
+                        </div>
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
+                            <i data-lucide="user-x" style="width:18px;height:18px;color:#ef4444;"></i>
+                        </div>
+                        <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.inactive_20d_orgs || 0}</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">INACTIVE (20D)</div>
+                    </div>
+
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('organizations'); setTimeout(() => SuperAdmin.filterByKpi('status', 'Expired'), 100);" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>❌ EXPIRED SUBSCRIPTIONS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Client accounts whose trial period or SaaS subscription has elapsed.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>license_expiry_date &lt; NOW()</code> or status Expired.</div><div style='color:#93c5fd;'>👉 Click to view expired tenants</div></div>">
+                        <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
+                        </div>
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
+                            <i data-lucide="x-circle" style="width:18px;height:18px;color:#ef4444;"></i>
+                        </div>
+                        <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.expired_licenses || 0}</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">EXPIRED SUBSCRIPTIONS</div>
+                    </div>
+
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('storage')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>💾 PLATFORM STORAGE USAGE</div><div class='text-white-50 mb-1'><strong>Data:</strong> Aggregate disk and database storage consumed by all tenants.</div><div class='text-white-50 mb-1'><strong>Source:</strong> Real-time storage engine & database metrics.</div><div style='color:#93c5fd;'>👉 Click to open storage dashboard</div></div>">
+                        <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
+                        </div>
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(139,92,246,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
+                            <i data-lucide="hard-drive" style="width:18px;height:18px;color:#8b5cf6;"></i>
+                        </div>
+                        <div class="text-xl fw-bold" style="color:var(--ds-text-main);" id="saStorageKpiVal">${data.storage_used_fmt || (data.storage_used ? data.storage_used + ' MB' : '0 MB')}</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">PLATFORM STORAGE USAGE</div>
+                    </div>
+
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('billing')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>💳 REVENUE (${(data.range_label || 'Selected Period').toUpperCase()})</div><div class='text-white-50 mb-1'><strong>Data:</strong> Total invoice collection amount received in selected period.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>subscription_payments</code> (status = Completed/Paid).</div><div style='color:#93c5fd;'>👉 Click to open billing & financial transactions</div></div>">
+                        <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
+                        </div>
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
+                            <i data-lucide="credit-card" style="width:18px;height:18px;color:#22c55e;"></i>
+                        </div>
+                        <div class="text-xl fw-bold" style="color:var(--ds-text-main);">₹${SuperAdmin.formatINR(data.revenue_in_period || data.revenue_this_month || 0)}</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">REVENUE (${(data.range_label || 'Selected Period').toUpperCase()})</div>
+                    </div>
+
+                    <div class="glass-card position-relative clickable hover-shadow" style="padding:0.85rem 0.4rem; text-align:center; min-height:125px; cursor:pointer;" onclick="SuperAdmin.switchView('support')" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<div class='text-start p-1' style='font-size:11px;line-height:1.4;'><div class='fw-bold text-white mb-1'>🛟 PENDING TICKETS</div><div class='text-white-50 mb-1'><strong>Data:</strong> Customer support tickets currently in Open or In-Progress status.</div><div class='text-white-50 mb-1'><strong>Source:</strong> <code>support_tickets</code> table.</div><div style='color:#93c5fd;'>👉 Click to open support desk</div></div>">
+                        <div class="position-absolute" style="top:6px; right:6px; z-index:10;">
+                            <i data-lucide="info" class="text-muted" style="width:12px;height:12px;opacity:0.6;"></i>
+                        </div>
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;">
+                            <i data-lucide="life-buoy" style="width:18px;height:18px;color:#ef4444;"></i>
+                        </div>
+                        <div class="text-xl fw-bold" style="color:var(--ds-text-main);">${data.pending_support_tickets || 0}</div>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;text-transform:uppercase;font-weight:600;letter-spacing:0.03em;">PENDING TICKETS</div>
+                    </div>
+                `;
+
+                // Force 8 columns in a single row
+                kpiGrid.style.gridTemplateColumns = `repeat(${kpiGrid.children.length}, minmax(100px, 1fr))`;
+                kpiGrid.style.overflowX = 'auto';
+
+                // Set Revenue Extrapolated KPIs (Real-time data from backend)
+                const mrr = data.mrr !== undefined ? data.mrr : (data.revenue_in_period ?? data.revenue_this_month ?? 0);
+                const arr = data.arr !== undefined ? data.arr : mrr * 12;
+                const paidOrgs = data.paid_orgs !== undefined ? data.paid_orgs : (data.active_organizations || 0);
+                const growthVal = data.growth_pct !== undefined ? data.growth_pct : 0;
+
+                document.getElementById('dashMrr').textContent = `₹${SuperAdmin.formatINR(mrr)}`;
+                document.getElementById('dashArr').textContent = `₹${SuperAdmin.formatINR(arr)}`;
+                document.getElementById('dashPaidOrgs').textContent = paidOrgs;
+                document.getElementById('dashGrowth').textContent = `${growthVal >= 0 ? '+' : ''}${growthVal}%`;
+
+                // Initialize tooltips on cards
+                if (window.OctaQube && OctaQube.initTooltips) {
+                    OctaQube.initTooltips(kpiGrid);
                 }
-            } catch (e) {
-                this.showSkeletons();
-            }
-        } else {
-            this.renderStatsData(this.lastStats);
-        }
 
-        // 2. Fetch primary stats and update UI immediately as soon as ready
-        const statsTask = api.get(`/v1/dashboard/stats?range=${this.selectedDateRange}`).then(stats => {
-            if (stats && stats.status === 'success' && stats.data) {
-                this.renderStatsData(stats.data);
-                try {
-                    localStorage.setItem('octaqube_sa_overview_cache', JSON.stringify(stats.data));
-                } catch (e) {}
+                // Redraw Donut and MRR Charts
+                this.renderOverviewCharts(data);
             }
-        }).catch(err => {
-            console.warn("[SuperAdmin] Stats loading notice:", err);
-        });
 
-        // 3. Parallel non-blocking streams for ancillary widgets
-        const healthTask = (async () => {
+            // Platform Health Dashboard (10 detailed services monitor)
             const healthStats = document.getElementById('healthStats');
             if (healthStats) {
                 const healthCheckedEl = document.getElementById('healthLastChecked');
@@ -1799,9 +1793,8 @@ const SuperAdmin = {
                     </div>
                 `;
             }
-        })();
 
-        const ticketsTask = api.get('/super-admin/tickets').then(tickets => {
+            // Recent Support Tickets & Counts Breakdown
             if (tickets && tickets.status === 'success') {
                 const listEl = document.getElementById('recentTicketsList');
                 const tList = tickets.data || [];
@@ -1814,87 +1807,85 @@ const SuperAdmin = {
                 if (document.getElementById('ticketUrgentCount')) document.getElementById('ticketUrgentCount').textContent = urgentCount;
                 if (document.getElementById('ticketResolvedCount')) document.getElementById('ticketResolvedCount').textContent = resolvedCount;
 
-                if (listEl) {
-                    const openTickets = tList.filter(t => t.status !== 'Resolved' && t.status !== 'Closed');
-                    const topTickets = openTickets.slice(0, 5);
-                    if (topTickets.length === 0) {
-                        listEl.innerHTML = `<div class="text-center py-4 text-muted text-xs"><i data-lucide="check-circle-2" class="me-1 text-success" style="width:14px;height:14px;"></i> No open tickets — you're all caught up</div>`;
-                    } else {
-                        listEl.innerHTML = topTickets.map(t => {
-                            const priColor = t.priority === 'High' || t.priority === 'Urgent' ? 'danger' : 'warning';
-                            return `
-                                <div class="list-group-item py-2 px-3 clickable hover-bg border-0 border-bottom" style="border-color:var(--ds-border-color)!important;" onclick="SuperAdmin.switchView('support');">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="fw-bold text-xs" style="color:var(--ds-text-main);">#${t.id}: ${t.subject}</span>
-                                        <span class="ds-badge ${priColor === 'danger' ? 'red' : 'orange'}" style="font-size:9px; padding:2px 6px;">${t.priority}</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between text-xxs text-secondary mt-1">
-                                        <span>${t.organization} &bull; ${t.requester_name}</span>
-                                        <span>${OctaQube.formatRelative(t.created_at)}</span>
-                                    </div>
+                // Show ONLY unresolved / open tickets in the Support Center list widget
+                const openTickets = tList.filter(t => t.status !== 'Resolved' && t.status !== 'Closed');
+                const topTickets = openTickets.slice(0, 5);
+                if (topTickets.length === 0) {
+                    listEl.innerHTML = `<div class="text-center py-4 text-muted text-xs"><i data-lucide="check-circle-2" class="me-1 text-success" style="width:14px;height:14px;"></i> No open tickets — you're all caught up</div>`;
+                } else {
+                    listEl.innerHTML = topTickets.map(t => {
+                        const priColor = t.priority === 'High' || t.priority === 'Urgent' ? 'danger' : 'warning';
+                        return `
+                            <div class="list-group-item py-2 px-3 clickable hover-bg border-0 border-bottom" style="border-color:var(--ds-border-color)!important;" onclick="SuperAdmin.switchView('support');">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold text-xs" style="color:var(--ds-text-main);">#${t.id}: ${t.subject}</span>
+                                    <span class="ds-badge ${priColor === 'danger' ? 'red' : 'orange'}" style="font-size:9px; padding:2px 6px;">${t.priority}</span>
                                 </div>
-                            `;
-                        }).join('');
-                    }
-                    if (window.lucide) lucide.createIcons();
-                }
-            }
-        }).catch(() => {});
-
-        const logsTask = api.get('/super-admin/logs').then(logs => {
-            if (logs && logs.status === 'success') {
-                const listEl = document.getElementById('activityTimeline');
-                if (listEl) {
-                    const recentLogs = (logs.data || []).slice(0, 7);
-                    if (recentLogs.length === 0) {
-                        listEl.innerHTML = `<div class="text-center py-4 text-muted text-xs">No recent activity logs found.</div>`;
-                    } else {
-                        const getTimelineIcon = (action) => {
-                            const act = action.toUpperCase();
-                            if (act.includes('CREATE') || act.includes('ADD')) return 'plus-circle';
-                            if (act.includes('DELETE') || act.includes('REMOVE')) return 'trash-2';
-                            if (act.includes('SUSPEND') || act.includes('STATUS')) return 'slash';
-                            if (act.includes('UPDATE') || act.includes('EDIT')) return 'edit-3';
-                            if (act.includes('BILL') || act.includes('PAY') || act.includes('LICENSE')) return 'credit-card';
-                            return 'info';
-                        };
-                        
-                        const getTimelineIconColor = (action) => {
-                            const act = action.toUpperCase();
-                            if (act.includes('CREATE') || act.includes('ADD')) return 'var(--ds-success)';
-                            if (act.includes('DELETE') || act.includes('REMOVE') || act.includes('SUSPEND')) return 'var(--ds-danger)';
-                            if (act.includes('UPDATE') || act.includes('EDIT')) return 'var(--ds-accent)';
-                            if (act.includes('BILL') || act.includes('PAY') || act.includes('LICENSE')) return 'var(--ds-success)';
-                            return 'var(--ds-text-secondary)';
-                        };
-
-                        listEl.innerHTML = `
-                            <div style="padding:12px 16px;">
-                                <div class="position-relative" style="border-left: 2px solid var(--ds-border-color); margin-left: 10px; padding-left: 20px;">
-                                    ${recentLogs.map(log => `
-                                        <div class="mb-2.5 position-relative">
-                                            <div class="position-absolute" style="left: -31px; top: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--ds-bg-surface); border: 2px solid ${getTimelineIconColor(log.action)}; display: flex; align-items: center; justify-content: center; z-index: 2;">
-                                                <i data-lucide="${getTimelineIcon(log.action)}" style="width: 10px; height: 10px; color:${getTimelineIconColor(log.action)};"></i>
-                                            </div>
-                                            <div>
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <span class="fw-bold text-xs" style="color:var(--ds-text-main);">${log.action}</span>
-                                                    <span class="text-xxs text-muted">${OctaQube.formatRelative(log.timestamp)}</span>
-                                                </div>
-                                                <p class="text-xxs text-muted mb-0 mt-0.5">By ${log.admin} &bull; Target: ${log.target || 'System'} &bull; IP: ${log.ip}</p>
-                                            </div>
-                                        </div>
-                                    `).join('')}
+                                <div class="d-flex justify-content-between text-xxs text-secondary mt-1">
+                                    <span>${t.organization} &bull; ${t.requester_name}</span>
+                                    <span>${OctaQube.formatRelative(t.created_at)}</span>
                                 </div>
                             </div>
                         `;
-                        if (window.lucide) lucide.createIcons();
-                    }
+                    }).join('');
                 }
             }
-        }).catch(() => {});
 
-        await statsTask;
+            // Activity Timeline (Vertical enterprise timeline populated from audit logs)
+            if (logs && logs.status === 'success') {
+                const listEl = document.getElementById('activityTimeline');
+                const recentLogs = logs.data.slice(0, 7);
+                
+                if (recentLogs.length === 0) {
+                    listEl.innerHTML = `<div class="text-center py-4 text-muted text-xs">No recent activity logs found.</div>`;
+                } else {
+                    const getTimelineIcon = (action) => {
+                        const act = action.toUpperCase();
+                        if (act.includes('CREATE') || act.includes('ADD')) return 'plus-circle';
+                        if (act.includes('DELETE') || act.includes('REMOVE')) return 'trash-2';
+                        if (act.includes('SUSPEND') || act.includes('STATUS')) return 'slash';
+                        if (act.includes('UPDATE') || act.includes('EDIT')) return 'edit-3';
+                        if (act.includes('BILL') || act.includes('PAY') || act.includes('LICENSE')) return 'credit-card';
+                        return 'info';
+                    };
+                    
+                    const getTimelineIconColor = (action) => {
+                        const act = action.toUpperCase();
+                        if (act.includes('CREATE') || act.includes('ADD')) return 'var(--ds-success)';
+                        if (act.includes('DELETE') || act.includes('REMOVE') || act.includes('SUSPEND')) return 'var(--ds-danger)';
+                        if (act.includes('UPDATE') || act.includes('EDIT')) return 'var(--ds-accent)';
+                        if (act.includes('BILL') || act.includes('PAY') || act.includes('LICENSE')) return 'var(--ds-success)';
+                        return 'var(--ds-text-secondary)';
+                    };
+
+                    listEl.innerHTML = `
+                        <div style="padding:12px 16px;">
+                            <div class="position-relative" style="border-left: 2px solid var(--ds-border-color); margin-left: 10px; padding-left: 20px;">
+                                ${recentLogs.map((log, idx) => `
+                                    <div class="mb-2.5 position-relative">
+                                        <div class="position-absolute" style="left: -31px; top: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--ds-bg-surface); border: 2px solid ${getTimelineIconColor(log.action)}; display: flex; align-items: center; justify-content: center; z-index: 2;">
+                                            <i data-lucide="${getTimelineIcon(log.action)}" style="width: 10px; height: 10px; color:${getTimelineIconColor(log.action)};"></i>
+                                        </div>
+                                        <div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="fw-bold text-xs" style="color:var(--ds-text-main);">${log.action}</span>
+                                                <span class="text-xxs text-muted">${OctaQube.formatRelative(log.timestamp)}</span>
+                                            </div>
+                                            <p class="text-xxs text-muted mb-0 mt-0.5">By ${log.admin} &bull; Target: ${log.target || 'System'} &bull; IP: ${log.ip}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            if (window.lucide) lucide.createIcons();
+        } catch (error) {
+            console.error("Error loading overview:", error);
+            api.showNotification("Failed to load overview data", "error");
+        }
     },
 
     // Sorting state
@@ -4664,40 +4655,16 @@ const SuperAdmin = {
             document.getElementById('superDAction').textContent = log.action;
             document.getElementById('superDLogId').textContent = `Audit ID: ${log.id} · SHA-256 Verified`;
             
-            document.getElementById('superDUser').textContent = log.user || 'System';
-            document.getElementById('superDEmail').textContent = log.user_email || '—';
-            document.getElementById('superDIp').textContent = log.ip_address || '—';
-            document.getElementById('superDLoc').textContent = log.location || '—';
-            document.getElementById('superDDev').textContent = `${log.device || 'Desktop'} (${log.os || 'Windows'} / ${log.browser || 'Chrome'})`;
-            
-            const respCode = parseInt(log.response_code || (log.status === 'Failed' ? 400 : 200), 10);
-            const getCodeText = (code) => {
-                const map = {
-                    200: '200 (OK)',
-                    201: '201 (Created)',
-                    204: '204 (No Content)',
-                    400: '400 (Bad Request)',
-                    401: '401 (Unauthorized)',
-                    403: '403 (Forbidden)',
-                    404: '404 (Not Found)',
-                    409: '409 (Conflict)',
-                    422: '422 (Unprocessable Entity)',
-                    429: '429 (Too Many Requests)',
-                    500: '500 (Internal Server Error)',
-                    502: '502 (Bad Gateway)',
-                    503: '503 (Service Unavailable)'
-                };
-                return map[code] || `${code} (${code >= 400 ? 'Error' : 'OK'})`;
-            };
-            const codeEl = document.getElementById('superDCode');
-            if (codeEl) {
-                codeEl.textContent = getCodeText(respCode);
-                codeEl.className = (respCode >= 400 || log.status === 'Failed') ? 'fw-semibold text-sm text-danger' : 'fw-semibold text-sm text-success';
-            }
-
-            const execTime = (log.execution_time !== null && log.execution_time !== undefined && Number(log.execution_time) > 0) ? Number(log.execution_time).toFixed(1) : '16.8';
+            document.getElementById('superDUser').textContent = log.user;
+            document.getElementById('superDEmail').textContent = log.user_email;
+            document.getElementById('superDIp').textContent = log.ip_address;
+            document.getElementById('superDLoc').textContent = log.location;
+            document.getElementById('superDDev').textContent = log.device;
+            const respCode = log.response_code || 200;
+            document.getElementById('superDCode').textContent = `${respCode} (${respCode >= 400 ? 'Error' : 'OK'})`;
+            const execTime = (log.execution_time !== null && log.execution_time !== undefined) ? Number(log.execution_time).toFixed(1) : '0.0';
             document.getElementById('superDTime').textContent = `${execTime} ms`;
-            document.getElementById('superDSession').textContent = log.session_id || `SES-${String(log.id).padStart(6, '0')}`;
+            document.getElementById('superDSession').textContent = log.session_id || '—';
             
             // Diffs (Past Data vs Current Data)
             const diffBox = document.getElementById('superDiffBox');
@@ -8921,9 +8888,7 @@ const SuperAdmin = {
                         pwTierEl.title = '';
                     }
                 }
-                if (document.getElementById('pwIsCustom')) {
-                    document.getElementById('pwIsCustom').checked = p.is_custom;
-                }
+                document.getElementById('pwIsCustom').checked = p.is_custom;
 
                 if (p.payg_rules) {
                     const pr = p.payg_rules;
@@ -9255,7 +9220,7 @@ const SuperAdmin = {
             plan_type: tierVal,
             pricing_model: pricingModel,
             payg_rules: paygRules,
-            is_custom: document.getElementById('pwIsCustom')?.checked || false,
+            is_custom: document.getElementById('pwIsCustom').checked,
             is_default_trial: isTrialTier && (document.getElementById('pwIsDefaultTrial')?.checked ?? true),
             trial_duration_days: parseInt(document.getElementById('pwTrialDays')?.value) || 14,
             auto_approve_extensions_limit: parseInt(document.getElementById('pwTrialAutoApproveLimit')?.value) || 2,
@@ -10946,7 +10911,7 @@ const SuperAdmin = {
     },
     
     async submitWizard() {
-        const defaultTrialDays = (typeof PlatformSettings !== 'undefined' && PlatformSettings._data?.trial_period_days) ? parseInt(PlatformSettings._data.trial_period_days) : 180;
+        const defaultTrialDays = (typeof PlatformSettings !== 'undefined' && PlatformSettings._data?.trial_period_days) ? parseInt(PlatformSettings._data.trial_period_days) : 14;
         const data = {
             company: {
                 name: document.getElementById('wizOrgName').value.trim(),
@@ -11346,21 +11311,14 @@ const SuperAdmin = {
             api.showNotification('Requesting administrative impersonation...', 'info');
             const res = await api.post(`/super-admin/companies/${id}/impersonate`);
             if (res.status === 'success' || res.token) {
-                const impersonatedToken = res.token || (res.data && res.data.token);
-                if (impersonatedToken) {
-                    sessionStorage.setItem('octaqube_authenticated', 'true');
-                    sessionStorage.setItem('token', impersonatedToken);
-                    sessionStorage.setItem('access_token', impersonatedToken);
-                    if (res.data && res.data.admin_name) {
-                        const userObj = {
-                            username: res.data.admin_name,
-                            role: 'Admin',
-                            role_name: 'Admin',
-                            org_id: id
-                        };
-                        sessionStorage.setItem('user', JSON.stringify(userObj));
-                    }
-                }
+                sessionStorage.setItem('octaqube_authenticated', 'true');
+                localStorage.setItem('octaqube_authenticated', 'true');
+                sessionStorage.removeItem('token');
+                localStorage.removeItem('token');
+                sessionStorage.removeItem('access_token');
+                localStorage.removeItem('access_token');
+                sessionStorage.removeItem('user');
+                localStorage.removeItem('user');
                 
                 api.showNotification('Login impersonation successful. Redirecting to tenant space...', 'success');
                 setTimeout(() => {

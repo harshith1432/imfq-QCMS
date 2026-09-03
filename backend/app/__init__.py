@@ -303,7 +303,8 @@ def create_app():
                         SaaSPlan(name='Enterprise', code='enterprise', plan_type='Paid', status='Active',
                                  is_default_trial=False, description='Enterprise plan for large organizations'),
                     ]
-                    db.session.add_all(default_plans)
+                    for plan in default_plans:
+                        db.session.add(plan)
                     db.session.commit()
                     print("[QCMS] Seeded default SaaS Plans (Trial/Starter/Professional/Enterprise) successfully.")
                 else:
@@ -372,7 +373,8 @@ def create_app():
                         {"name": "IAM", "code": "iam", "icon": "users", "order": 10},
                         {"name": "Customization", "code": "customization", "icon": "palette", "order": 11},
                     ]
-                    db.session.add_all([FeatureCategory(name=c['name'], code=c['code'], icon=c['icon'], display_order=c['order']) for c in cats])
+                    for c in cats:
+                        db.session.add(FeatureCategory(name=c['name'], code=c['code'], icon=c['icon'], display_order=c['order']))
                     db.session.commit()
 
                 # 2. Parent & Child Modules Hierarchy
@@ -782,24 +784,6 @@ def create_app():
         if (filename == 'index.html' or filename == 'index' or filename == '') and not is_landing_page_enabled():
             return redirect('/auth/login.html')
 
-        # Super Admin legacy / direct URL redirection (for views consolidated into super-admin.html)
-        sa_view_map = {
-            'super-admin-orgs': '/admin/super-admin.html?view=organizations',
-            'super-admin-plans': '/admin/super-admin.html?view=plans',
-            'super-admin-tickets': '/admin/super-admin.html?view=tickets',
-            'super-admin-announcements': '/admin/super-admin.html?view=announcements',
-            'super-admin-billing': '/admin/super-admin.html?view=billing',
-            'super-admin-audit-logs': '/admin/super-admin.html?view=audit-logs',
-            'super-admin-doc-identity': '/admin/super-admin.html?view=branding',
-            'super-admin-storage-analytics': '/admin/super-admin.html?view=storage',
-            'super-admin-recycle-bin': '/admin/super-admin.html?view=recycle-bin',
-            'super-admin-settings': '/admin/super-admin.html?view=settings',
-            'super-admin-analytics': '/admin/super-admin.html?view=analytics',
-        }
-        for sa_key, sa_target in sa_view_map.items():
-            if filename.endswith(f"{sa_key}.html") or filename.endswith(sa_key):
-                return redirect(sa_target)
-
         # 1. Direct match at root or exact path (e.g. assets, favicon)
         filepath = os.path.join(frontend_dir, filename)
         if os.path.isfile(filepath):
@@ -829,18 +813,7 @@ def create_app():
         if '..' in clean_filename or clean_filename.startswith('/'):
             return jsonify({"status": "error", "message": "Invalid file path."}), 400
 
-        is_private_folder = (
-            clean_filename.startswith('project_evidence/') or
-            clean_filename.startswith('support_attachments/') or
-            clean_filename.startswith('payment_proofs/') or
-            clean_filename.startswith('payment_proof_') or
-            clean_filename.startswith('sop_documents/') or
-            clean_filename.startswith('documents/') or
-            'evidence' in clean_filename.lower() or
-            'payment_proof' in clean_filename.lower()
-        )
-
-        is_public_asset = not is_private_folder and (
+        is_public_asset = (
             clean_filename.startswith('branding/') or
             clean_filename.startswith('template_previews/') or
             clean_filename.startswith('system/') or
@@ -848,7 +821,8 @@ def create_app():
             clean_filename.startswith('avatar_') or
             clean_filename.startswith('banner_') or
             'logo' in clean_filename.lower() or
-            'favicon' in clean_filename.lower()
+            'favicon' in clean_filename.lower() or
+            clean_filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.webp'))
         )
 
         if not is_public_asset:
@@ -916,32 +890,20 @@ def create_app():
         if is_excluded:
             return
 
-        import time as _time
-        now_ts = _time.time()
-        if not hasattr(app, '_maint_cache'):
-            app._maint_cache = {"val": False, "settings": {}, "ts": 0}
-
-        # Cache check for 5 seconds to prevent DB connection starvation on high-frequency polling
-        if (now_ts - app._maint_cache["ts"]) > 5.0:
-            from sqlalchemy import text as _sql_text
-            try:
-                _row = db.session.execute(
-                    _sql_text("SELECT id, maintenance_mode, maintenance_settings FROM platform_settings LIMIT 1")
-                ).fetchone()
-                maintenance_on = bool(_row[1]) if _row and _row[1] is not None else False
-                _maint_raw = _row[2] if _row else None
-                import json as _json
-                maint_settings = _json.loads(_maint_raw) if isinstance(_maint_raw, str) else (_maint_raw or {})
-                app._maint_cache = {"val": maintenance_on, "settings": maint_settings, "ts": now_ts}
-            except Exception:
-                maintenance_on = app._maint_cache.get("val", False)
-                maint_settings = app._maint_cache.get("settings", {})
-        else:
-            maintenance_on = app._maint_cache["val"]
-            maint_settings = app._maint_cache["settings"]
-
+        from app.infrastructure.database.models.models import User
+        from sqlalchemy import text as _sql_text
+        # Use raw SQL to bypass SQLAlchemy identity map cache and always get fresh DB state
+        _row = db.session.execute(
+            _sql_text("SELECT id, maintenance_mode, maintenance_settings FROM platform_settings LIMIT 1")
+        ).fetchone()
+        maintenance_on = bool(_row[1]) if _row and _row[1] is not None else False
         if maintenance_on:
-            from app.infrastructure.database.models.models import User
+            import json as _json
+            try:
+                _maint_raw = _row[2]
+                maint_settings = _json.loads(_maint_raw) if isinstance(_maint_raw, str) else (_maint_raw or {})
+            except Exception:
+                maint_settings = {}
             from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
             is_super_admin = False
             try:
@@ -1125,13 +1087,6 @@ def create_app():
             db.session.rollback()
         except Exception:
             pass
-        try:
-            db.session.remove()
-        except Exception:
-            pass
-
-    @app.teardown_appcontext
-    def teardown_appcontext(exception=None):
         try:
             db.session.remove()
         except Exception:

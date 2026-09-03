@@ -6,17 +6,17 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.003248ba8802.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.bca5f8498c05.min.js" as="script">
-    <script src="/assets/dist/auth-guard.bca5f8498c05.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
+    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Member Directory | OctaQube Enterprise</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <link rel="stylesheet" href="/assets/dist/core.003248ba8802.min.css">
-    <script src="/assets/dist/breadcrumbs.ef74fb9c326e.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js" integrity="sha384-tTkFttkBclaU1cloKwOi9xk3pbao3VZxTjLNBt8iFABWDBQibbAbWpVmO28zMuxq" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
     <div class="app-layout">
@@ -83,38 +83,12 @@
                     </div>
                 </div>
 
-                <!-- Bulk Actions Toolbar -->
-                <div class="p-3 px-4 d-none justify-content-between align-items-center flex-wrap gap-2" id="bulkActionsBar" style="background: rgba(var(--ds-primary-rgb, 99, 102, 241), 0.08); border-bottom: 1px solid rgba(var(--ds-primary-rgb, 99, 102, 241), 0.25);">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-primary rounded-pill px-2.5 py-1 text-xs fw-semibold" id="selectedCountBadge">0 selected</span>
-                        <span class="text-xs text-muted">Bulk Actions for selected members</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <button class="ds-btn ds-btn-sm ds-btn-secondary" onclick="Users.exportCSV(true)">
-                            <i data-lucide="download" style="width:13px;height:13px;"></i> Export Selected
-                        </button>
-                        <button class="ds-btn ds-btn-sm ds-btn-secondary" onclick="Users.bulkAction('activate')">
-                            <i data-lucide="check-circle" style="width:13px;height:13px;"></i> Activate
-                        </button>
-                        <button class="ds-btn ds-btn-sm ds-btn-secondary" onclick="Users.bulkAction('deactivate')">
-                            <i data-lucide="shield-off" style="width:13px;height:13px;"></i> Deactivate
-                        </button>
-                        <button class="ds-btn ds-btn-sm ds-btn-secondary text-danger" onclick="Users.bulkAction('delete')">
-                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i> Delete
-                        </button>
-                        <button class="ds-btn ds-btn-sm ds-btn-ghost text-xs" onclick="Users.clearSelection()">Clear</button>
-                    </div>
-                </div>
-
                 <div class="ds-card-body p-0">
                     <div class="table-responsive">
                         <table class="ds-table ds-table-hover">
                             <thead>
                                 <tr id="usersTheadRow">
-                                    <th style="width: 40px;" class="text-center">
-                                        <input type="checkbox" class="form-check-input" id="selectAllUsersCheckbox" onchange="Users.toggleSelectAll(this)" style="cursor: pointer;">
-                                    </th>
-                                    <th data-i18n="dashboards.admin.stakeholder">Stakeholder</th>
+                                    <th data-i18n="dashboards.admin.stakeholder">Identity</th>
                                     <th data-i18n="dashboards.admin.corporate_role">Role</th>
                                     <th>Plant Location</th>
                                     <th data-i18n="dashboards.common.department">Department</th>
@@ -478,8 +452,8 @@
     </div>
 
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
-    <script src="/assets/dist/core-bundle.1abb5f54ddea.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
     <script>
         const Users = {
             currentFilter: 'all',
@@ -598,9 +572,7 @@
 
             async exportCSV(onlySelected = false) {
                 const btn = document.getElementById('btnBulkExport');
-                const origHtml = btn ? btn.innerHTML : '<i data-lucide="download" style="width:14px;height:14px;"></i> Bulk Export';
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+                const origHtml = btn ? btn.innerHTML : '';
                 try {
                     if (btn) {
                         btn.disabled = true;
@@ -624,81 +596,63 @@
                         if (deptVal) payload.department_id = deptVal;
                     }
 
-                    const token = (typeof api !== 'undefined' && api.token) ? api.token
-                        : (sessionStorage.getItem('token') || sessionStorage.getItem('access_token')
-                           || localStorage.getItem('token') || localStorage.getItem('access_token') || '');
-
-                    const headers = {
-                        'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                    };
-
-                    const res = await fetch('/api/admin/users/export', {
-                        method: 'POST',
-                        headers,
-                        credentials: 'same-origin',
-                        body: JSON.stringify(payload),
-                        signal: controller.signal
-                    });
-
-                    clearTimeout(timeoutId);
+                    const token = (typeof api !== 'undefined' && api.token) ? api.token : (localStorage.getItem('token') || localStorage.getItem('access_token') || sessionStorage.getItem('token') || '');
+                    const res = (typeof api !== 'undefined' && typeof api.fetch === 'function')
+                        ? await api.fetch('/admin/users/export', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        })
+                        : await fetch('/api/admin/users/export', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                            },
+                            credentials: 'same-origin',
+                            body: JSON.stringify(payload)
+                        });
 
                     if (!res.ok) {
-                        let errMsg = `Export failed (HTTP ${res.status})`;
-                        try {
-                            const ct = res.headers.get('Content-Type') || '';
-                            if (ct.includes('application/json')) {
-                                const errJson = await res.json();
-                                errMsg = errJson.message || errJson.error || errMsg;
-                            }
-                        } catch (_) {}
-                        throw new Error(errMsg);
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err.message || `Export failed with HTTP ${res.status}`);
                     }
 
                     const blob = await res.blob();
-                    if (!blob || blob.size === 0) {
-                        throw new Error('Export returned empty file. No users matched the current filters.');
-                    }
-
                     const disposition = res.headers.get('Content-Disposition') || '';
                     let filename = 'OctaQube_Users_Directory.csv';
-                    const match = disposition.match(/filename[^;=\n]*=([^;\n]*)/);
+                    const match = disposition.match(/filename=([^;]+)/);
                     if (match && match[1]) {
                         filename = match[1].trim().replace(/^["']|["']$/g, '');
                     }
 
-                    const dlUrl = window.URL.createObjectURL(blob);
+                    const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
-                    a.href = dlUrl;
+                    a.href = url;
                     a.download = filename;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                    setTimeout(() => window.URL.revokeObjectURL(dlUrl), 1000);
+                    window.URL.revokeObjectURL(url);
 
-                    const countText = (payload.user_ids && payload.user_ids.length > 0)
-                        ? `${payload.user_ids.length} selected member(s)`
+                    const countText = (payload.user_ids && payload.user_ids.length > 0) 
+                        ? `${payload.user_ids.length} selected member(s)` 
                         : 'member directory';
                     if (typeof OctaQube !== 'undefined' && OctaQube.toast) {
                         OctaQube.toast(`Successfully exported ${countText} to CSV!`, 'success');
                     }
                 } catch (e) {
-                    clearTimeout(timeoutId);
                     console.error('Export CSV error:', e);
-                    const msg = e.name === 'AbortError'
-                        ? 'Export timed out. Please try again or apply filters to reduce the data set.'
-                        : (e.message || 'Failed to export users CSV');
                     if (typeof OctaQube !== 'undefined' && OctaQube.toast) {
-                        OctaQube.toast(msg, 'error');
+                        OctaQube.toast(e.message || 'Failed to export users CSV', 'error');
                     } else {
-                        alert(msg);
+                        alert(e.message || 'Failed to export users CSV');
                     }
                 } finally {
-                    clearTimeout(timeoutId);
                     if (btn) {
                         btn.disabled = false;
                         btn.innerHTML = origHtml;
-                        try { if (window.lucide) lucide.createIcons({ container: btn }); } catch (_) {}
+                        if (window.lucide) lucide.createIcons({ container: btn });
                     }
                 }
             },
@@ -761,17 +715,10 @@
                         memberSearchInput.addEventListener('input', () => this.loadUsers());
                     }
                     
-                    // Immediately trigger user loading so directory renders right away
+                    await this.fetchDepartments();
+                    await this.loadPlants();
+                    await this.loadCustomFields();
                     this.loadUsers();
-                    
-                    // Load metadata asynchronously without blocking member list
-                    Promise.allSettled([
-                        this.fetchDepartments(),
-                        this.loadPlants(),
-                        this.loadCustomFields()
-                    ]).then(() => {
-                        this.loadUsers(this.currentPage || 1);
-                    });
                     
                     const dropzone = document.getElementById('bulkDropzone');
                     const fileInput = document.getElementById('bulkFile');
@@ -823,7 +770,8 @@
                 }
             },
 
-            renderFieldList() {
+            async openFieldsModal() {
+                await this.loadCustomFields();
                 const container = document.getElementById('fieldsListContainer');
                 if (!container) return;
                 
@@ -863,18 +811,13 @@
                         </tr>
                     `;
                 }).join('');
-                if (window.lucide) lucide.createIcons();
-            },
+                
+                document.getElementById('newFieldForm').reset();
 
-            async openFieldsModal() {
-                await this.loadCustomFields();
-                this.renderFieldList();
-                document.getElementById('newFieldForm')?.reset();
+                // Load login options section
                 await this.loadLoginOptions();
 
-                const modalEl = document.getElementById('fieldsModal');
-                const modalInst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-                modalInst.show();
+                new bootstrap.Modal(document.getElementById('fieldsModal')).show();
                 if (window.lucide) lucide.createIcons();
             },
 
@@ -967,10 +910,9 @@
 
 
             async addCustomField() {
-                const nameInput = document.getElementById('newFieldName');
-                const name = (nameInput ? nameInput.value : '').trim();
-                const is_required = document.getElementById('newFieldRequired') ? document.getElementById('newFieldRequired').checked : false;
-                const data_type = document.getElementById('newFieldDataType') ? document.getElementById('newFieldDataType').value : 'both';
+                const name = document.getElementById('newFieldName').value.trim();
+                const is_required = document.getElementById('newFieldRequired').checked;
+                const data_type = document.getElementById('newFieldDataType').value;
                 
                 if (!name) return OctaQube.toast('Please enter a display name', 'warning');
                 
@@ -978,10 +920,7 @@
                     OctaQube.toast('Adding custom field...', 'info');
                     await api.post('/admin/users/custom-fields', { display_name: name, is_required, data_type });
                     OctaQube.toast('Custom field added successfully!', 'success');
-                    document.getElementById('newFieldForm')?.reset();
-                    await this.loadCustomFields();
-                    this.renderFieldList();
-                    await this.loadLoginOptions();
+                    await this.openFieldsModal();
                     this.loadUsers();
                 } catch (e) {
                     OctaQube.toast(e.message || 'Failed to add custom field', 'error');
@@ -994,9 +933,7 @@
                     OctaQube.toast('Deleting custom field...', 'info');
                     await api.delete(`/admin/users/custom-fields/${id}`);
                     OctaQube.toast('Custom field deleted successfully!', 'success');
-                    await this.loadCustomFields();
-                    this.renderFieldList();
-                    await this.loadLoginOptions();
+                    await this.openFieldsModal();
                     this.loadUsers();
                 } catch (e) {
                     OctaQube.toast(e.message || 'Failed to delete custom field', 'error');
@@ -1206,9 +1143,6 @@
                     const theadRow = document.getElementById('usersTheadRow');
                     if (theadRow) {
                         theadRow.innerHTML = `
-                            <th style="width: 40px;" class="text-center">
-                                <input type="checkbox" class="form-check-input" id="selectAllUsersCheckbox" onchange="Users.toggleSelectAll(this)" style="cursor: pointer;">
-                            </th>
                             <th data-i18n="dashboards.admin.stakeholder">Stakeholder</th>
                             <th data-i18n="dashboards.admin.corporate_role">Corporate Role</th>
                             <th>Plant Location</th>
@@ -1231,9 +1165,6 @@
 
                     tbody.innerHTML = users.map(u => `
                         <tr class="fade-in">
-                            <td class="text-center" onclick="event.stopPropagation()">
-                                <input type="checkbox" class="form-check-input user-select-checkbox" value="${u.id}" ${this.selectedUserIds && this.selectedUserIds.has(u.id) ? 'checked' : ''} onchange="Users.onCheckboxChange(this, ${u.id})" style="cursor: pointer;">
-                            </td>
                             <td>
                                 <div class="d-flex align-items-center gap-3">
                                     ${OctaQube.renderAvatar(u, 36)}

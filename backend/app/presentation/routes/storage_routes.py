@@ -133,12 +133,6 @@ def secure_download_file(file_path):
 
     resp = Response(content_bytes, mimetype=content_type or 'application/octet-stream')
     resp.headers['X-Content-Type-Options'] = 'nosniff'
-    resp.headers['X-Frame-Options'] = 'DENY'
-    resp.headers['X-Permitted-Cross-Domain-Policies'] = 'none'
-    resp.headers['Content-Security-Policy'] = "default-src 'self'"
-    resp.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    resp.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
-    resp.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     resp.headers['Cache-Control'] = 'private, no-cache, no-store, must-revalidate'
     filename = os.path.basename(clean_path)
     resp.headers['Content-Disposition'] = f'inline; filename="{filename}"'

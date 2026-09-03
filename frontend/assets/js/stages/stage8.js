@@ -658,6 +658,14 @@ const Stage8 = {
         this.setVal('s8_commercial_notes', ipPub.commercial_notes || '');
 
         if (window.lucide) lucide.createIcons();
+
+        // Restrict Section 5 (Benefits Summary / Impact Review) to Facilitator & Admin only
+        const user = OctaQube.user || JSON.parse(sessionStorage.getItem('user') || '{}');
+        const role = user.role ? (user.role.name || user.role) : 'Team Member';
+        const roleNormalized = role.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+        if (roleNormalized !== 'teammember') {
+            this.disableBenefitSummarySection();
+        }
     },
 
     async loadSopMasterOptions(savedCategory, savedType) {
@@ -1618,6 +1626,40 @@ const Stage8 = {
                     el.style.display = 'none';
                 }
             });
+        }
+    },
+
+    disableBenefitSummarySection() {
+        // Hide the "Add Benefit" button
+        const addBenefitBtn = document.querySelector('[onclick="StageModules[8].addBenefitRow()"]');
+        if (addBenefitBtn) {
+            addBenefitBtn.disabled = true;
+            addBenefitBtn.style.display = 'none';
+        }
+
+        // Disable all inputs inside the benefit container
+        const benefitContainer = document.getElementById('s8_benefitContainer');
+        if (benefitContainer) {
+            benefitContainer.querySelectorAll('input, textarea, select').forEach(el => {
+                el.disabled = true;
+                el.style.opacity = '0.6';
+            });
+            // Hide delete buttons on existing rows
+            benefitContainer.querySelectorAll('button').forEach(btn => {
+                btn.disabled = true;
+                btn.style.display = 'none';
+            });
+        }
+
+        // Add a role-restriction notice beneath the section heading
+        const benefitSection = document.querySelector('[onclick="StageModules[8].addBenefitRow()"]')?.closest('.d-flex');
+        if (benefitSection && !document.getElementById('benefitRoleNotice')) {
+            const notice = document.createElement('div');
+            notice.id = 'benefitRoleNotice';
+            notice.className = 'alert alert-info text-xs mt-2 mb-0 py-2 px-3';
+            notice.style.cssText = 'border-radius: var(--ds-radius-md); font-size: 0.75rem;';
+            notice.innerHTML = '<i class="me-1">🔒</i><strong>Impact Review (Section 5)</strong> can only be filled in by the <strong>Team Member</strong>.';
+            benefitSection.parentNode.insertBefore(notice, benefitSection.nextSibling);
         }
     },
 

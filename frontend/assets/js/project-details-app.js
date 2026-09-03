@@ -556,54 +556,14 @@ const ProjectApp = {
             return s.startsWith('sec_') || s.includes('_custom_sec_') || s.startsWith('custom_') || sec.type === 'custom';
         };
 
-        const formEl = container.querySelector('[id$="Form"]') || container.firstElementChild;
-        // Filter ONLY top-level cards (excluding any inner nested cards like in Stratification or child cards)
-        const allCards = Array.from((formEl || container).querySelectorAll('.glass-card.ds-card, .ds-card'));
-        const predefinedCards = allCards.filter(c => {
-            let parent = c.parentElement;
-            while (parent && parent !== (formEl || container) && parent !== container) {
-                if (parent.classList.contains('glass-card') || parent.classList.contains('ds-card')) {
-                    return false; // Skip nested cards
-                }
-                parent = parent.parentElement;
-            }
-            return true;
-        });
-
-        // Robust matching helper to locate the exact DOM card element for any predefined section
-        const findPredefinedCard = (sec, pIdx) => {
-            if (!sec) return null;
-            // 1. Direct match by section ID
-            if (sec.id) {
-                const el = (formEl || container).querySelector(`[data-sec-id="${sec.id}"]`) ||
-                           (formEl || container).querySelector(`#${sec.id}`);
-                if (el) return el;
-            }
-            // 2. Direct match by standard section ID pattern (e.g. s2_section_7 or section_7)
-            const stageSecNum = pIdx + 1;
-            const bySecId = (formEl || container).querySelector(`#s${stageId}_section_${stageSecNum}`) ||
-                            (formEl || container).querySelector(`#section_${stageSecNum}`);
-            if (bySecId) return bySecId;
-
-            // 3. Match by badge number in card header (e.g. "2.7")
-            const badgeText = `${stageId}.${stageSecNum}`;
-            const byBadge = predefinedCards.find(card => {
-                const badge = card.querySelector('.ds-card-header .ds-icon-circle');
-                return badge && badge.textContent.trim() === badgeText;
-            });
-            if (byBadge) return byBadge;
-
-            // 4. Fallback to card index in filtered top-level cards
-            const cardIdx = sec.card_index !== undefined ? sec.card_index : pIdx;
-            return predefinedCards[cardIdx] || null;
-        };
-
         // 0. Tag predefined cards BEFORE injecting custom cards to prevent index shift issues
+        const predefinedCards = Array.from(container.querySelectorAll('.glass-card.ds-card'));
         try {
             if (stageCfg && stageCfg.sections) {
                 const predefinedSecs = stageCfg.sections.filter(sec => !_isCustomSec(sec));
                 predefinedSecs.forEach((sec, pIdx) => {
-                    const cardEl = findPredefinedCard(sec, pIdx);
+                    const cardIdx = sec.card_index !== undefined ? sec.card_index : pIdx;
+                    const cardEl = predefinedCards[cardIdx];
                     if (cardEl) {
                         cardEl.dataset.secId = sec.id;
                         const isMandatory = (sec.required === true);
@@ -638,6 +598,7 @@ const ProjectApp = {
 
         // 1. Inject custom top-level section cards
         try {
+            const formEl = container.querySelector('[id$="Form"]') || container.firstElementChild;
             if (formEl && stageCfg && stageCfg.sections) {
                 stageCfg.sections.forEach(sec => {
                     if (sec && sec.id && _isCustomSec(sec)) {
@@ -696,17 +657,15 @@ const ProjectApp = {
                 predefinedSecs.forEach((sec, pIdx) => {
                     const subFields = Array.isArray(sec.fields) ? sec.fields : (Array.isArray(sec.custom_fields) ? sec.custom_fields : []);
                     if (subFields.length > 0) {
-                        const cardEl = findPredefinedCard(sec, pIdx);
+                        const cardIdx = sec.card_index !== undefined ? sec.card_index : pIdx;
+                        const cardEl = predefinedCards[cardIdx];
                         if (cardEl) {
-                            let cardBody = cardEl.querySelector('.ds-card-body');
-                            if (!cardBody) {
-                                cardBody = cardEl.querySelector('.card-body') || cardEl;
-                            }
+                            const cardBody = cardEl.querySelector('.ds-card-body');
                             if (cardBody) {
                                 subFields.forEach(field => {
                                     if (field && !cardBody.querySelector(`#field_wrap_${field.id}`) && !cardBody.querySelector(`#${field.id}`)) {
                                         const fieldWrapper = document.createElement('div');
-                                        fieldWrapper.className = 'ds-field mt-3 border-top pt-3 custom-injected-field';
+                                        fieldWrapper.className = 'ds-field mt-3 border-top pt-3';
                                         fieldWrapper.id = `field_wrap_${field.id}`;
                                         
                                         const labelEl = document.createElement('label');
@@ -740,6 +699,7 @@ const ProjectApp = {
 
         // 3. Sort all cards in formEl according to stageCfg.sections order
         try {
+            const formEl = container.querySelector('[id$="Form"]') || container.firstElementChild;
             if (formEl && stageCfg && stageCfg.sections) {
                 const orderMap = {};
                 stageCfg.sections.forEach((sec, idx) => {
@@ -748,7 +708,7 @@ const ProjectApp = {
                     }
                 });
 
-                const cards = Array.from(formEl.querySelectorAll(':scope > .glass-card.ds-card, :scope > .ds-card'));
+                const cards = Array.from(formEl.querySelectorAll(':scope > .glass-card.ds-card'));
                 cards.sort((a, b) => {
                     const idA = a.dataset.secId || '';
                     const idB = b.dataset.secId || '';
@@ -799,8 +759,9 @@ const ProjectApp = {
 
         // Fallback pass: ensure circle numbers are stageId.secNum and hide duplicate inner section headings
         try {
+            const formEl = container.querySelector('[id$="Form"]') || container.firstElementChild;
             if (formEl) {
-                const cards = Array.from(formEl.querySelectorAll(':scope > .glass-card.ds-card, :scope > .ds-card'));
+                const cards = Array.from(formEl.querySelectorAll(':scope > .glass-card.ds-card, .glass-card.ds-card'));
                 let secIdx = 1;
                 cards.forEach(card => {
                     const circle = card.querySelector('.ds-card-header .ds-icon-circle');
@@ -857,44 +818,12 @@ const ProjectApp = {
     setupSectionNAToggles(container, stageCfg) {
         if (!stageCfg || !stageCfg.sections) return;
 
-        const formEl = container.querySelector('[id$="Form"]') || container.firstElementChild;
-        const allCards = Array.from((formEl || container).querySelectorAll('.glass-card.ds-card, .ds-card'));
-        const predefinedCards = allCards.filter(c => {
-            let parent = c.parentElement;
-            while (parent && parent !== (formEl || container) && parent !== container) {
-                if (parent.classList.contains('glass-card') || parent.classList.contains('ds-card')) {
-                    return false;
-                }
-                parent = parent.parentElement;
-            }
-            return true;
-        });
+        const predefinedCards = Array.from(container.querySelectorAll('.glass-card.ds-card'));
 
         const _isCustomSec = (sec) => {
             if (!sec || !sec.id) return false;
             const s = String(sec.id);
             return s.startsWith('sec_') || s.includes('_custom_sec_') || s.startsWith('custom_') || sec.type === 'custom';
-        };
-
-        const findPredefinedCard = (sec, pIdx) => {
-            if (!sec) return null;
-            if (sec.id) {
-                const el = (formEl || container).querySelector(`[data-sec-id="${sec.id}"]`) ||
-                           (formEl || container).querySelector(`#${sec.id}`);
-                if (el) return el;
-            }
-            const stageSecNum = pIdx + 1;
-            const bySecId = (formEl || container).querySelector(`#s${this.activeStageId}_section_${stageSecNum}`) ||
-                            (formEl || container).querySelector(`#section_${stageSecNum}`);
-            if (bySecId) return bySecId;
-            const badgeText = `${this.activeStageId}.${stageSecNum}`;
-            const byBadge = predefinedCards.find(card => {
-                const badge = card.querySelector('.ds-card-header .ds-icon-circle');
-                return badge && badge.textContent.trim() === badgeText;
-            });
-            if (byBadge) return byBadge;
-            const cardIdx = sec.card_index !== undefined ? sec.card_index : pIdx;
-            return predefinedCards[cardIdx] || null;
         };
 
         const predefinedSecs = stageCfg.sections.filter(sec => !_isCustomSec(sec));
@@ -906,7 +835,8 @@ const ProjectApp = {
                 cardEl = container.querySelector(`#card_${sec.id}`);
             } else {
                 const pIdx = predefinedSecs.indexOf(sec);
-                cardEl = findPredefinedCard(sec, pIdx !== -1 ? pIdx : sIdx);
+                const cardIdx = sec.card_index !== undefined ? sec.card_index : (pIdx !== -1 ? pIdx : sIdx);
+                cardEl = predefinedCards[cardIdx];
             }
 
             if (!cardEl) return;
@@ -1017,6 +947,7 @@ const ProjectApp = {
         const lockedNotice = document.getElementById('lockedStagesNotice');
         const exportBtn = document.getElementById('exportReportBtn');
         const qcBtn = document.getElementById('qcAnalysisBtn');
+        const docsBtn = document.getElementById('projectDocsBtn');
         const bottomContainer = document.getElementById('bottomStageActionsContainer');
         const saveBtnBottom = document.getElementById('saveDraftBtnBottom');
         const submitBtnBottom = document.getElementById('submitBtnBottom');
@@ -1037,6 +968,13 @@ const ProjectApp = {
                 qcBtn.classList.remove('d-none');
             } else {
                 qcBtn.classList.add('d-none');
+            }
+        }
+        if (docsBtn) {
+            if (isStage8) {
+                docsBtn.classList.remove('d-none');
+            } else {
+                docsBtn.classList.add('d-none');
             }
         }
 
@@ -1203,7 +1141,7 @@ const ProjectApp = {
                 const parent = el.closest('.ds-field');
                 if (parent && !parent.querySelector('.is-invalid-feedback')) {
                     const label = parent.querySelector('.ds-label');
-                    const labelText = label ? label.textContent.replace(/\*/g, '').trim() : 'This field';
+                    const labelText = label ? label.textContent.replace('*', '').trim() : 'This field';
                     const feedback = document.createElement('div');
                     feedback.className = 'is-invalid-feedback';
                     feedback.textContent = `${labelText} is required.`;
@@ -2845,232 +2783,383 @@ const ProjectApp = {
         if (window.lucide) setTimeout(() => lucide.createIcons(), 100);
     },
 
-    /**
-     * Open Project Documents Modal and fetch all documents across 8 stages
-     */
-    async openProjectDocsModal() {
-        const modalEl = document.getElementById('projectDocsModal');
-        if (!modalEl) return;
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modal.show();
-
-        const body = document.getElementById('projectDocsModalBody');
-        const countBadge = document.getElementById('projectDocsCountBadge');
-        const downloadAllBtn = document.getElementById('downloadAllDocsBtn');
-        if (downloadAllBtn) downloadAllBtn.style.display = 'none';
-
-        if (body) {
-            body.innerHTML = `
-                <div class="p-5 text-center text-muted">
-                    <span class="spinner-border spinner-border-sm me-2 text-primary"></span>
-                    <span>Scanning and gathering all project documents & attachments...</span>
-                </div>
-            `;
+    normalizeDocUrl(rawUrl) {
+        if (!rawUrl || typeof rawUrl !== 'string') return null;
+        const u = rawUrl.trim();
+        if (!u || ['#', 'n/a', 'none', 'uploading...', 'null', 'undefined'].includes(u.toLowerCase())) return null;
+        
+        // Match valid file extensions or upload paths or explicit http links to documents
+        const hasFileExt = /\.(pdf|docx|xlsx|xls|png|jpg|jpeg|gif|webp|svg|csv|pptx|ppt|mp4|webm|mov|txt)($|\?)/i.test(u);
+        const isUploadPath = u.startsWith('/uploads/') || u.startsWith('uploads/') || u.startsWith('ev_') || u.startsWith('sop_');
+        const isExternalDoc = (u.startsWith('http://') || u.startsWith('https://')) && (hasFileExt || u.includes('/uploads/') || u.includes('sharepoint') || u.includes('drive.google') || u.includes('docs.google'));
+        
+        if (!hasFileExt && !isUploadPath && !isExternalDoc) {
+            return null; // Ignore plain non-document text or random website URLs
         }
 
-        try {
-            const res = await api.get(`/projects/${this.projectId}/documents`);
-            this._projectDocs = res.documents || [];
-            if (countBadge) countBadge.textContent = this._projectDocs.length;
-            
-            // Check if any local downloadable files exist
-            const hasLocalFiles = this._projectDocs.some(d => !d.is_external && (d.url.includes('/uploads/') || d.url.startsWith('uploads/')));
-            if (downloadAllBtn && hasLocalFiles) {
-                downloadAllBtn.style.display = 'inline-flex';
-            }
-
-            this.renderProjectDocs('all');
-        } catch (err) {
-            console.error('Failed to load project documents:', err);
-            if (body) {
-                body.innerHTML = `
-                    <div class="alert alert-danger d-flex align-items-center gap-2 m-3">
-                        <i data-lucide="alert-circle"></i>
-                        <div>Failed to load project documents: ${err.message || 'Server error'}</div>
-                    </div>
-                `;
-                if (window.lucide) lucide.createIcons();
-            }
+        if (u.startsWith('/uploads/') || u.startsWith('uploads/')) {
+            return u.startsWith('/') ? u : '/' + u;
         }
+        if (u.startsWith('http://') || u.startsWith('https://')) {
+            return u;
+        }
+        if (u.startsWith('ev_')) {
+            return '/uploads/project_evidence/' + u;
+        }
+        if (u.startsWith('sop_')) {
+            return '/uploads/sop/' + u;
+        }
+        return '/uploads/' + u;
     },
 
-    /**
-     * Render documents with category/stage filter pills
-     */
-    renderProjectDocs(selectedFilter = 'all') {
-        const body = document.getElementById('projectDocsModalBody');
-        if (!body) return;
-
-        const docs = this._projectDocs || [];
-        if (docs.length === 0) {
-            body.innerHTML = `
-                <div class="text-center py-5">
-                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:56px;height:56px;background:rgba(var(--ds-primary-rgb),0.08);color:var(--ds-primary);">
-                        <i data-lucide="folder-open" style="width:28px;height:28px;"></i>
-                    </div>
-                    <h6 class="fw-bold text-main">No Uploaded Documents Found</h6>
-                    <p class="text-xs text-muted mb-0">Files, evidence, and SOP documents uploaded during project workflow stages will appear here.</p>
-                </div>
-            `;
-            if (window.lucide) lucide.createIcons();
-            return;
+    openDocument(docUrl) {
+        if (!docUrl) return;
+        let finalUrl = docUrl;
+        if (finalUrl.startsWith('/uploads/') || finalUrl.startsWith('uploads/')) {
+            finalUrl = window.location.origin + (finalUrl.startsWith('/') ? finalUrl : '/' + finalUrl);
+        } else if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+            if (finalUrl.startsWith('ev_')) {
+                finalUrl = window.location.origin + '/uploads/project_evidence/' + finalUrl;
+            } else if (finalUrl.startsWith('sop_')) {
+                finalUrl = window.location.origin + '/uploads/sop/' + finalUrl;
+            } else {
+                finalUrl = window.location.origin + '/uploads/' + finalUrl;
+            }
         }
+        const win = window.open(finalUrl, '_blank', 'noopener,noreferrer');
+        if (win) win.focus();
+    },
 
-        // Gather unique stages that actually have documents
-        const stageMap = {};
-        docs.forEach(d => {
-            const sNum = d.stage_number || 1;
-            stageMap[sNum] = (stageMap[sNum] || 0) + 1;
-        });
+    extractAllProjectDocuments() {
+        const docs = [];
+        const p = this.projectData || {};
+        const workflows = p.workflows || [];
+        const seenUrls = new Set();
 
-        // Build filter tabs
-        let filterHtml = `
-            <div class="d-flex align-items-center gap-2 mb-4 overflow-auto pb-1" style="border-bottom: 1px solid var(--ds-border-color);">
-                <button type="button" class="btn btn-sm ${selectedFilter === 'all' ? 'btn-primary' : 'btn-light border'} rounded-pill px-3 py-1 fw-semibold text-xs" onclick="ProjectApp.renderProjectDocs('all')">
-                    All Documents <span class="badge ${selectedFilter === 'all' ? 'bg-white text-primary' : 'bg-secondary'} ms-1">${docs.length}</span>
-                </button>
-        `;
-
-        Object.keys(stageMap).sort((a, b) => Number(a) - Number(b)).forEach(sNum => {
-            const isAct = String(selectedFilter) === String(sNum);
-            filterHtml += `
-                <button type="button" class="btn btn-sm ${isAct ? 'btn-primary' : 'btn-light border'} rounded-pill px-3 py-1 fw-semibold text-xs text-nowrap" onclick="ProjectApp.renderProjectDocs(${sNum})">
-                    Stage ${sNum} <span class="badge ${isAct ? 'bg-white text-primary' : 'bg-secondary'} ms-1">${stageMap[sNum]}</span>
-                </button>
-            `;
-        });
-        filterHtml += `</div>`;
-
-        // Filter the list
-        const filteredDocs = selectedFilter === 'all' 
-            ? docs 
-            : docs.filter(d => String(d.stage_number) === String(selectedFilter));
-
-        // Get icon for document
-        const getDocIcon = (fileType, ext) => {
-            ext = (ext || '').toLowerCase();
-            if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext)) return 'image';
-            if (['xls', 'xlsx', 'csv'].includes(ext)) return 'table';
-            if (['ppt', 'pptx'].includes(ext)) return 'presentation';
-            if (['pdf'].includes(ext)) return 'file-text';
-            if (['doc', 'docx'].includes(ext)) return 'file-edit';
-            if (['mp4', 'mov', 'avi', 'mkv'].includes(ext)) return 'video';
-            if (['zip', 'rar', '7z', 'tar'].includes(ext)) return 'archive';
-            return 'paperclip';
+        const stageNames = {
+            1: 'Stage 1: Project Charter & Team',
+            2: 'Stage 2: Define Problem & Observation',
+            3: 'Stage 3: Interim Containment & Causes',
+            4: 'Stage 4: Root Cause Analysis',
+            5: 'Stage 5: Permanent Corrections',
+            6: 'Stage 6: Implementation & Action Plans',
+            7: 'Stage 7: Preventive Measures & Verification',
+            8: 'Stage 8: SOP Standardization & Closure'
         };
 
-        // Render documents table / cards
-        let listHtml = `
-            <div class="table-responsive">
-                <table class="ds-table table-hover align-middle mb-0">
-                    <thead>
-                        <tr class="text-uppercase text-xs" style="color:var(--ds-text-secondary);background:rgba(var(--ds-primary-rgb),0.03);">
-                            <th style="min-width:280px;">Document / File</th>
-                            <th style="min-width:180px;">Stage & Section</th>
-                            <th style="min-width:120px;">Type & Size</th>
-                            <th class="text-end" style="min-width:140px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+        const addDoc = (stageNum, title, rawUrl, category = 'Evidence') => {
+            const targetUrl = this.normalizeDocUrl(rawUrl);
+            if (!targetUrl || seenUrls.has(targetUrl)) return;
+            seenUrls.add(targetUrl);
 
-        filteredDocs.forEach(doc => {
-            const icon = getDocIcon(doc.file_type, doc.extension);
-            const isLocal = !doc.is_external && (doc.url.includes('/uploads/') || doc.url.startsWith('uploads/'));
-            
-            listHtml += `
-                <tr>
-                    <td>
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width:38px;height:38px;background:rgba(var(--ds-primary-rgb),0.08);color:var(--ds-primary);">
-                                <i data-lucide="${icon}" style="width:18px;height:18px;"></i>
-                            </div>
-                            <div class="overflow-hidden">
-                                <div class="fw-bold text-sm text-main text-truncate" title="${escapeHtml(doc.label)}">${escapeHtml(doc.label)}</div>
-                                <div class="text-xs text-muted text-truncate font-monospace" style="max-width:260px;" title="${escapeHtml(doc.filename)}">${escapeHtml(doc.filename)}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="d-flex flex-column">
-                            <span class="ds-badge ds-badge-sm blue mb-1" style="width:fit-content;font-size:11px;">Stage ${doc.stage_number}</span>
-                            <span class="text-xs text-muted">${escapeHtml(doc.section || 'General')}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="d-flex flex-column">
-                            <span class="text-xs fw-semibold text-main">${escapeHtml(doc.file_type || 'File')}</span>
-                            <span class="text-xxs text-muted">${escapeHtml(doc.file_size || 'Remote')}</span>
-                        </div>
-                    </td>
-                    <td class="text-end">
-                        <div class="d-inline-flex align-items-center gap-2">
-                            <a href="${escapeHtml(doc.url)}" target="_blank" rel="noopener noreferrer" class="ds-btn ds-btn-xs ds-btn-outline-primary" title="View / Open File">
-                                <i data-lucide="external-link" style="width:12px;height:12px;margin-right:4px;"></i> View
-                            </a>
-                            <button type="button" class="ds-btn ds-btn-xs ds-btn-primary" onclick="ProjectApp.downloadSingleDoc('${escapeHtml(doc.url)}', '${escapeHtml(doc.filename)}')" title="Download File">
-                                <i data-lucide="download" style="width:12px;height:12px;margin-right:4px;"></i> Download
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
+            let cleanName = (title || '').trim();
+            if (!cleanName || cleanName.startsWith('http') || cleanName.startsWith('/uploads')) {
+                const parts = targetUrl.split('/');
+                cleanName = decodeURIComponent(parts[parts.length - 1] || 'Document');
+                cleanName = cleanName.replace(/^ev_\d+_\d+_/, '').replace(/^sop_\d+_/, '');
+            }
+
+            const extMatch = targetUrl.match(/\.([a-zA-Z0-9]+)(\?.*)?$/);
+            const ext = extMatch ? extMatch[1].toUpperCase() : 'DOC';
+
+            docs.push({
+                stage: stageNum,
+                stageName: stageNames[stageNum] || `Stage ${stageNum}`,
+                title: cleanName,
+                url: targetUrl,
+                category: category,
+                ext: ext
+            });
+        };
+
+        // 1. Process each workflow stage's saved data
+        workflows.forEach(wf => {
+            const sId = wf.stage_id;
+            const d = wf.data || {};
+            if (!d || typeof d !== 'object') return;
+
+            // Stage 2: Problem Definition Evidence, Process Flow, Gemba, etc.
+            if (sId === 2) {
+                const cs = d.current_state || d.customer_statement || d.problem_definition || {};
+                const media = cs.media_files || d.media_files || [];
+                if (Array.isArray(media)) {
+                    media.forEach(m => {
+                        if (typeof m === 'object' && m) {
+                            addDoc(2, m.name || m.file_name || 'Problem Definition Evidence', m.url || m.file_path, 'Problem Evidence');
+                        } else if (typeof m === 'string') {
+                            addDoc(2, 'Problem Definition Evidence', m, 'Problem Evidence');
+                        }
+                    });
+                }
+                if (d.process_observation) {
+                    if (d.process_observation.flow_upload) addDoc(2, 'Process Flow Diagram', d.process_observation.flow_upload, 'Flow Diagram');
+                    if (d.process_observation.gemba_evidence) addDoc(2, 'Gemba Walk Evidence', d.process_observation.gemba_evidence, 'Gemba Evidence');
+                    if (d.process_observation.gembutsu_evidence) addDoc(2, 'Gembutsu Evidence', d.process_observation.gembutsu_evidence, 'Gembutsu Evidence');
+                }
+                if (d.process_flow && d.process_flow.evidence) {
+                    addDoc(2, 'Process Flow Evidence', d.process_flow.evidence, 'Process Flow');
+                }
+                if (d.data_collection && d.data_collection.csv_file) {
+                    addDoc(2, 'Data Collection CSV Sheet', d.data_collection.csv_file, 'Data Sheet');
+                }
+            }
+
+            // Stage 6: Countermeasure Implementation Evidence & Documents
+            if (sId === 6) {
+                const implEv = d.implementation_evidence || [];
+                if (Array.isArray(implEv)) {
+                    implEv.forEach(ev => {
+                        if (typeof ev === 'object' && ev) {
+                            addDoc(6, ev.document_name || ev.name || 'Implementation Evidence', ev.link || ev.url, 'Implementation Evidence');
+                        }
+                    });
+                }
+                const cm = d.countermeasures || [];
+                if (Array.isArray(cm)) {
+                    cm.forEach(c => {
+                        if (c && c.evidence_url) addDoc(6, c.countermeasure || 'Countermeasure Evidence', c.evidence_url, 'Action Evidence');
+                        if (c && c.doc_url) addDoc(6, c.countermeasure || 'Implementation Document', c.doc_url, 'Implementation Doc');
+                    });
+                }
+            }
+
+            // Stage 8: SOP Standardization Annexures & Knowledge Repository
+            if (sId === 8) {
+                // Section 8.1 SOP Attachment
+                if (d.sop && d.sop.attachment_url) {
+                    addDoc(8, 'SOP Supporting Annexure Document', d.sop.attachment_url, 'SOP Annexure');
+                }
+                if (d.sop && d.sop.attachment) {
+                    addDoc(8, 'SOP Supporting Annexure Document', d.sop.attachment, 'SOP Annexure');
+                }
+                if (d.sop_attachment) {
+                    addDoc(8, 'SOP Annexure Document', d.sop_attachment, 'SOP Annexure');
+                }
+
+                // Section 8.2 Standardization Records
+                if (Array.isArray(d.standardization)) {
+                    d.standardization.forEach(std => {
+                        if (std && std.document && (std.document.includes('/') || /\.(pdf|docx|xlsx|png|jpg)/i.test(std.document))) {
+                            addDoc(8, std.document, std.document, 'Standardization Doc');
+                        }
+                    });
+                }
+
+                // Section 8.7 Knowledge Repository
+                if (Array.isArray(d.knowledge_repository)) {
+                    d.knowledge_repository.forEach(repo => {
+                        if (repo && (repo.link || repo.url)) {
+                            const repoTitle = repo.summary || repo.keyword || 'Knowledge Repository Asset';
+                            addDoc(8, repoTitle, repo.link || repo.url, 'Knowledge Repository');
+                        }
+                    });
+                }
+
+                // Section 8.3 Training Records
+                if (Array.isArray(d.training_adoption)) {
+                    d.training_adoption.forEach(tr => {
+                        if (tr && tr.document) {
+                            const trTitle = tr.target_group ? `${tr.target_group} - Training Attendance Sheet` : 'Training Attendance Record';
+                            addDoc(8, trTitle, tr.document, 'Training Record');
+                        }
+                    });
+                }
+
+                // Section 8.10 IP & Publications
+                if (d.ip_patent_publication && d.ip_patent_publication.paper_title_link) {
+                    const pubTitle = d.ip_patent_publication.patent_title || d.ip_patent_publication.forum_name || 'Research Paper / Patent Document';
+                    addDoc(8, pubTitle, d.ip_patent_publication.paper_title_link, 'Research & Patent');
+                }
+            }
         });
 
-        listHtml += `
-                    </tbody>
-                </table>
-            </div>
-        `;
+        // 2. Also incorporate active stage uploads currently in memory / live DOM (e.g. newly uploaded before saving draft)
+        if (window.StageModules) {
+            // Stage 2 active uploads
+            if (window.StageModules[2] && Array.isArray(window.StageModules[2].uploadedFiles)) {
+                window.StageModules[2].uploadedFiles.forEach(f => {
+                    addDoc(2, f.name || 'Problem Definition Evidence', f.url, 'Problem Evidence');
+                });
+            }
 
-        body.innerHTML = filterHtml + listHtml;
-        if (window.lucide) lucide.createIcons();
-    },
+            // Stage 8 Section 8.1 SOP input
+            const s8Input = document.getElementById('s8_sop_attachment');
+            if (s8Input && s8Input.value && s8Input.value.trim() && s8Input.value !== 'Uploading...') {
+                addDoc(8, 'SOP Supporting Annexure Document', s8Input.value.trim(), 'SOP Annexure');
+            }
 
-    /**
-     * Download a single document
-     */
-    async downloadSingleDoc(url, filename) {
-        if (!url) return;
-        if (url.startsWith('http://') || url.startsWith('https://')) {
-            window.open(url, '_blank');
-            return;
-        }
-        try {
-            // Use api.downloadFile to download securely with Authorization header
-            await api.downloadFile(url, filename || 'download');
-        } catch (err) {
-            console.error('Download failed, opening direct URL:', err);
-            window.open(url, '_blank');
-        }
-    },
+            // Stage 8 Section 8.7 Knowledge Repository dynamic rows
+            const repoRows = document.querySelectorAll('#s8_repoContainer .dyn-row');
+            if (repoRows && repoRows.length > 0) {
+                repoRows.forEach(row => {
+                    const tagInput = row.querySelector('.r-tag');
+                    const sumInput = row.querySelector('.r-sum');
+                    const lnkInput = row.querySelector('.r-lnk');
+                    if (lnkInput && lnkInput.value && lnkInput.value.trim() && lnkInput.value !== 'Uploading...') {
+                        const title = (sumInput ? sumInput.value : '') || (tagInput ? tagInput.value : '') || 'Knowledge Repository Asset';
+                        addDoc(8, title, lnkInput.value.trim(), 'Knowledge Repository');
+                    }
+                });
+            }
 
-    /**
-     * Download all project documents in a ZIP bundle
-     */
-    async downloadAllDocuments() {
-        const btn = document.getElementById('downloadAllDocsBtn');
-        const origHtml = btn ? btn.innerHTML : '';
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Packaging ZIP...`;
-        }
+            // Stage 8 Section 8.2 Standardization dynamic rows
+            const stdRows = document.querySelectorAll('#s8_stdContainer .dyn-row');
+            if (stdRows && stdRows.length > 0) {
+                stdRows.forEach(row => {
+                    const docInput = row.querySelector('.r-doc');
+                    if (docInput && docInput.value && docInput.value.trim()) {
+                        const val = docInput.value.trim();
+                        if (val.includes('/') || /\.(pdf|docx|xlsx|png|jpg)/i.test(val)) {
+                            addDoc(8, val, val, 'Standardization Doc');
+                        }
+                    }
+                });
+            }
 
-        try {
-            const projectUid = this.projectData?.project_uid || `PRJ-${this.projectId}`;
-            const filename = `${projectUid}_All_Documents.zip`;
-            await api.downloadFile(`/projects/${this.projectId}/documents/download-all`, filename);
-        } catch (err) {
-            console.error('Failed to download documents ZIP:', err);
-            alert(`Could not download all documents as ZIP: ${err.message || 'Server error'}`);
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = origHtml;
+            // Stage 8 Section 8.10 IP & Publication input
+            const pubInput = document.getElementById('s8_pub_title_link');
+            if (pubInput && pubInput.value && pubInput.value.trim()) {
+                addDoc(8, 'Research Paper / Citation Document', pubInput.value.trim(), 'Research & Patent');
             }
         }
+
+        return docs;
+    },
+
+    openProjectDocsModal() {
+        const modalEl = document.getElementById('projectDocsModal');
+        const bodyEl = document.getElementById('projectDocsModalBody');
+        const countBadge = document.getElementById('projectDocsCountBadge');
+        const downloadAllBtn = document.getElementById('downloadAllDocsBtn');
+        if (!modalEl || !bodyEl) return;
+
+        const docs = this.extractAllProjectDocuments();
+        if (countBadge) countBadge.textContent = docs.length;
+
+        if (docs.length === 0) {
+            if (downloadAllBtn) downloadAllBtn.style.display = 'none';
+            bodyEl.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <div class="d-inline-flex p-3 rounded-circle mb-3" style="background: rgba(var(--ds-primary-rgb), 0.08);">
+                        <i data-lucide="folder-x" style="width: 44px; height: 44px; color: var(--ds-text-secondary); opacity: 0.7;"></i>
+                    </div>
+                    <h6 class="fw-bold text-main mb-1">No Documents Uploaded</h6>
+                    <p class="text-xs text-secondary mb-0" style="max-width: 380px; margin: 0 auto;">
+                        No attachments, evidence files, SOP annexures, or presentations have been uploaded in this project yet.
+                    </p>
+                </div>
+            `;
+        } else {
+            if (downloadAllBtn) downloadAllBtn.style.display = 'inline-flex';
+
+            // Group documents by stage
+            const grouped = {};
+            docs.forEach(doc => {
+                if (!grouped[doc.stage]) grouped[doc.stage] = [];
+                grouped[doc.stage].push(doc);
+            });
+
+            const getFileIcon = (ext) => {
+                const e = (ext || '').toUpperCase();
+                if (['PDF'].includes(e)) return { icon: 'file-text', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.12)', badge: 'PDF' };
+                if (['PNG', 'JPG', 'JPEG', 'GIF', 'WEBP', 'SVG'].includes(e)) return { icon: 'image', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)', badge: e };
+                if (['XLSX', 'XLS', 'CSV'].includes(e)) return { icon: 'table', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', badge: e };
+                if (['DOC', 'DOCX'].includes(e)) return { icon: 'file-text', color: '#6366f1', bg: 'rgba(99, 102, 241, 0.12)', badge: 'DOCX' };
+                if (['PPT', 'PPTX'].includes(e)) return { icon: 'presentation', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)', badge: 'PPT' };
+                if (['MP4', 'WEBM', 'MOV', 'AVI', 'MKV'].includes(e)) return { icon: 'video', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)', badge: 'VIDEO' };
+                return { icon: 'file', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)', badge: e || 'FILE' };
+            };
+
+            let html = '<div class="v-stack gap-4">';
+            const stageKeys = Object.keys(grouped).sort((a, b) => parseInt(a) - parseInt(b));
+
+            stageKeys.forEach(stg => {
+                const stgDocs = grouped[stg];
+                const stageTitle = stgDocs[0]?.stageName || `Stage ${stg}`;
+
+                html += `
+                    <div class="glass-card p-3 rounded-3" style="background: var(--ds-surface, rgba(255,255,255,0.02)); border: 1px solid var(--ds-border-color, rgba(255,255,255,0.08));">
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom" style="border-color: var(--ds-border-color, rgba(255,255,255,0.08)) !important;">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 fw-bold" style="font-size: 11px;">
+                                    Stage ${stg}
+                                </span>
+                                <h6 class="fw-bold mb-0 text-main" style="font-size: 13px;">${stageTitle}</h6>
+                            </div>
+                            <span class="text-xs text-muted fw-medium">${stgDocs.length} ${stgDocs.length === 1 ? 'document' : 'documents'}</span>
+                        </div>
+                        <div class="row g-3">
+                `;
+
+                stgDocs.forEach(doc => {
+                    const styleInfo = getFileIcon(doc.ext);
+                    const isImg = ['PNG', 'JPG', 'JPEG', 'GIF', 'WEBP'].includes(doc.ext.toUpperCase());
+                    const safeUrl = OctaQube.escapeHtml(doc.url);
+                    const safeTitle = OctaQube.escapeHtml(doc.title);
+                    const safeCat = OctaQube.escapeHtml(doc.category);
+                    
+                    html += `
+                        <div class="col-md-6 col-12">
+                            <div class="d-flex align-items-center justify-content-between p-3 rounded-3 border hover-shadow" style="background: var(--ds-bg-card, #ffffff); border-color: var(--ds-border-color, #e2e8f0) !important; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;" onclick="ProjectApp.openDocument('${safeUrl}')">
+                                <div class="d-flex align-items-center gap-3" style="min-width: 0; flex: 1;">
+                                    ${isImg ? `
+                                        <div style="width: 42px; height: 42px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #f8fafc;" class="border">
+                                            <img src="${safeUrl}" alt="${safeTitle}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'d-flex align-items-center justify-content-center w-100 h-100\\'><i data-lucide=\\'image\\' style=\\'width:18px;height:18px;color:#3b82f6;\\'></i></div>';">
+                                        </div>
+                                    ` : `
+                                        <div style="width: 42px; height: 42px; border-radius: 8px; background: ${styleInfo.bg}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                            <i data-lucide="${styleInfo.icon}" style="width: 20px; height: 20px; color: ${styleInfo.color};"></i>
+                                        </div>
+                                    `}
+                                    <div style="min-width: 0; flex: 1;">
+                                        <a href="javascript:void(0)" class="fw-semibold text-main text-decoration-none d-block text-truncate hover-underline" style="font-size: 13px;" title="${safeTitle}" onclick="event.stopPropagation(); ProjectApp.openDocument('${safeUrl}')">
+                                            ${safeTitle}
+                                        </a>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <span class="badge" style="background: ${styleInfo.bg}; color: ${styleInfo.color}; font-size: 9.5px; padding: 2px 6px; font-weight: 700;">
+                                                ${styleInfo.badge}
+                                            </span>
+                                            <span class="text-xs text-muted text-truncate" style="font-size: 11px;">
+                                                ${safeCat}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="ds-btn ds-btn-sm ds-btn-outline ms-2 flex-shrink-0" style="padding: 5px 10px; font-size: 11.5px; border-radius: 8px;" title="Open document" onclick="event.stopPropagation(); ProjectApp.openDocument('${safeUrl}')">
+                                    <i data-lucide="external-link" style="width: 13px; height: 13px;" class="me-1"></i> Open
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            bodyEl.innerHTML = html;
+        }
+
+        new bootstrap.Modal(modalEl).show();
+        if (window.lucide) setTimeout(() => lucide.createIcons(), 100);
+    },
+
+    downloadAllDocuments() {
+        const docs = this.extractAllProjectDocuments();
+        if (docs.length === 0) {
+            OctaQube.toast("No documents available to download.", "info");
+            return;
+        }
+        OctaQube.toast(`Opening ${docs.length} documents...`, "info");
+        docs.forEach((doc, idx) => {
+            setTimeout(() => {
+                this.openDocument(doc.url);
+            }, idx * 250);
+        });
     }
 };
 
 document.addEventListener('DOMContentLoaded', () => ProjectApp.init());
-

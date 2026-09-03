@@ -46,39 +46,6 @@ PLAN_LIMITS = {
         'white_label': True,
         'multi_plant': True,
         'api_access': True
-    },
-    'Pay-As-You-Go': {
-        'max_users': 1000000, # Unlimited metered
-        'max_locations': 1000000, # Unlimited metered
-        'max_active_projects': 1000000, # Unlimited metered
-        'features': ['basic_workflow', 'standard_reports', 'full_workflow', 'advanced_analytics', 'repository', 'ai_assistant', 'audit_logs', 'white_label', 'multi_plant', 'api_access'],
-        'workflow_stages': [1, 2, 3, 4, 5, 6, 7, 8],
-        'ai_assistant': True,
-        'white_label': True,
-        'multi_plant': True,
-        'api_access': True
-    },
-    'Pay-As-You-Go (Metered)': {
-        'max_users': 1000000, # Unlimited metered
-        'max_locations': 1000000, # Unlimited metered
-        'max_active_projects': 1000000, # Unlimited metered
-        'features': ['basic_workflow', 'standard_reports', 'full_workflow', 'advanced_analytics', 'repository', 'ai_assistant', 'audit_logs', 'white_label', 'multi_plant', 'api_access'],
-        'workflow_stages': [1, 2, 3, 4, 5, 6, 7, 8],
-        'ai_assistant': True,
-        'white_label': True,
-        'multi_plant': True,
-        'api_access': True
-    },
-    'payg': {
-        'max_users': 1000000, # Unlimited metered
-        'max_locations': 1000000, # Unlimited metered
-        'max_active_projects': 1000000, # Unlimited metered
-        'features': ['basic_workflow', 'standard_reports', 'full_workflow', 'advanced_analytics', 'repository', 'ai_assistant', 'audit_logs', 'white_label', 'multi_plant', 'api_access'],
-        'workflow_stages': [1, 2, 3, 4, 5, 6, 7, 8],
-        'ai_assistant': True,
-        'white_label': True,
-        'multi_plant': True,
-        'api_access': True
     }
 }
 
@@ -123,7 +90,6 @@ class SubscriptionManager:
         Returns:
           dict: {
              'plan_name': str,
-             'is_payg': bool,
              'max_users': int,
              'max_locations': int,
              'max_projects': int,
@@ -137,7 +103,6 @@ class SubscriptionManager:
         if not org:
             return {
                 'plan_name': 'Trial',
-                'is_payg': False,
                 'max_users': 50,
                 'max_locations': 5,
                 'max_projects': 25,
@@ -189,44 +154,11 @@ class SubscriptionManager:
                     func.lower(func.trim(SaaSPlan.plan_type)) == raw_plan_name.lower()
                 ).first()
 
-        plan_name = (plan_obj.name.strip() if plan_obj and plan_obj.name else None) or (sub.plan_name.strip() if sub and sub.plan_name else None) or raw_plan_name or 'Trial'
-
-        # Check if organization is on a Pay-As-You-Go / metered billing plan
-        is_payg = False
-        if plan_obj:
-            is_payg = (
-                getattr(plan_obj, 'plan_type', '') == 'Pay-As-You-Go' or
-                getattr(plan_obj, 'pricing_model', '') == 'pay_as_you_go' or
-                'pay-as-you-go' in (plan_obj.name or '').lower() or
-                'payg' in (plan_obj.code or '').lower()
-            )
-        if not is_payg and sub:
-            is_payg = (
-                getattr(sub, 'pricing_model', '') == 'pay_as_you_go' or
-                'pay-as-you-go' in (sub.plan_name or '').lower() or
-                'payg' in (sub.plan_name or '').lower()
-            )
-        if not is_payg and raw_plan_name:
-            is_payg = (
-                'pay-as-you-go' in raw_plan_name.lower() or
-                'payg' in raw_plan_name.lower() or
-                'metered' in raw_plan_name.lower()
-            )
-
-        if is_payg:
-            return {
-                'plan_name': plan_name,
-                'is_payg': True,
-                'max_projects': 1000000,
-                'max_users': 1000000,
-                'max_locations': 1000000,
-                'storage_limit_gb': 1000000.0
-            }
-
         max_projects = None
         max_users = None
         max_locations = None
         storage_gb = 10.0
+        plan_name = raw_plan_name or 'Trial'
 
         if plan_obj and plan_obj.limits:
             limits = plan_obj.limits
@@ -234,6 +166,7 @@ class SubscriptionManager:
             max_users = limits.max_users
             max_locations = getattr(limits, 'max_locations', 5)
             storage_gb = getattr(limits, 'storage_limit_gb', 10.0)
+            plan_name = plan_obj.name.strip()
 
         # 4. Fallback to PLAN_LIMITS dictionary
         fallback_key = 'Trial' if is_trial_status else 'Starter'
@@ -245,7 +178,6 @@ class SubscriptionManager:
 
         return {
             'plan_name': plan_name,
-            'is_payg': False,
             'max_projects': final_max_projects,
             'max_users': final_max_users,
             'max_locations': final_max_locations,
@@ -267,14 +199,6 @@ class SubscriptionManager:
 
         clean_name = (plan_name or '').strip()
         if clean_name:
-            if any(k in clean_name.lower() for k in ['pay-as-you-go', 'payg', 'metered']):
-                base = PLAN_LIMITS['Pay-As-You-Go'].copy()
-                base['max_users'] = 1000000
-                base['max_locations'] = 1000000
-                base['max_active_projects'] = 1000000
-                base['storage_limit_gb'] = 1000000.0
-                return base
-
             from app.infrastructure.database.models.models import SaaSPlan
             from sqlalchemy import func
             db_plan = SaaSPlan.query.filter(
@@ -299,9 +223,6 @@ class SubscriptionManager:
     @staticmethod
     def check_user_limit(org_id):
         limits = SubscriptionManager.get_organization_plan_limits(org_id)
-        if limits.get('is_payg'):
-            return True, "Unlimited (Pay-As-You-Go metered)"
-
         plan_name = limits['plan_name']
         max_users = limits['max_users']
 
@@ -321,9 +242,6 @@ class SubscriptionManager:
         Check if the organization has reached its maximum plant locations allowance under its active SaaS plan.
         """
         limits = SubscriptionManager.get_organization_plan_limits(org_id)
-        if limits.get('is_payg'):
-            return True, "Unlimited (Pay-As-You-Go metered)"
-
         plan_name = limits['plan_name']
         max_locations = limits.get('max_locations', 5)
 
@@ -340,9 +258,6 @@ class SubscriptionManager:
     @staticmethod
     def check_project_limit(org_id):
         limits = SubscriptionManager.get_organization_plan_limits(org_id)
-        if limits.get('is_payg'):
-            return True, "Unlimited (Pay-As-You-Go metered)"
-
         plan_name = limits['plan_name']
         max_projects = limits['max_projects']
 
@@ -463,13 +378,7 @@ def get_org_effective_expiry_and_start(org):
         raw_expiry = getattr(org, 'trial_ends_at', None) or getattr(org, 'license_expiry_date', None) or (sub.trial_end_date if sub else None) or (sub.end_date if sub else None)
         expiry_date = make_naive_utc(raw_expiry)
         if not expiry_date:
-            from app.infrastructure.database.models.billing import PlatformSettings
-            tp = SaaSPlan.query.filter(
-                (SaaSPlan.is_default_trial == True) | (SaaSPlan.plan_type == 'Trial') | (SaaSPlan.name == 'Trial')
-            ).first()
-            ps = PlatformSettings.query.first()
-            trial_days = getattr(tp, 'trial_duration_days', None) or getattr(tp, 'trial_days', None) or (ps.trial_period_days if ps and ps.trial_period_days else 180)
-            expiry_date = start_date + timedelta(days=int(trial_days))
+            expiry_date = start_date + timedelta(days=30)
         return expiry_date, start_date
 
     # For Paid / Active / Other subscriptions
@@ -483,7 +392,6 @@ def get_org_effective_expiry_and_start(org):
         ).first()
         if sp:
             from app.infrastructure.database.models.models import SaaSPlanPricing
-            from app.infrastructure.database.models.billing import PlatformSettings
             pricing = SaaSPlanPricing.query.filter_by(plan_id=sp.id, is_active=True).first()
             cycle = (pricing.billing_cycle if pricing else (getattr(sp, 'billing_cycle', None) or (sub.billing_cycle if sub else None) or 'Monthly')).strip().title()
             
@@ -495,13 +403,12 @@ def get_org_effective_expiry_and_start(org):
                 duration_days = 30
             elif getattr(sp, 'duration_days', None) and sp.duration_days > 0:
                 duration_days = sp.duration_days
-            elif cycle in ('Trial', 'Trialing', 'Trial Duration') or sp.is_default_trial or (sp.plan_type and 'trial' in sp.plan_type.lower()):
-                ps = PlatformSettings.query.first()
-                duration_days = getattr(sp, 'trial_duration_days', None) or getattr(sp, 'trial_days', None) or (ps.trial_period_days if ps and ps.trial_period_days else 180)
+            elif cycle in ('Trial', 'Trialing', 'Trial Duration'):
+                duration_days = getattr(sp, 'trial_days', None) or getattr(sp, 'trial_duration_days', 30) or 30
             else:
                 duration_days = 30  # Monthly default
 
-            expiry_date = start_date + timedelta(days=int(duration_days))
+            expiry_date = start_date + timedelta(days=duration_days)
 
     if not expiry_date:
         expiry_date = start_date + timedelta(days=30)
@@ -615,15 +522,13 @@ def apply_new_plan_to_organization(org, plan_name, billing_cycle=None, approved_
         duration_days = 365
     elif cycle_title in ('Quarterly', 'Quarter'):
         duration_days = 90
-    elif cycle_title in ('Trial', 'Trialing', 'Trial Duration') or (sp and (getattr(sp, 'is_default_trial', False) or (getattr(sp, 'plan_type', '') and 'trial' in sp.plan_type.lower()))):
-        from app.infrastructure.database.models.billing import PlatformSettings
-        ps = PlatformSettings.query.first()
-        duration_days = getattr(sp, 'trial_duration_days', None) or getattr(sp, 'trial_days', None) or (ps.trial_period_days if ps and ps.trial_period_days else 180)
+    elif cycle_title in ('Trial', 'Trialing', 'Trial Duration'):
+        duration_days = getattr(sp, 'trial_duration_days', None) or getattr(sp, 'trial_days', None) or 30
     else:
         duration_days = 30
 
     start_dt = now
-    expiry_dt = start_dt + timedelta(days=int(duration_days))
+    expiry_dt = start_dt + timedelta(days=duration_days)
 
     # 1. Update Organization attributes
     org.subscription_plan = pname

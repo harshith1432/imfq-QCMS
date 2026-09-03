@@ -1135,7 +1135,7 @@ const SupportDesk = {
                 <h5 class="fw-bold text-main mb-4" style="color:var(--ds-text-main);"><i data-lucide="plus-circle" class="me-2 text-primary"></i> Create Support Ticket</h5>
                 
                 <!-- Step Indicator -->
-                <div class="d-flex justify-content-between mb-4 border-bottom pb-3" style="border-color:rgba(255,255,255,0.06)!important;">
+                <div class="d-flex justify-content-between mb-4 border-bottom pb-3" style="border-color:var(--ds-border-color, #cbd5e1)!important;">
                     <span class="text-xs fw-bold ${this.wizards.step === 1 ? 'text-primary' : 'text-secondary'}">1. Requester</span>
                     <span class="text-xs fw-bold ${this.wizards.step === 2 ? 'text-primary' : 'text-secondary'}">2. Details</span>
                     <span class="text-xs fw-bold ${this.wizards.step === 3 ? 'text-primary' : 'text-secondary'}">3. Files</span>
@@ -1146,7 +1146,7 @@ const SupportDesk = {
                     <!-- Loaded dynamically based on step -->
                 </div>
 
-                <div class="d-flex justify-content-between mt-4 pt-3 border-top" style="border-color:rgba(255,255,255,0.06)!important;">
+                <div class="d-flex justify-content-between mt-4 pt-3 border-top" style="border-color:var(--ds-border-color, #cbd5e1)!important;">
                     <button class="ds-btn ds-btn-outline ds-btn-sm" onclick="SupportDesk.prevStep()" ${this.wizards.step === 1 ? 'disabled' : ''}>Back</button>
                     <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="SupportDesk.nextStep()">${this.wizards.step === 4 ? 'Create Ticket' : 'Continue'}</button>
                 </div>
@@ -1261,8 +1261,8 @@ const SupportDesk = {
                     </div>
                     <div class="v-stack gap-2" id="wizFilesList">
                         ${data.attachments.map((f, i) => `
-                            <div class="d-flex align-items-center justify-content-between p-2 rounded bg-dark-50" style="border:1px solid rgba(255,255,255,0.06);">
-                                <span class="text-xs text-main">${f.file_name}</span>
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded" style="background: var(--ds-surface-secondary, rgba(0,0,0,0.02)); border:1px solid var(--ds-border-color, #cbd5e1);">
+                                <span class="text-xs text-main" style="color:var(--ds-text-main);">${f.file_name}</span>
                                 <button class="ds-btn ds-btn-ghost ds-btn-sm text-danger" onclick="SupportDesk.removeWizFile(${i})">Remove</button>
                             </div>
                         `).join('')}
@@ -1272,13 +1272,30 @@ const SupportDesk = {
             if (window.lucide) lucide.createIcons();
         } else if (this.wizards.step === 4) {
             stepView.innerHTML = `
-                <div class="v-stack gap-3 bg-dark-50 p-3 rounded" style="border: 1px solid rgba(255,255,255,0.06);">
-                    <h6 class="fw-bold border-bottom pb-2 text-main" style="color:var(--ds-text-main);">Confirm Details</h6>
-                    <div class="text-xs text-secondary">Subject: <span class="text-white">${data.subject}</span></div>
-                    <div class="text-xs text-secondary">Priority: <span class="text-white">${data.priority}</span></div>
-                    <div class="text-xs text-secondary">Category: <span class="text-white">${data.category}</span></div>
-                    <div class="text-xs text-secondary">Requester: <span class="text-white">${data.requester_name} (${data.requester_email})</span></div>
-                    <div class="text-xs text-secondary">Files Attached: <span class="text-white">${data.attachments.length}</span></div>
+                <div class="v-stack gap-3 p-3 rounded" style="background: var(--ds-surface-secondary, rgba(0, 0, 0, 0.02)); border: 1px solid var(--ds-border-color, #cbd5e1);">
+                    <h6 class="fw-bold border-bottom pb-2 text-main mb-3" style="color:var(--ds-text-main); border-color: var(--ds-border-color, #cbd5e1)!important;">Confirm Details</h6>
+                    <div class="d-flex flex-column gap-2 text-sm">
+                        <div class="d-flex justify-content-between align-items-center py-1.5 border-bottom" style="border-color: var(--ds-border-color, rgba(0,0,0,0.06))!important;">
+                            <span class="text-xs fw-medium" style="color:var(--ds-text-secondary, #64748b);">Subject:</span>
+                            <span class="text-xs fw-semibold" style="color:var(--ds-text-main, #0f172a);">${data.subject || '-'}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-1.5 border-bottom" style="border-color: var(--ds-border-color, rgba(0,0,0,0.06))!important;">
+                            <span class="text-xs fw-medium" style="color:var(--ds-text-secondary, #64748b);">Priority:</span>
+                            <span class="badge" style="background: rgba(37,99,235,0.12); color: var(--ds-primary, #2563eb); font-weight: 600; font-size: 11px;">${data.priority}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-1.5 border-bottom" style="border-color: var(--ds-border-color, rgba(0,0,0,0.06))!important;">
+                            <span class="text-xs fw-medium" style="color:var(--ds-text-secondary, #64748b);">Category:</span>
+                            <span class="text-xs fw-semibold" style="color:var(--ds-text-main, #0f172a);">${data.category}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-1.5 border-bottom" style="border-color: var(--ds-border-color, rgba(0,0,0,0.06))!important;">
+                            <span class="text-xs fw-medium" style="color:var(--ds-text-secondary, #64748b);">Requester:</span>
+                            <span class="text-xs fw-semibold" style="color:var(--ds-text-main, #0f172a);">${data.requester_name || '-'} <span style="color:var(--ds-text-secondary, #64748b); font-size: 0.9em;">(${data.requester_email || '-'})</span></span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-1.5">
+                            <span class="text-xs fw-medium" style="color:var(--ds-text-secondary, #64748b);">Files Attached:</span>
+                            <span class="text-xs fw-semibold" style="color:var(--ds-text-main, #0f172a);">${data.attachments.length}</span>
+                        </div>
+                    </div>
                 </div>
             `;
         }
@@ -1566,6 +1583,8 @@ const SupportDesk = {
                     subject: '', description: '', category: 'Technical', priority: 'Medium', tags: [],
                     attachments: [], assigned_engineer_id: '', assigned_team: 'Tier 1 Support'
                 };
+                this.currentPage = 1;
+                this.filters.q = '';
                 this.switchTab('tickets');
             }
         } catch (e) {

@@ -2467,8 +2467,10 @@ const PlatformSettings = {
     _setInner(id, val) {
         const el = this._find(id);
         if (el) el.innerHTML = val ?? '—';
-    },
+    }
+};
 
+Object.assign(PlatformSettings, {
     // === Footer Pages CMS Methods ===
     loadFooterPages: function(savedPages) {
         const stored = localStorage.getItem('ps-landing-cms-pages');
@@ -3015,7 +3017,7 @@ const PlatformSettings = {
             OctaQube.toast(e.message || 'Failed to update Super Admin account.', 'error');
         }
     }
-};
+});
 window.PlatformSettings = PlatformSettings;
 
 document.addEventListener('DOMContentLoaded', () => {

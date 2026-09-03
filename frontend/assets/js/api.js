@@ -59,6 +59,10 @@ const api = {
                 const sToken = sessionStorage.getItem('token') || sessionStorage.getItem('access_token');
                 if (sToken) return sToken;
             }
+            if (typeof localStorage !== 'undefined') {
+                const lToken = localStorage.getItem('token') || localStorage.getItem('access_token');
+                if (lToken) return lToken;
+            }
         } catch (_) {}
         return '';
     },
@@ -71,10 +75,18 @@ const api = {
                     sessionStorage.setItem('token', val);
                     sessionStorage.setItem('access_token', val);
                 }
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('token', val);
+                    localStorage.setItem('access_token', val);
+                }
             } else {
                 if (typeof sessionStorage !== 'undefined') {
                     sessionStorage.removeItem('token');
                     sessionStorage.removeItem('access_token');
+                }
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('access_token');
                 }
             }
         } catch (_) {}
@@ -205,10 +217,12 @@ const api = {
                         if (endpoint.includes('/auth/me') || endpoint.includes('/auth/profile') || errData.session_terminated || errData.message?.includes('Signature has expired') || errData.message?.includes('Invalid token')) {
                             console.warn('[API] 401 Unauthorized session for:', endpoint, '— redirecting to login.');
                             sessionStorage.removeItem('octaqube_authenticated');
+                            localStorage.removeItem('octaqube_authenticated');
                             sessionStorage.removeItem('user');
+                            localStorage.removeItem('user');
                             sessionStorage.removeItem('token');
-                            sessionStorage.removeItem('access_token');
-                            sessionStorage.removeItem('role_permissions');
+                            localStorage.removeItem('token');
+                            localStorage.removeItem('access_token');
                             if (!window.location.pathname.includes('login.html')) {
                                 window.location.href = '/auth/login.html' + (errData.session_terminated ? '?reason=session_terminated' : '');
                             }
@@ -367,6 +381,9 @@ const api = {
             } else {
                 try {
                     sessionStorage.clear();
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('user');
                 } catch (_) {}
                 window.location.replace('/auth/login.html?logout=true');
             }
@@ -486,21 +503,19 @@ window.printElementContent = function(elementId, title = 'Document') {
         </head>
         <body>
             ${area.innerHTML}
+            <script>
+                window.onload = function() {
+                    window.focus();
+                    window.print();
+                    setTimeout(() => {
+                        window.parent.document.body.removeChild(window.frameElement);
+                    }, 500);
+                };
+            <\/script>
         </body>
         </html>
     `);
     doc.close();
-    try {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        setTimeout(() => {
-            if (iframe && iframe.parentNode) {
-                iframe.parentNode.removeChild(iframe);
-            }
-        }, 1000);
-    } catch (printErr) {
-        console.warn('[PrintArea] Error printing iframe:', printErr);
-    }
 };
 
 /**

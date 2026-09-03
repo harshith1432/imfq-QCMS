@@ -50,12 +50,10 @@ async function loadStageContent() {
     const stageData = await api.get(`/workflow/${projectId}/stage/${currentStageId}`);
     const data = stageData.data || {};
     
-    const esc = (s) => (window.OctaQube && OctaQube.escapeHtml) ? OctaQube.escapeHtml(String(s || '')) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const stageObj = stages[currentStageId-1] || {};
     const container = document.getElementById('stageBody');
     container.innerHTML = `
-        <h2 style="margin-bottom: 0.5rem;">${esc(stageObj.title)}</h2>
-        <p class="text-muted" style="margin-bottom: 2rem;">${esc(stageObj.description)}</p>
+        <h2 style="margin-bottom: 0.5rem;">${stages[currentStageId-1].title}</h2>
+        <p class="text-muted" style="margin-bottom: 2rem;">${stages[currentStageId-1].description}</p>
         
         <div id="stageForm">
             ${getStageFields(currentStageId, data)}
@@ -71,12 +69,11 @@ async function loadStageContent() {
 }
 
 function getStageFields(step, data) {
-    const esc = (s) => (window.OctaQube && OctaQube.escapeHtml) ? OctaQube.escapeHtml(String(s || '')) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     if (step === 1) {
         return `
             <div class="form-group">
                 <label>Problem Statement</label>
-                <textarea id="f_problem" placeholder="Describe the current issue and its impact..." rows="6">${esc(data.problem || '')}</textarea>
+                <textarea id="f_problem" placeholder="Describe the current issue and its impact..." rows="6">${data.problem || ''}</textarea>
             </div>
         `;
     }
@@ -84,7 +81,7 @@ function getStageFields(step, data) {
         return `
             <div class="form-group">
                 <label>Root Causes (Comma separated)</label>
-                <input type="text" id="f_rca" value="${esc(data.causes || '')}" placeholder="e.g., Equipment Malfunction, Training Gap, Material Defect">
+                <input type="text" id="f_rca" value="${data.causes || ''}" placeholder="e.g., Equipment Malfunction, Training Gap, Material Defect">
             </div>
             <div style="margin-top:2rem; padding:3rem; border:2px dashed #E5E7EB; border-radius:12px; text-align:center; background: #F9FAFB;">
                 <i data-lucide="network" style="color: var(--primary); margin-bottom: 1rem;"></i>
@@ -96,7 +93,7 @@ function getStageFields(step, data) {
     return `
         <div class="form-group">
             <label>Stage Notes & Supplemental Data</label>
-            <textarea id="f_general" placeholder="Enter findings, data points, or progress notes..." rows="8">${esc(data.notes || '')}</textarea>
+            <textarea id="f_general" placeholder="Enter findings, data points, or progress notes..." rows="8">${data.notes || ''}</textarea>
         </div>
     `;
 }

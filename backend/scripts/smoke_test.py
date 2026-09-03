@@ -7,7 +7,8 @@ database migration, and service launch.
 
 import sys
 import time
-import requests
+import urllib.request
+import urllib.error
 import json
 
 DEFAULT_HOST = "http://127.0.0.1:5000"
@@ -15,20 +16,28 @@ DEFAULT_HOST = "http://127.0.0.1:5000"
 def check_endpoint(name, url, expected_statuses=(200,), timeout=10):
     start = time.time()
     try:
-        if not (url.startswith('https://') or url.startswith('http://')):
-            print(f"  [FAIL] {name} ({url}) -> Invalid protocol")
-            return False
-        resp = requests.get(
+        req = urllib.request.Request(
             url,
-            headers={"User-Agent": "QCMS-SmokeTest/1.0", "Accept": "application/json"},
-            timeout=timeout
+            headers={"User-Agent": "QCMS-SmokeTest/1.0", "Accept": "application/json"}
         )
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            status = response.getcode()
+            body = response.read().decode('utf-8')
+            duration_ms = round((time.time() - start) * 1000, 2)
+            
+            if status in expected_statuses:
+                print(f"  [PASS] {name} ({url}) -> HTTP {status} in {duration_ms}ms")
+                return True
+            else:
+                print(f"  [FAIL] {name} ({url}) -> Unexpected HTTP {status} (Expected: {expected_statuses})")
+                return False
+    except urllib.error.HTTPError as e:
         duration_ms = round((time.time() - start) * 1000, 2)
-        if resp.status_code in expected_statuses:
-            print(f"  [PASS] {name} ({url}) -> HTTP {resp.status_code} in {duration_ms}ms")
+        if e.code in expected_statuses:
+            print(f"  [PASS] {name} ({url}) -> HTTP {e.code} in {duration_ms}ms (Allowed status)")
             return True
         else:
-            print(f"  [FAIL] {name} ({url}) -> Unexpected HTTP {resp.status_code} (Expected: {expected_statuses})")
+            print(f"  [FAIL] {name} ({url}) -> HTTP Error {e.code} in {duration_ms}ms")
             return False
     except Exception as e:
         duration_ms = round((time.time() - start) * 1000, 2)

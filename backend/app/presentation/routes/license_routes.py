@@ -60,12 +60,11 @@ def _require_role(user, allowed_capabilities):
         
     role_name = user.role.name if user.role else ''
     is_sa_custom = isinstance(user.custom_fields, dict) and bool(user.custom_fields.get('super_admin_role'))
-    is_sa = role_name == 'SuperAdmin' or is_sa_custom or getattr(user, 'is_super_admin', False)
-    if not is_sa:
+    if role_name not in ('SuperAdmin', 'Admin') and not is_sa_custom:
         return jsonify({'error': 'Unauthorized — Super Admin required'}), 403
     
-    sub_role = (user.custom_fields or {}).get('super_admin_role', 'Owner') if isinstance(user.custom_fields, dict) else 'Owner'
-    if sub_role in ('Owner', 'SuperAdmin') or not user.custom_fields:
+    sub_role = (user.custom_fields or {}).get('super_admin_role', 'Owner')
+    if sub_role in ('Owner', 'SuperAdmin', 'Admin') or not user.custom_fields:
         return None # Full access
         
     # Check capabilities

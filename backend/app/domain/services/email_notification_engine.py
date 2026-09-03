@@ -843,30 +843,35 @@ class EmailNotificationEngine:
                 'Authorization': f'Bearer {api_key}'
             }
 
-            if not (url.startswith('https://') or url.startswith('http://')):
-                return False, f"Invalid SMS gateway protocol: {url}"
-
-            import requests
             try:
-                resp = requests.post(url, json=param_dict, headers=headers, timeout=12)
-                if resp.ok:
+                req = urllib.request.Request(
+                    url,
+                    data=json.dumps(param_dict).encode('utf-8'),
+                    headers=headers,
+                    method='POST'
+                )
+                with urllib.request.urlopen(req, timeout=12) as response:
+                    res_body = response.read().decode('utf-8')
                     cfg.usage_count = (cfg.usage_count or 0) + 1
                     db.session.commit()
                     return True, "SMS sent successfully"
-                else:
-                    form_headers = {
-                        'User-Agent': 'QCMS-Enterprise-OS/1.0',
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'api-key': api_key
-                    }
-                    resp2 = requests.post(url, data=param_dict, headers=form_headers, timeout=12)
-                    if resp2.ok:
+            except urllib.error.HTTPError as he:
+                form_headers = {
+                    'User-Agent': 'QCMS-Enterprise-OS/1.0',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'api-key': api_key
+                }
+                form_data = urllib.parse.urlencode(param_dict).encode('utf-8')
+                req2 = urllib.request.Request(url, data=form_data, headers=form_headers, method='POST')
+                try:
+                    with urllib.request.urlopen(req2, timeout=12) as response2:
+                        res_body2 = response2.read().decode('utf-8')
                         cfg.usage_count = (cfg.usage_count or 0) + 1
                         db.session.commit()
                         return True, "SMS sent successfully"
-                    return False, f"SMS Gateway HTTP {resp2.status_code}: {resp2.text}"
-            except Exception as e:
-                return False, f"SMS Gateway error: {e}"
+                except urllib.error.HTTPError as he2:
+                    err_body2 = he2.read().decode('utf-8') if he2.fp else str(he2)
+                    return False, f"SMS Gateway HTTP {he2.code}: {err_body2}"
 
         except Exception as e:
             return False, str(e)
@@ -1250,21 +1255,6 @@ class EmailNotificationEngine:
         if not rule:
             return {"status": "error", "message": "Notification rule not found"}
 
-        # Check if email integrations are connected in Integration Hub
-        is_conn, _, _ = EmailUtils.is_email_integration_connected()
-        if not is_conn:
-            return {
-                "status": "warning", 
-                "message": "Email delivery is disabled: All email integrations (Resend/ZeptoMail) are Disconnected in Integration Hub. Please connect an email provider first."
-            }
-
-        # Check if the rule is active (for real broadcasts)
-        if not test_email and not rule.is_active:
-            return {
-                "status": "warning",
-                "message": f"Notification rule '{rule.name}' is currently paused/disabled in Set Email Notifications. Please enable the rule toggle before broadcasting."
-            }
-
         rule_dict = rule.to_dict()
 
         if test_email:
@@ -1366,86 +1356,79 @@ class EmailNotificationEngine:
         app = current_app._get_current_object()
 
         def _async_rule_broadcast_worker(target_app, r_id, l_id, recs, r_dict, s_addr, s_name, r_to):
-            try:
-                with target_app.app_context():
-                    from app.infrastructure.database.models.models import EmailNotificationRule, EmailNotificationLog, db
-                    from app.infrastructure.mailer.email_service import EmailUtils
+            with target_app.app_context():
+                from app.infrastructure.database.models.models import EmailNotificationRule, EmailNotificationLog, db
+                from app.infrastructure.mailer.email_service import EmailUtils
 
-                    r_obj = db.session.get(EmailNotificationRule, r_id)
-                    l_obj = db.session.get(EmailNotificationLog, l_id)
+                r_obj = db.session.get(EmailNotificationRule, r_id)
+                l_obj = db.session.get(EmailNotificationLog, l_id)
 
-                    s_count = 0
-                    f_count = 0
-                    d_summary = []
+                s_count = 0
+                f_count = 0
+                d_summary = []
 
-                    for r in recs:
-                        html_c = EmailNotificationEngine.generate_html_email(r_dict, r['context'])
-                        p_subj = EmailNotificationEngine.replace_variables(r_dict.get('subject', ''), r['context'])
+                for r in recs:
+                    html_c = EmailNotificationEngine.generate_html_email(r_dict, r['context'])
+                    p_subj = EmailNotificationEngine.replace_variables(r_dict.get('subject', ''), r['context'])
 
-                        s_res = EmailUtils.send_email(
-                            to_email=r['email'],
-                            subject=p_subj,
-                            html_content=html_c,
-                            sender_email=s_addr,
-                            sender_name=s_name,
-                            reply_to=r_to
-                        )
+                    s_res = EmailUtils.send_email(
+                        to_email=r['email'],
+                        subject=p_subj,
+                        html_content=html_c,
+                        sender_email=s_addr,
+                        sender_name=s_name,
+                        reply_to=r_to
+                    )
 
-                        if s_res:
-                            s_count += 1
-                            d_summary.append({
-                                "email": r['email'],
-                                "name": r['name'],
-                                "role": r.get('context', {}).get('role_name', 'User'),
-                                "org": r.get('org_name', 'System'),
-                                "status": "Delivered"
-                            })
-                        else:
-                            f_count += 1
-                            d_summary.append({
-                                "email": r['email'],
-                                "name": r['name'],
-                                "role": r.get('context', {}).get('role_name', 'User'),
-                                "org": r.get('org_name', 'System'),
-                                "status": "Failed"
-                            })
+                    if s_res:
+                        s_count += 1
+                        d_summary.append({
+                            "email": r['email'],
+                            "name": r['name'],
+                            "role": r.get('context', {}).get('role_name', 'User'),
+                            "org": r.get('org_name', 'System'),
+                            "status": "Delivered"
+                        })
+                    else:
+                        f_count += 1
+                        d_summary.append({
+                            "email": r['email'],
+                            "name": r['name'],
+                            "role": r.get('context', {}).get('role_name', 'User'),
+                            "org": r.get('org_name', 'System'),
+                            "status": "Failed"
+                        })
 
-                        # Dispatch SMS if SMS is enabled on the rule and recipient has a phone number
-                        if r_dict.get('sms_enabled') and r_dict.get('sms_body'):
-                            phone = r.get('phone')
-                            if phone:
-                                p_sms_body = EmailNotificationEngine.replace_variables(r_dict.get('sms_body', ''), r['context'])
-                                sms_ok, sms_msg = EmailNotificationEngine.dispatch_dlt_sms(
-                                    phone=phone,
-                                    sms_body=p_sms_body,
-                                    template_id=r_dict.get('sms_template_id'),
-                                    entity_id=r_dict.get('sms_entity_id'),
-                                    sender_id=r_dict.get('sms_sender_id')
-                                )
-                                if sms_ok and r_obj:
-                                    r_obj.sms_total_sent = (r_obj.sms_total_sent or 0) + 1
+                    # Dispatch SMS if SMS is enabled on the rule and recipient has a phone number
+                    if r_dict.get('sms_enabled') and r_dict.get('sms_body'):
+                        phone = r.get('phone')
+                        if phone:
+                            p_sms_body = EmailNotificationEngine.replace_variables(r_dict.get('sms_body', ''), r['context'])
+                            sms_ok, sms_msg = EmailNotificationEngine.dispatch_dlt_sms(
+                                phone=phone,
+                                sms_body=p_sms_body,
+                                template_id=r_dict.get('sms_template_id'),
+                                entity_id=r_dict.get('sms_entity_id'),
+                                sender_id=r_dict.get('sms_sender_id')
+                            )
+                            if sms_ok and r_obj:
+                                r_obj.sms_total_sent = (r_obj.sms_total_sent or 0) + 1
 
-                    if r_obj:
-                        r_obj.total_sent = (r_obj.total_sent or 0) + s_count
-                        r_obj.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
+                if r_obj:
+                    r_obj.total_sent = (r_obj.total_sent or 0) + s_count
+                    r_obj.last_triggered_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
-                    if l_obj:
-                        o_status = "Delivered" if f_count == 0 else ("Partially Delivered" if s_count > 0 else "Failed")
-                        l_obj.status = o_status
-                        l_obj.recipient_count = s_count + f_count
-                        l_obj.recipients_summary = d_summary[:200]
-                        l_obj.error_message = f"{f_count} deliveries failed" if f_count > 0 else None
+                if l_obj:
+                    o_status = "Delivered" if f_count == 0 else ("Partially Delivered" if s_count > 0 else "Failed")
+                    l_obj.status = o_status
+                    l_obj.recipient_count = s_count + f_count
+                    l_obj.recipients_summary = d_summary[:200]
+                    l_obj.error_message = f"{f_count} deliveries failed" if f_count > 0 else None
 
-                    try:
-                        db.session.commit()
-                    except Exception as c_err:
-                        target_app.logger.error(f"[AsyncRuleBroadcast] Commit error: {c_err}")
-            finally:
                 try:
-                    from app import db
-                    db.session.remove()
-                except Exception:
-                    pass
+                    db.session.commit()
+                except Exception as c_err:
+                    target_app.logger.error(f"[AsyncRuleBroadcast] Commit error: {c_err}")
 
         from app.infrastructure.mailer.email_service import email_executor
         email_executor.submit(

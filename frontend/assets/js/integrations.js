@@ -101,7 +101,7 @@
                     const res = await api.get(url);
                     return res ?? fallback;
                 } catch (e) {
-                    console.warn('[IntegrationsModule] Failed to load endpoint:', url, e.message || e);
+                    console.warn(`[IntegrationsModule] Failed to load ${url}:`, e.message || e);
                     return fallback;
                 }
             };

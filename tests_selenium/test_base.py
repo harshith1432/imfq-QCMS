@@ -122,8 +122,6 @@ def capture_screen(driver, name):
         print(f"[!] Screenshot failed: {e}")
         return ""
 
-save_screenshot = capture_screen
-
 def login_as(driver, email, password):
     try:
         driver.get(f"{BASE_URL}/auth/login.html")

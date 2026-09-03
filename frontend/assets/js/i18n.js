@@ -191,16 +191,12 @@ class LanguageManager {
      * Returns the key itself as fallback (graceful degradation).
      */
     t(key) {
-        if (!key || typeof key !== 'string') return '';
+        if (!key) return '';
         const keys = key.split('.');
         let result = this.translations;
         for (const k of keys) {
-            if (!k || k === '__proto__' || k === 'constructor' || k === 'prototype') {
-                return key;
-            }
-            if (result && typeof result === 'object' && Object.prototype.hasOwnProperty.call(result, k)) {
-                const desc = Object.getOwnPropertyDescriptor(result, k);
-                result = desc ? desc.value : undefined;
+            if (result && typeof result === 'object' && k in result) {
+                result = result[k];
             } else {
                 return key; // Fallback: display the key
             }

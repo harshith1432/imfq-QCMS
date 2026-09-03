@@ -27,7 +27,7 @@ const cleanCss = new CleanCSS({
 });
 
 function hashContent(content) {
-    return crypto.createHash('sha256').update(content).digest('hex').slice(0, 12);
+    return crypto.createHash('md5').update(content).digest('hex').slice(0, 8);
 }
 
 function ensureDir(dir) {
@@ -40,10 +40,9 @@ function cleanDistDir() {
     ensureDir(DIST_DIR);
     const files = fs.readdirSync(DIST_DIR);
     for (const file of files) {
-        const safeFile = path.basename(file);
-        if (safeFile.endsWith('.min.js') || safeFile.endsWith('.min.css') || safeFile === 'manifest.json') {
+        if (file.endsWith('.min.js') || file.endsWith('.min.css') || file === 'manifest.json') {
             try {
-                fs.unlinkSync(path.join(DIST_DIR, safeFile));
+                fs.unlinkSync(path.join(DIST_DIR, file));
             } catch (e) {}
         }
     }
@@ -59,7 +58,7 @@ function cleanDistDir() {
         });
         return result.code;
     } catch (err) {
-        console.warn(`[WARN] Terser warning for ${path.basename(filename)}: ${err.message}`);
+        console.warn(`[+warn+ Terser warning for ${filename}: ${err.message}`);
         return code;
     }
 }
@@ -67,7 +66,7 @@ function cleanDistDir() {
 function minifyCSS(cssCode, filename = 'style.css') {
     const output = cleanCss.minify(cssCode);
     if (output.errors.length > 0) {
-        console.warn('[WARN] CleanCSS errors in %s: %s', path.basename(filename), String(output.errors));
+        console.warn('[WARN] CleanCSS errors in ' + filename + ':', output.errors);
         return cssCode;
     }
     return output.styles;
@@ -76,14 +75,12 @@ function minifyCSS(cssCode, filename = 'style.css') {
 function getHtmlFiles(dir, fileList = []) {
     const files = fs.readdirSync(dir);
     for (const file of files) {
-        const safeName = path.basename(file);
-        if (safeName.startsWith('.')) continue;
-        const filePath = path.resolve(path.normalize(dir), safeName);
+        const filePath = path.join(dir, file);
         if (fs.statSync(filePath).isDirectory()) {
-            if (safeName !== 'node_modules' && safeName !== 'assets' && safeName !== '.git' && safeName !== 'scratch') {
+            if (file !== 'node_modules' && file !== 'assets' && file !== '.git' && file !== 'scratch') {
                 getHtmlFiles(filePath, fileList);
             }
-        } else if (safeName.endsWith('.html')) {
+        } else if (file.endsWith('.html')) {
             fileList.push(filePath);
         }
     }

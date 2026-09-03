@@ -27,7 +27,7 @@ class LivePresenceManager {
             if (typeof api !== 'undefined' && api.getUser) {
                 return api.getUser();
             }
-            const raw = sessionStorage.getItem('user') || localStorage.getItem('user');
+            const raw = localStorage.getItem('user');
             return raw ? JSON.parse(raw) : null;
         } catch (e) {
             return null;

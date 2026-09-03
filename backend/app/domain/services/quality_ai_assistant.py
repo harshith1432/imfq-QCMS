@@ -112,7 +112,7 @@ class QualityAIAssistant:
                 "case_num": 1,
                 "title": "To Fetch / Modify Organization Data",
                 "steps": [
-                    "Step 1: Go to **Organization** (`/admin/super-admin.html?view=organizations`) from the Super Admin sidebar.",
+                    "Step 1: Go to **Organization** (`/admin/super-admin-orgs.html`) from the Super Admin sidebar.",
                     "Step 2: Click on **Action Button** (⋮) next to the target organization row.",
                     "Step 3: Click on **View Details / Edit Profile / Extend Trial / Reset Password / Pause / Delete Org** as required."
                 ]
@@ -123,7 +123,7 @@ class QualityAIAssistant:
                 "case_num": 2,
                 "title": "To Download Overall Organization Directory",
                 "steps": [
-                    "Step 1: Go to **Organization** (`/admin/super-admin.html?view=organizations`).",
+                    "Step 1: Go to **Organization** (`/admin/super-admin-orgs.html`).",
                     "Step 2: Click on **Export CSV Button** in the top action toolbar."
                 ]
             },
@@ -133,7 +133,7 @@ class QualityAIAssistant:
                 "case_num": 3,
                 "title": "To Create New Subscription Plan",
                 "steps": [
-                    "Step 1: Go to **Plans** (`/admin/super-admin.html?view=plans`).",
+                    "Step 1: Go to **Plans** (`/admin/super-admin-plans.html`).",
                     "Step 2: Click on **New Plan Button**.",
                     "Step 3: Enter the plan Details (Plan Name, Pricing, User Quota, Plant Limit, Storage).",
                     "Step 4: Click **Next** and click the **Save** button."
@@ -145,7 +145,7 @@ class QualityAIAssistant:
                 "case_num": 4,
                 "title": "To Dispatch All Pay-As-You-Go Metered Bills",
                 "steps": [
-                    "Step 1: Go to **Plans** (`/admin/super-admin.html?view=plans`).",
+                    "Step 1: Go to **Plans** (`/admin/super-admin-plans.html`).",
                     "Step 2: Click on **Pay As You Go** tab.",
                     "Step 3: Click on **Set the Metered Rules** button to define per-unit rates.",
                     "Step 4: Click **Dispatch Bills Button**.",
@@ -158,7 +158,7 @@ class QualityAIAssistant:
                 "case_num": 5,
                 "title": "To View / Edit Existing Subscription Plan",
                 "steps": [
-                    "Step 1: Go to **Plans** (`/admin/super-admin.html?view=plans`).",
+                    "Step 1: Go to **Plans** (`/admin/super-admin-plans.html`).",
                     "Step 2: Click on **Action Button** on the target plan tier.",
                     "Step 3: To view click on **View**.",
                     "Step 4: To edit click on **Edit**."
@@ -170,7 +170,7 @@ class QualityAIAssistant:
                 "case_num": 6,
                 "title": "To Extend Organization Trial",
                 "steps": [
-                    "Step 1: Go to **Support Tickets** (`/admin/super-admin.html?view=tickets`).",
+                    "Step 1: Go to **Support Tickets** (`/admin/super-admin-tickets.html`).",
                     "Step 2: Under Action, Click on **Extend Trial Button**."
                 ]
             },
@@ -180,7 +180,7 @@ class QualityAIAssistant:
                 "case_num": 7,
                 "title": "To Create Support Ticket",
                 "steps": [
-                    "Step 1: Go to **Support Tickets** (`/admin/super-admin.html?view=tickets`).",
+                    "Step 1: Go to **Support Tickets** (`/admin/super-admin-tickets.html`).",
                     "Step 2: Click on **Create Ticket**.",
                     "Step 3: Enter the details (Target Org, Category, Priority, Subject).",
                     "Step 4: Review the content.",
@@ -193,7 +193,7 @@ class QualityAIAssistant:
                 "case_num": 8,
                 "title": "To Define New SMS / Email Notification Template",
                 "steps": [
-                    "Step 1: Go to **Announcements** (`/admin/super-admin.html?view=announcements`).",
+                    "Step 1: Go to **Announcements** (`/admin/super-admin-announcements.html`).",
                     "Step 2: Click on **Set SMS / Email Notification**.",
                     "Step 3: Click on **Set SMS / Email Notification Button**.",
                     "Step 4: Define New Rule (Event Trigger, DLT Template ID, PE ID, Sender ID, Email/SMS Body).",
@@ -206,7 +206,7 @@ class QualityAIAssistant:
                 "case_num": 9,
                 "title": "To Create New Announcement Broadcast",
                 "steps": [
-                    "Step 1: Go to **Announcements** (`/admin/super-admin.html?view=announcements`).",
+                    "Step 1: Go to **Announcements** (`/admin/super-admin-announcements.html`).",
                     "Step 2: Click on **Compose Broadcast**.",
                     "Step 3: Enter the details (Title, Message, Category).",
                     "Step 4: Select the Target Audience (All Organizations, Specific Tenants, Admins).",
@@ -219,7 +219,7 @@ class QualityAIAssistant:
                 "case_num": 10,
                 "title": "To View Organization Billing Details & Invoices",
                 "steps": [
-                    "Step 1: Go to **Billings** (`/admin/super-admin.html?view=billing`).",
+                    "Step 1: Go to **Billings** (`/admin/super-admin-billing.html`).",
                     "Step 2: Click on **Action Button** (⋮) on the invoice record.",
                     "Step 3: Click on **View Details**."
                 ]
@@ -230,7 +230,7 @@ class QualityAIAssistant:
                 "case_num": 11,
                 "title": "To Delete / Purge Security Audit Logs",
                 "steps": [
-                    "Step 1: Go to **Audit Logs** (`/admin/super-admin.html?view=audit-logs`).",
+                    "Step 1: Go to **Audit Logs** (`/admin/super-admin-audit-logs.html`).",
                     "Step 2: Click on **Purge Audit Logs**.",
                     "Step 3: Select the option from the Dropdown (Older than 30/90 days, All Logs).",
                     "Step 4: Click on **Confirm & Purge Logs**."
@@ -242,7 +242,7 @@ class QualityAIAssistant:
                 "case_num": 12,
                 "title": "To Update Platform & Company Identity Details",
                 "steps": [
-                    "Step 1: Go to **Doc Identity & Branding** (`/admin/super-admin.html?view=branding`).",
+                    "Step 1: Go to **Doc Identity & Branding** (`/admin/super-admin-doc-identity.html`).",
                     "Step 2: Enter the details (Software Name, Support Email, Watermarks, Headers).",
                     "Step 3: Click on **Save Platform Identity Button**."
                 ]
@@ -253,7 +253,7 @@ class QualityAIAssistant:
                 "case_num": 13,
                 "title": "To View & Adjust Storage Used by Individual Organization",
                 "steps": [
-                    "Step 1: Click on **Storage Analytics** (`/admin/super-admin.html?view=storage`).",
+                    "Step 1: Click on **Storage Analytics** (`/admin/super-admin-storage-analytics.html`).",
                     "Step 2: Click on **Details Button** next to the target organization.",
                     "Step 3: Click on **Adjust Storage Limit**.",
                     "Step 4: Set new Limit (in GB).",
@@ -266,7 +266,7 @@ class QualityAIAssistant:
                 "case_num": 14,
                 "title": "To Update Global 8-Stage Master Template",
                 "steps": [
-                    "Step 1: Go to **Global Stage Template** (`/admin/super-admin.html?view=stage-templates`).",
+                    "Step 1: Go to **Global Stage Template** (`/admin/super-admin-stage-template.html`).",
                     "Step 2: Click on **Add New Stage Button** to add new Stage.",
                     "Step 3: To add New Columns in existing Stages, click on **Add Columns** under any stage.",
                     "Step 4: Click on **Save Templates Button**.",
@@ -279,7 +279,7 @@ class QualityAIAssistant:
                 "case_num": 15,
                 "title": "To Delete Organization Permanently",
                 "steps": [
-                    "Step 1: Go to **Recycle Bin** (`/admin/super-admin.html?view=recycle-bin`).",
+                    "Step 1: Go to **Recycle Bin** (`/admin/super-admin-recycle-bin.html`).",
                     "Step 2: Click on the **Empty Recycle Bin Button**.",
                     "Step 3: Click **OK**."
                 ]
@@ -290,7 +290,7 @@ class QualityAIAssistant:
                 "case_num": 16,
                 "title": "To Recover Organization from Recycle Bin",
                 "steps": [
-                    "Step 1: Go to **Recycle Bin** (`/admin/super-admin.html?view=recycle-bin`).",
+                    "Step 1: Go to **Recycle Bin** (`/admin/super-admin-recycle-bin.html`).",
                     "Step 2: Click on **Recover Button** next to the soft-deleted organization.",
                     "Step 3: Click **OK**."
                 ]
@@ -301,7 +301,7 @@ class QualityAIAssistant:
                 "case_num": 17,
                 "title": "To Configure General Platform Settings (Self-Service, Email OTP, Phone OTP, Maintenance)",
                 "steps": [
-                    "Step 1: Go to **Settings** (`/admin/super-admin.html?view=settings`).",
+                    "Step 1: Go to **Settings** (`/admin/super-admin-settings.html`).",
                     "Step 2: Under **General**, all four options are available (*Self-Service Sign-up, Email OTP Verification, Phone OTP Verification, Maintenance Mode*).",
                     "Step 3: Turn On / Off the Button switches.",
                     "Step 4: Click on **Save**."
@@ -313,7 +313,7 @@ class QualityAIAssistant:
                 "case_num": 18,
                 "title": "To Upload Platform Logos & Branding Assets",
                 "steps": [
-                    "Step 1: Go to **Settings** (`/admin/super-admin.html?view=settings`).",
+                    "Step 1: Go to **Settings** (`/admin/super-admin-settings.html`).",
                     "Step 2: Under **Branding**, upload Logo, Dark Logo, Favicon, Background Graphic, and Splash Image.",
                     "Step 3: Click on **Save Branding Button**."
                 ]
@@ -324,7 +324,7 @@ class QualityAIAssistant:
                 "case_num": 19,
                 "title": "To Update Super Admin Password",
                 "steps": [
-                    "Step 1: Go to **Settings** (`/admin/super-admin.html?view=settings`).",
+                    "Step 1: Go to **Settings** (`/admin/super-admin-settings.html`).",
                     "Step 2: Under **Super Admin Logins**, enter New Password.",
                     "Step 3: Click on **Update My Credentials Button**."
                 ]
@@ -335,7 +335,7 @@ class QualityAIAssistant:
                 "case_num": 20,
                 "title": "To Add New Super Admin Account",
                 "steps": [
-                    "Step 1: Go to **Settings** (`/admin/super-admin.html?view=settings`).",
+                    "Step 1: Go to **Settings** (`/admin/super-admin-settings.html`).",
                     "Step 2: Under **Super Admin Logins**, click on **Add Super Admin**.",
                     "Step 3: Enter the details (Name, Email, Username, Password).",
                     "Step 4: Click on **Create Super Admin Account Button**."
@@ -347,7 +347,7 @@ class QualityAIAssistant:
                 "case_num": 21,
                 "title": "To Modify Platform Landing Page",
                 "steps": [
-                    "Step 1: Go to **Settings** (`/admin/super-admin.html?view=settings`).",
+                    "Step 1: Go to **Settings** (`/admin/super-admin-settings.html`).",
                     "Step 2: Under **Landing CMS**, enter the details (Hero Headline, Subtitle, Features, CTA labels).",
                     "Step 3: Click on **Publish Landing Page / Use Default Template Button**."
                 ]

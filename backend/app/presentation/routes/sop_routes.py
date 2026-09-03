@@ -32,11 +32,8 @@ def parse_int(val):
         return None
 
 def scope_sop_query(query, user):
-    role_name = user.role.name if user.role else 'Team Member'
+    role_name = user.role.name
     
-    if role_name != 'SuperAdmin':
-        query = query.filter(SOP.org_id == user.org_id)
-        
     if role_name in ('SuperAdmin', 'Admin', 'CEO'):
         return query
         
@@ -129,12 +126,6 @@ def create_sop():
     sop_uid = f"SOP-{datetime.now(timezone.utc).replace(tzinfo=None).year}-{random_suffix}"
     
     try:
-        proj_id_val = parse_int(data.get('project_id'))
-        if proj_id_val:
-            proj_chk = db.session.get(Project, proj_id_val)
-            if not proj_chk or (user.role.name != 'SuperAdmin' and proj_chk.org_id != user.org_id):
-                return jsonify({"msg": "Linked Project must belong to your organization."}), 400
-
         # Create SOP Master
         sop = SOP(
             sop_uid=sop_uid,
@@ -158,7 +149,7 @@ def create_sop():
             expiry_date=parse_date(data.get('expiry_date')),
             status='Active',
             version=1,
-            project_id=proj_id_val,
+            project_id=parse_int(data.get('project_id')),
             attachments=data.get('attachments', []),
             sop_document_path=data.get('sop_document_path'),
             preventive_actions=data.get('preventive_actions'),
@@ -1522,7 +1513,7 @@ def get_training_results(training_id):
     # Permission check: User must be the trainee themselves, or an Admin/Facilitator/Team Leader/Reviewer in the org
     is_authorized = (
         t.user_id == user_id or
-        user.role.name in ('Admin', 'Facilitator', 'Team Leader', 'SuperAdmin', 'CEO', 'Reviewer')
+        user.role.name in ('Admin', 'Facilitator', 'Team Leader', 'Team Member', 'SuperAdmin', 'CEO', 'Reviewer')
     )
     if not is_authorized or t.user.org_id != user.org_id:
         return jsonify({"msg": "Unauthorized to view these results."}), 403
@@ -2069,13 +2060,15 @@ def get_sop_masters():
 
     cats = SOPCategory.query.filter_by(org_id=org_id).order_by(SOPCategory.name.asc()).all()
     if not cats:
-        db.session.add_all([SOPCategory(org_id=org_id, name=c["name"], description=c["description"]) for c in DEFAULT_SOP_CATEGORIES])
+        for c in DEFAULT_SOP_CATEGORIES:
+            db.session.add(SOPCategory(org_id=org_id, name=c["name"], description=c["description"]))
         db.session.commit()
         cats = SOPCategory.query.filter_by(org_id=org_id).order_by(SOPCategory.name.asc()).all()
 
     types = SOPType.query.filter_by(org_id=org_id).order_by(SOPType.name.asc()).all()
     if not types:
-        db.session.add_all([SOPType(org_id=org_id, name=t["name"], description=t["description"]) for t in DEFAULT_SOP_TYPES])
+        for t in DEFAULT_SOP_TYPES:
+            db.session.add(SOPType(org_id=org_id, name=t["name"], description=t["description"]))
         db.session.commit()
         types = SOPType.query.filter_by(org_id=org_id).order_by(SOPType.name.asc()).all()
 
@@ -2086,7 +2079,6 @@ def get_sop_masters():
 
 @sop_bp.route('/categories', methods=['POST'])
 @jwt_required()
-@role_required(['Admin', 'SuperAdmin', 'CEO'])
 def create_sop_category():
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
@@ -2111,7 +2103,6 @@ def create_sop_category():
 
 @sop_bp.route('/categories/<int:cat_id>', methods=['PUT'])
 @jwt_required()
-@role_required(['Admin', 'SuperAdmin', 'CEO'])
 def update_sop_category(cat_id):
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
@@ -2130,7 +2121,6 @@ def update_sop_category(cat_id):
 
 @sop_bp.route('/categories/<int:cat_id>', methods=['DELETE'])
 @jwt_required()
-@role_required(['Admin', 'SuperAdmin', 'CEO'])
 def delete_sop_category(cat_id):
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)
@@ -2144,7 +2134,6 @@ def delete_sop_category(cat_id):
 
 @sop_bp.route('/types', methods=['POST'])
 @jwt_required()
-@role_required(['Admin', 'SuperAdmin', 'CEO'])
 def create_sop_type():
     user_id = get_jwt_identity()
     user = db.session.get(User, user_id)

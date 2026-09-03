@@ -614,16 +614,6 @@ const AnnouncementsModule = {
         this.searchQuery = '';
         const searchInput = document.getElementById('annSearchInput');
         if (searchInput) searchInput.value = '';
-
-        const statusSel = document.getElementById('filterStatus');
-        if (statusSel) statusSel.value = '';
-
-        const prioritySel = document.getElementById('filterPriority');
-        if (prioritySel) prioritySel.value = '';
-
-        const catSel = document.getElementById('filterCategory');
-        if (catSel) catSel.value = '';
-
         this.filters = { status: '', priority: '', category: '', date_preset: '' };
         this.currentPage = 1;
         this.loadRegistry();
@@ -2596,6 +2586,80 @@ const AnnouncementsModule = {
                                 </div>
                             </div>
 
+                            <!-- ═══ SMS Notification Configuration (Gio DLT) ═══ -->
+                            <div class="mt-4 p-3 rounded border" style="background: rgba(99,102,241,0.03); border-color: rgba(99,102,241,0.25)!important;">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="p-1.5 rounded" style="background:rgba(99,102,241,0.12);">
+                                            <i data-lucide="smartphone" style="width:15px;height:15px;color:#6366f1;"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold text-sm text-main">📱 SMS Notification Configuration <span class="badge bg-indigo-subtle text-indigo ms-1" style="font-size:10px;background:rgba(99,102,241,0.12);color:#6366f1;">Gio DLT</span></div>
+                                            <div class="text-xxs text-secondary">Send SMS alongside this email using the Gio DLT (Kaleyra) gateway — requires pre-approved DLT template.</div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-xxs text-secondary fw-semibold" id="enSmsToggleLabel">${ruleData.sms_enabled ? 'SMS: ON' : 'SMS: OFF'}</span>
+                                        <div class="form-check form-switch m-0">
+                                            <input class="form-check-input" type="checkbox" role="switch" id="enSmsEnabled" ${ruleData.sms_enabled ? 'checked' : ''} onchange="AnnouncementsModule.onSmsPanelToggle(this.checked)" style="cursor:pointer;">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- SMS Fields (shown when SMS is toggled ON) -->
+                                <div id="enSmsConfigFields" style="display:${ruleData.sms_enabled ? 'block' : 'none'};">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="ds-label text-xxs fw-semibold">DLT Entity ID (PE ID) <span class="text-danger">*</span></label>
+                                            <input type="text" class="ds-input text-xs font-monospace" id="enSmsEntityId" placeholder="e.g. 1301XXXXXXXXX" value="${OctaQube.escapeHtml(ruleData.sms_entity_id || '')}">
+                                            <div class="text-xxs text-muted mt-0.5">Your Gio DLT Principal Entity ID</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label text-xxs fw-semibold">DLT Template ID <span class="text-danger">*</span></label>
+                                            <input type="text" class="ds-input text-xs font-monospace" id="enSmsTemplateId" placeholder="e.g. 1307XXXXXXXXX" value="${OctaQube.escapeHtml(ruleData.sms_template_id || '')}">
+                                            <div class="text-xxs text-muted mt-0.5">Gio DLT approved Template ID</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="ds-label text-xxs fw-semibold">Sender ID (Header) <span class="text-danger">*</span></label>
+                                            <input type="text" class="ds-input text-xs font-monospace text-uppercase" id="enSmsSenderId" placeholder="e.g. IFQMSK" maxlength="6" value="${OctaQube.escapeHtml(ruleData.sms_sender_id || '')}" oninput="this.value=this.value.toUpperCase()">
+                                            <div class="text-xxs text-muted mt-0.5">6-char DLT-approved sender header</div>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="d-flex align-items-center justify-content-between mb-1.5">
+                                                <label class="ds-label text-xxs fw-semibold m-0">SMS Body Text <span class="text-danger">*</span></label>
+                                                <span class="text-xxs text-muted">Must exactly match your DLT-approved template. Use <code class="text-indigo">{{variable}}</code> for dynamic parts.</span>
+                                            </div>
+                                            <div class="d-flex flex-wrap gap-1 mb-2 p-2 rounded border" style="background:rgba(99,102,241,0.03);">
+                                                <span class="text-xxs text-muted fw-semibold me-1 align-self-center">Insert:</span>
+                                                ${['{{org_name}}','{{user_name}}','{{username}}','{{Password}}','{{password}}','{{plan_name}}','{{expiry_date}}','{{days_left}}','{{app_url}}'].map(v =>
+                                                    `<button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-1.5 text-xxs font-monospace rounded" onclick="AnnouncementsModule.insertSmsVariableChip('${v}')">${v}</button>`
+                                                ).join('')}
+                                            </div>
+                                            <textarea class="ds-input text-xs font-monospace" id="enSmsBody" rows="3" placeholder="e.g. Dear {{org_name}}, your {{plan_name}} subscription expires on {{expiry_date}}. Renew at {{app_url}}. -IFQMSK">${OctaQube.escapeHtml(ruleData.sms_body || '')}</textarea>
+                                            <div class="d-flex justify-content-between mt-1">
+                                                <div class="text-xxs text-muted">Character count: <span id="enSmsBodyCount" class="fw-semibold">${(ruleData.sms_body || '').length}</span>/160</div>
+                                                <div class="text-xxs text-warning">⚠️ SMS body must be DLT-registered. Do NOT change approved wording.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- DLT Compliance Notice -->
+                                    <div class="mt-3 p-2.5 rounded border d-flex align-items-start gap-2" style="background:rgba(245,158,11,0.06); border-color:rgba(245,158,11,0.3)!important;">
+                                        <i data-lucide="shield-alert" style="width:14px;height:14px;color:#d97706;flex-shrink:0;margin-top:1px;"></i>
+                                        <div class="text-xxs" style="color:#92400e;">
+                                            <strong>Indian DLT Regulatory Compliance:</strong> All commercial SMS in India require Telecom Regulatory Authority (TRAI) DLT registration. The Entity ID, Template ID, and Sender ID must be pre-approved on the <strong>Gio DLT / Airtel DLT / JIO DLT</strong> portal before activating SMS. Unregistered SMS will be blocked by telecom operators.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Collapsed placeholder when SMS is OFF -->
+                                <div id="enSmsOffPlaceholder" style="display:${ruleData.sms_enabled ? 'none' : 'block'};">
+                                    <div class="text-xxs text-secondary text-center py-2" style="background:rgba(0,0,0,0.02); border-radius:6px;">
+                                        Toggle SMS ON above to configure Gio DLT template, Entity ID, Template ID, Sender ID and SMS body for this notification.
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="modal-footer mt-4 pt-3 border-top d-flex justify-content-between align-items-center px-0 pb-0">
                                 <button type="button" class="ds-btn ds-btn-secondary ds-btn-sm px-3" data-bs-dismiss="modal">Cancel</button>
                                 <div class="d-flex align-items-center gap-2">
@@ -3991,7 +4055,7 @@ const AnnouncementsModule = {
     },
 
     async openTestEmailModal(ruleId) {
-        const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+        const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
         const user = userStr ? JSON.parse(userStr) : {};
         const defaultEmail = user.email || 'harshithkd6@gmail.com';
 

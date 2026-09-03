@@ -263,87 +263,12 @@ def list_repository_projects():
         query = query.filter_by(department_id=int(dept_id))
 
     # STRICT RULE: Closed / Completed / Archived projects belong in Knowledge Base ONLY.
-    # They MUST NEVER be visible in Project Repository default listing.
+    # They MUST NEVER be visible in Project Repository.
     closed_statuses = ['Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED', 'ARCHIVED', 'Stage 8 Approved']
 
-    # ── Real-Time Overall Scope Statistics (Computed before pagination / status filters) ──
-    stats_scope_query = Project.query.filter_by(org_id=user.org_id)
-    if user.role.name == 'Team Member':
-        stats_scope_query = stats_scope_query.filter(Project.members.any(id=user.id))
-    elif user.role.name == 'Team Leader':
-        stats_scope_query = stats_scope_query.filter(db.or_(
-            Project.team_leader_id == user.id,
-            Project.creator_id == user.id,
-            Project.members.any(id=user.id)
-        ))
-    elif user.role.name == 'Facilitator':
-        stats_scope_query = stats_scope_query.filter(Project.facilitator_id == user.id)
-
-    if plant_param:
-        if plant_param.isdigit():
-            plant_obj = Plant.query.filter_by(id=int(plant_param), org_id=user.org_id).first()
-            pname = plant_obj.name if plant_obj else None
-            if pname:
-                stats_scope_query = stats_scope_query.filter(db.or_(
-                    Project.plant.ilike(f"%{pname}%"),
-                    Project.department.has(Department.plant_id == int(plant_param))
-                ))
-            else:
-                stats_scope_query = stats_scope_query.filter(Project.department.has(Department.plant_id == int(plant_param)))
-        else:
-            stats_scope_query = stats_scope_query.filter(db.or_(
-                Project.plant.ilike(f"%{plant_param}%"),
-                Project.department.has(Department.plant.has(Plant.name.ilike(f"%{plant_param}%")))
-            ))
-
-    if dept_id and str(dept_id).isdigit():
-        stats_scope_query = stats_scope_query.filter_by(department_id=int(dept_id))
-
-    if category:
-        stats_scope_query = stats_scope_query.filter_by(category=category)
-
-    all_scope_projects = stats_scope_query.all()
-
-    inactivity_days = 30
-    if user and hasattr(user, 'org_id') and user.org_id:
-        org = db.session.get(Organization, user.org_id)
-        if org and getattr(org, 'project_inactivity_days', None):
-            inactivity_days = org.project_inactivity_days
-            
-    inactivity_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=inactivity_days)
-
-    stopped_scope_projects = [
-        p for p in all_scope_projects 
-        if (p.status or '') in ('Rejected', 'Cancelled', 'Stopped', 'On Hold', 'Stage 1 Rejected') or 
-           ('reject' in (p.status or '').lower() or 'stop' in (p.status or '').lower())
-    ]
-    closed_scope_projects = [
-        p for p in all_scope_projects 
-        if (p.status or '') in closed_statuses
-    ]
-    active_scope_projects = [
-        p for p in all_scope_projects 
-        if p not in stopped_scope_projects and p not in closed_scope_projects
-    ]
-
-    scope_stalled_count = 0
-    scope_active_count = 0
-    for p in active_scope_projects:
-        last_log = AuditLog.query.filter_by(project_id=p.id).order_by(AuditLog.created_at.desc()).first()
-        last_activity = last_log.created_at if last_log else p.created_at
-        if last_activity and last_activity < inactivity_cutoff:
-            scope_stalled_count += 1
-        else:
-            scope_active_count += 1
-
-    scope_stopped_count = len(stopped_scope_projects)
-    scope_completed_count = len(closed_scope_projects)
-    scope_total_count = len(all_scope_projects)
-
-    # ── Table Data Filtering ────────────────────────────────────────────────
     if status and str(status).lower() != 'all':
         if status == 'Active':
-            query = query.filter(~Project.status.in_(closed_statuses + ['Rejected', 'On Hold', 'Cancelled', 'Stage 1 Rejected']))
+            query = query.filter(~Project.status.in_(closed_statuses + ['Rejected', 'On Hold', 'Cancelled']))
         elif status in ['Closed', 'Completed', 'Archived']:
             query = query.filter(Project.status.in_(closed_statuses))
         elif status in ['Inactive', 'Stalled']:
@@ -361,11 +286,9 @@ def list_repository_projects():
             )
         elif status in ['Stopped', 'Rejected', 'Cancelled']:
             query = query.filter(db.or_(
-                Project.status.in_(['Rejected', 'Cancelled', 'Stopped', 'On Hold', 'Stage 1 Rejected']),
+                Project.status.in_(['Rejected', 'Cancelled', 'Stopped', 'On Hold']),
                 Project.status.ilike('Rejected%'),
-                Project.status.ilike('Stopped%'),
-                Project.status.ilike('%Rejected%'),
-                Project.status.ilike('%Stopped%')
+                Project.status.ilike('Stopped%')
             ))
         elif status == 'Pending Approval':
             from app.infrastructure.database.models.models import (
@@ -433,7 +356,19 @@ def list_repository_projects():
         
     projects = query.order_by(Project.created_at.desc()).all()
     
+    inactivity_days = 30
+    if user and hasattr(user, 'org_id') and user.org_id:
+        org = db.session.get(Organization, user.org_id)
+        if org and getattr(org, 'project_inactivity_days', None):
+            inactivity_days = org.project_inactivity_days
+            
+    inactivity_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=inactivity_days)
+    
     results = []
+    total_count = len(projects)
+    active_count = 0
+    completed_count = 0
+    stalled_count = 0
     
     from app.infrastructure.database.models.models import (
         ProjectStageTracker, ProjectReview,
@@ -459,6 +394,9 @@ def list_repository_projects():
         is_stalled = False
         if last_activity and last_activity < inactivity_cutoff:
             is_stalled = True
+            stalled_count += 1
+        else:
+            active_count += 1
 
         display_status = p.status
         if p.status not in ('Closed', 'Completed', 'Archived'):
@@ -500,6 +438,8 @@ def list_repository_projects():
             "is_stalled": is_stalled,
             "last_updated": last_activity.isoformat() + "Z"
         })
+        
+    stopped_count = sum(1 for p in projects if p.status in ('Rejected', 'Cancelled', 'Stopped', 'On Hold') or (p.status and (p.status.startswith('Rejected') or p.status.startswith('Stopped'))))
 
     total_items = len(results)
     if page is not None:
@@ -509,11 +449,10 @@ def list_repository_projects():
         total_pages = (total_items + per_page - 1) // per_page if total_items > 0 else 1
         return jsonify({
             "stats": {
-                "total": scope_total_count,
-                "active": scope_active_count,
-                "stalled": scope_stalled_count,
-                "stopped": scope_stopped_count,
-                "completed": scope_completed_count
+                "total": total_count,
+                "active": active_count,
+                "stalled": stalled_count,
+                "stopped": stopped_count
             },
             "page": page,
             "per_page": per_page,
@@ -524,11 +463,10 @@ def list_repository_projects():
         
     return jsonify({
         "stats": {
-            "total": scope_total_count,
-            "active": scope_active_count,
-            "stalled": scope_stalled_count,
-            "stopped": scope_stopped_count,
-            "completed": scope_completed_count
+            "total": total_count,
+            "active": active_count,
+            "stalled": stalled_count,
+            "stopped": stopped_count
         },
         "page": 1,
         "per_page": total_items,
@@ -763,11 +701,6 @@ def auto_archive_project_to_repository(project_id, org_id):
                             db.session.commit()
                     except Exception as err:
                         print(f"[RAG Background Indexing Error] {err}")
-                    finally:
-                        try:
-                            db.session.remove()
-                        except Exception:
-                            pass
 
         t = threading.Thread(target=_bg_vector, args=(app_obj, entry.id, org_id))
         t.daemon = True

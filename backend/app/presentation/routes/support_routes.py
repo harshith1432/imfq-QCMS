@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template_string
+from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import re
 from app.infrastructure.database.models.models import (
@@ -50,7 +50,7 @@ def log_support_audit(ticket_id, user_id, action, old_vals=None, new_vals=None):
 @support_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
 def get_dashboard():
-    user, err = get_current_user_and_check_rbac(required_roles=['SuperAdmin', 'Admin', 'CEO', 'Support Engineer', 'Support Manager'])
+    user, err = get_current_user_and_check_rbac()
     if err:
         return jsonify({"status": "error", "message": err}), 403
 
@@ -118,31 +118,24 @@ def get_dashboard():
     
     sla_records = sla_records.all()
     if sla_records:
-        total_fr_hours = sum((s.first_response_responded_at - s.ticket.created_at).total_seconds() / 3600.0 for s in sla_records if s.ticket)
-        avg_fr_time = round(total_fr_hours / len(sla_records), 1)
+        total_resp_hours = sum((s.first_response_responded_at - s.created_at).total_seconds() / 3600.0 for s in sla_records)
+        avg_resp_time = round(total_resp_hours / len(sla_records), 1)
     else:
-        avg_fr_time = 0.0
+        avg_resp_time = 0.0
 
-    # Format SLA distribution
-    sla_dist = {
-        "within_sla": q_period.filter(SupportTicket.sla_status == 'Active').count(),
-        "warning": q_period.filter(SupportTicket.sla_status == 'Warning').count(),
-        "breached": sla_breached_cnt
-    }
-
-    # Volume trends by day (last 7 days)
-    trends = []
-    for i in range(6, -1, -1):
-        day_date = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=i)).date()
-        day_start = datetime.combine(day_date, datetime.min.time())
-        day_end = datetime.combine(day_date, datetime.max.time())
-        day_created = q.filter(SupportTicket.created_at >= day_start, SupportTicket.created_at <= day_end).count()
-        day_resolved = q.filter(SupportTicket.resolved_at >= day_start, SupportTicket.resolved_at <= day_end).count()
-        trends.append({
-            "date": day_date.strftime('%b %d'),
-            "created": day_created,
-            "resolved": day_resolved
-        })
+    # CSAT Score calculation
+    ratings = db.session.query(SupportRating).join(SupportTicket).filter(
+        SupportTicket.created_at >= start_date
+    )
+    if user.role.name != 'SuperAdmin':
+        ratings = ratings.filter(SupportTicket.org_id == user.org_id)
+        
+    ratings = ratings.all()
+    if ratings:
+        avg_rating = sum(r.rating for r in ratings) / len(ratings)
+        csat_score = round(avg_rating * 20.0, 1) # Out of 100%
+    else:
+        csat_score = 0.0
 
     # Structure payload exactly as required with icon, value, growth, trend, tooltips
     data = {
@@ -175,15 +168,9 @@ def list_tickets():
     # Query build
     q = SupportTicket.query
     
-    role_name = user.role.name if user.role else 'Team Member'
-    is_support_admin = role_name in ('SuperAdmin', 'Admin', 'CEO', 'Support Engineer', 'Support Manager')
-
     # Tenant Isolation
-    if role_name != 'SuperAdmin':
+    if user.role.name != 'SuperAdmin':
         q = q.filter_by(org_id=user.org_id)
-        if not is_support_admin:
-            # Regular tenant users only see their own tickets or tickets assigned to them
-            q = q.filter((SupportTicket.user_id == user.id) | (SupportTicket.assigned_engineer_id == user.id))
     else:
         # Admin can filter by organization ID
         org_id = request.args.get('organization')
@@ -213,7 +200,10 @@ def list_tickets():
     # Advanced Filters
     status_filter = request.args.get('status')
     if status_filter:
-        q = q.filter(SupportTicket.status == status_filter)
+        if status_filter == 'Open':
+            q = q.filter(SupportTicket.status.in_(['Open', 'Assigned']))
+        else:
+            q = q.filter(SupportTicket.status == status_filter)
         
     priority_filter = request.args.get('priority')
     if priority_filter:
@@ -329,16 +319,6 @@ def create_ticket():
     assigned_engineer_id = data.get('assigned_engineer_id')
     assigned_team = data.get('assigned_team', 'Tier 1 Support')
     
-    # Only allow explicit assignment if caller is support personnel / admin
-    is_staff = user.role and user.role.name in ('Support Engineer', 'Support Manager', 'Admin', 'SuperAdmin')
-    if assigned_engineer_id and not is_staff:
-        assigned_engineer_id = None
-
-    if assigned_engineer_id:
-        target_eng = db.session.get(User, assigned_engineer_id)
-        if not target_eng or (target_eng.role and target_eng.role.name not in ('Support Engineer', 'Support Manager', 'Admin', 'SuperAdmin')):
-            assigned_engineer_id = None
-
     if not assigned_engineer_id:
         engineers = User.query.join(Role).filter(Role.name.in_(['Support Engineer', 'Support Manager', 'SuperAdmin'])).all()
         if engineers:
@@ -417,23 +397,17 @@ def get_ticket_details(ticket_id):
         return jsonify({"status": "error", "message": err}), 403
 
     ticket = SupportTicket.query.get_or_404(ticket_id)
-    role_name = user.role.name if (user and user.role) else 'Team Member'
-    is_support_admin = role_name in ('SuperAdmin', 'Admin', 'CEO', 'Support Engineer', 'Support Manager')
-    is_requester = (ticket.user_id == user.id)
-    is_assigned = (ticket.assigned_engineer_id == user.id)
-
+    
     # Tenant Isolation
-    if role_name != 'SuperAdmin' and ticket.org_id != user.org_id:
+    if user.role.name != 'SuperAdmin' and ticket.org_id != user.org_id:
         return jsonify({"status": "error", "message": "Tenant access forbidden"}), 403
-
-    if not (is_support_admin or is_requester or is_assigned):
-        return jsonify({"status": "error", "message": "Access denied to this ticket"}), 403
 
     # Related info
     org = ticket.organization
     subscriptions = Subscription.query.filter_by(org_id=ticket.org_id).all() if org else []
 
     # Format timeline comments (public comments vs internal notes)
+    role_name = user.role.name if (user and user.role) else 'User'
     comments_list = []
     for c in ticket.comments:
         # Support Engineers & Admins see internal notes; clients do not
@@ -523,16 +497,8 @@ def update_ticket(ticket_id):
         return jsonify({"status": "error", "message": err}), 403
 
     ticket = SupportTicket.query.get_or_404(ticket_id)
-    role_name = user.role.name if (user and user.role) else 'Team Member'
-    is_support_admin = role_name in ('SuperAdmin', 'Admin', 'CEO', 'Support Engineer', 'Support Manager')
-    is_requester = (ticket.user_id == user.id)
-    is_assigned = (ticket.assigned_engineer_id == user.id)
-
-    if role_name != 'SuperAdmin' and ticket.org_id != user.org_id:
+    if user.role.name != 'SuperAdmin' and ticket.org_id != user.org_id:
         return jsonify({"status": "error", "message": "Access denied"}), 403
-
-    if not (is_support_admin or is_requester or is_assigned):
-        return jsonify({"status": "error", "message": "Access denied to update this ticket"}), 403
 
     data = request.get_json() or {}
     old_status = ticket.status
@@ -540,15 +506,8 @@ def update_ticket(ticket_id):
     old_assignee_id = ticket.assigned_engineer_id
 
     # Update actions
-    if 'assigned_engineer_id' in data and not is_support_admin:
-        return jsonify({"status": "error", "message": "Only support personnel or administrators can reassign tickets."}), 403
-
     if 'status' in data:
         new_status = data['status']
-        if new_status in ['Resolved', 'Closed'] and not (is_support_admin or is_assigned):
-            # Non-support requester cannot mark resolved/closed directly
-            return jsonify({"status": "error", "message": "Only assigned support engineers or administrators can resolve tickets."}), 403
-
         ticket.status = new_status
         
         # Audit status changes
@@ -590,12 +549,12 @@ def update_ticket(ticket_id):
                     ticket.sla.sla_status = 'Breached'
                     ticket.sla_status = 'Breached'
 
-    if 'priority' in data and is_support_admin:
+    if 'priority' in data:
         new_priority = data['priority']
         ticket.priority = new_priority
         log_support_audit(ticket.id, user.id, "Change Priority", {"priority": old_priority}, {"priority": new_priority})
 
-    if 'assigned_engineer_id' in data and is_support_admin:
+    if 'assigned_engineer_id' in data:
         new_eng_id = int(data['assigned_engineer_id']) if data['assigned_engineer_id'] else None
         ticket.assigned_engineer_id = new_eng_id
         ticket.status = 'Assigned' if new_eng_id else 'Open'
@@ -613,23 +572,12 @@ def add_comment(ticket_id):
         return jsonify({"status": "error", "message": err}), 403
 
     ticket = SupportTicket.query.get_or_404(ticket_id)
-    role_name = user.role.name if (user and user.role) else 'Team Member'
-    is_support_admin = role_name in ('SuperAdmin', 'Admin', 'CEO', 'Support Engineer', 'Support Manager')
-    is_requester = (ticket.user_id == user.id)
-    is_assigned = (ticket.assigned_engineer_id == user.id)
-
-    if role_name != 'SuperAdmin' and ticket.org_id != user.org_id:
+    if user.role.name != 'SuperAdmin' and ticket.org_id != user.org_id:
         return jsonify({"status": "error", "message": "Access denied"}), 403
-
-    if not (is_support_admin or is_requester or is_assigned):
-        return jsonify({"status": "error", "message": "Access denied to comment on this ticket"}), 403
 
     data = request.get_json() or {}
     content = data.get('content')
-    is_internal = bool(data.get('is_internal', False))
-
-    if is_internal and not is_support_admin:
-        return jsonify({"status": "error", "message": "Only support personnel and administrators can post internal notes."}), 403
+    is_internal = data.get('is_internal', False)
 
     if not content:
         return jsonify({"status": "error", "message": "Comment content cannot be empty"}), 400
@@ -681,16 +629,8 @@ def escalate_ticket(ticket_id):
         return jsonify({"status": "error", "message": err}), 403
 
     ticket = SupportTicket.query.get_or_404(ticket_id)
-    role_name = user.role.name if (user and user.role) else 'Team Member'
-    is_support_admin = role_name in ('SuperAdmin', 'Admin', 'CEO', 'Support Engineer', 'Support Manager')
-    is_requester = (ticket.user_id == user.id)
-    is_assigned = (ticket.assigned_engineer_id == user.id)
-
-    if role_name != 'SuperAdmin' and ticket.org_id != user.org_id:
+    if user.role.name != 'SuperAdmin' and ticket.org_id != user.org_id:
         return jsonify({"status": "error", "message": "Access denied"}), 403
-
-    if not (is_support_admin or is_requester or is_assigned):
-        return jsonify({"status": "error", "message": "Access denied to escalate this ticket"}), 403
 
     data = request.get_json() or {}
     reason = data.get('reason', 'Manual escalation triggered')
@@ -839,11 +779,6 @@ def handle_knowledge_detail(article_id):
         return jsonify({"status": "error", "message": "Article not found"}), 404
 
     if request.method == 'GET':
-        role_name = user.role.name if (user and user.role) else 'Team Member'
-        is_support_admin = role_name in ['SuperAdmin', 'CEO', 'Admin', 'Support Engineer', 'Support Manager']
-        if article.is_internal and not is_support_admin:
-            return jsonify({"status": "error", "message": "Access denied to internal knowledge article"}), 403
-
         article.views_count = (article.views_count or 0) + 1
         db.session.commit()
         return jsonify({
@@ -956,7 +891,7 @@ def ai_assistance():
 @support_bp.route('/tickets/export', methods=['POST'])
 @jwt_required()
 def export_tickets():
-    user, err = get_current_user_and_check_rbac(required_roles=['SuperAdmin', 'Admin', 'CEO', 'Support Engineer', 'Support Manager'])
+    user, err = get_current_user_and_check_rbac()
     if err:
         return jsonify({"status": "error", "message": err}), 403
 
@@ -1088,7 +1023,7 @@ def submit_public_enquiry():
 @support_bp.route('/support/enquiries/settings', methods=['GET', 'POST', 'PUT'])
 @jwt_required()
 def manage_enquiries_settings():
-    user, err = get_current_user_and_check_rbac(required_roles=['SuperAdmin'])
+    user, err = get_current_user_and_check_rbac()
     if err:
         return jsonify({"status": "error", "message": err}), 403
 
@@ -1143,7 +1078,7 @@ def manage_enquiries_settings():
 @support_bp.route('/enquiries', methods=['GET'])
 @jwt_required()
 def list_enquiries():
-    user, err = get_current_user_and_check_rbac(required_roles=['SuperAdmin', 'Support Engineer', 'Support Manager'])
+    user, err = get_current_user_and_check_rbac()
     if err:
         return jsonify({"status": "error", "message": err}), 403
 
@@ -1217,7 +1152,7 @@ def list_enquiries():
 @support_bp.route('/enquiries/<int:enquiry_id>', methods=['PUT'])
 @jwt_required()
 def update_enquiry(enquiry_id):
-    user, err = get_current_user_and_check_rbac(required_roles=['SuperAdmin', 'Support Engineer', 'Support Manager'])
+    user, err = get_current_user_and_check_rbac()
     if err:
         return jsonify({"status": "error", "message": err}), 403
 
@@ -1246,7 +1181,7 @@ def update_enquiry(enquiry_id):
 @support_bp.route('/enquiries/<int:enquiry_id>', methods=['DELETE'])
 @jwt_required()
 def delete_enquiry(enquiry_id):
-    user, err = get_current_user_and_check_rbac(required_roles=['SuperAdmin'])
+    user, err = get_current_user_and_check_rbac()
     if err:
         return jsonify({"status": "error", "message": err}), 403
 
@@ -1263,7 +1198,7 @@ def delete_enquiry(enquiry_id):
 @support_bp.route('/enquiries/<int:enquiry_id>/send-email', methods=['POST'])
 @jwt_required()
 def send_enquiry_email(enquiry_id):
-    user, err = get_current_user_and_check_rbac(required_roles=['SuperAdmin', 'Support Engineer', 'Support Manager'])
+    user, err = get_current_user_and_check_rbac()
     if err:
         return jsonify({"status": "error", "message": err}), 403
 
@@ -1281,30 +1216,25 @@ def send_enquiry_email(enquiry_id):
         from app.infrastructure.mailer.email_service import EmailUtils
         from app.domain.services.document_branding_service import DocumentBrandingService
 
-        import html as html_escape
         user_org_id = getattr(user, 'org_id', None)
 
         msg_str = message_content.strip()
-        has_custom_greeting = bool(re.match(r'^(dear|hi|hello|greetings)\b', msg_str, re.IGNORECASE))
-        enquiry_name = enquiry.name or 'Valued Prospect'
-        company_name = enquiry.company_name or 'QCMS Enterprise'
+        # Avoid duplicate greeting if message content already includes "Dear ...", "Hi ...", or "Hello ..."
+        if re.match(r'^(dear|hi|hello|greetings)\b', msg_str, re.IGNORECASE):
+            greeting_hdr = ""
+        else:
+            greeting_hdr = f"<p style=\"margin-bottom: 12px;\">Dear {enquiry.name or 'Valued Prospect'},</p>"
 
-        body_html = render_template_string(
-            """<div style="font-family: Arial, sans-serif; font-size: 14px; color: #1e293b; line-height: 1.6;">
-                {% if not has_custom_greeting %}
-                <p style="margin-bottom: 12px;">Dear {{ enquiry_name }},</p>
-                {% endif %}
-                <div style="margin: 8px 0; white-space: pre-wrap;">{{ msg_str }}</div>
-                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-                <p style="font-size: 12px; color: #64748b;">
-                    This communication is sent regarding your sales inquiry with <strong>{{ company_name }}</strong>.
-                </p>
-            </div>""",
-            has_custom_greeting=has_custom_greeting,
-            enquiry_name=enquiry_name,
-            msg_str=msg_str,
-            company_name=company_name
-        )
+        body_html = f"""
+        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1e293b; line-height: 1.6;">
+            {greeting_hdr}
+            <div style="margin: 8px 0; white-space: pre-wrap;">{msg_str}</div>
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+            <p style="font-size: 12px; color: #64748b;">
+                This communication is sent regarding your sales inquiry with <strong>{enquiry.company_name or 'QCMS Enterprise'}</strong>.
+            </p>
+        </div>
+        """
         html_wrapped = DocumentBrandingService.wrap_email_html(body_html, title=subject, org_id=user_org_id)
 
         # Dispatch email asynchronously using 'support' email_type in background
@@ -1360,14 +1290,6 @@ def upload_ticket_attachment(ticket_id):
     ticket = SupportTicket.query.get_or_404(ticket_id)
     if user.role.name != 'SuperAdmin' and ticket.org_id != user.org_id:
         return jsonify({"status": "error", "message": "Access denied"}), 403
-
-    role_name = user.role.name if (user and user.role) else 'Team Member'
-    is_support_admin = role_name in ('SuperAdmin', 'Admin', 'CEO', 'Support Engineer', 'Support Manager')
-    is_requester = (ticket.user_id == user.id)
-    is_assigned = (ticket.assigned_engineer_id == user.id)
-
-    if not (is_support_admin or is_requester or is_assigned):
-        return jsonify({"status": "error", "message": "Access denied: You are not authorized to upload attachments to this ticket."}), 403
 
     if 'file' not in request.files:
         return jsonify({"status": "error", "message": "No file provided"}), 400

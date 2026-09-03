@@ -382,50 +382,34 @@ class FeatureEngine:
         Asynchronously track usage. Does not block the request.
         event_type: 'page_view' | 'api_call' | 'export' | 'import' | 'action'
         """
-        from flask import current_app
-        try:
-            app_inst = current_app._get_current_object()
-        except Exception:
-            app_inst = None
-
-        def _do_track(target_app):
-            from app.infrastructure.database.models.models import Module, ModuleUsageAnalytics, db
-            from datetime import datetime, timezone
+        def _do_track():
             try:
-                if target_app:
-                    with target_app.app_context():
-                        m = Module.query.filter_by(code=module_code).first()
-                        if not m:
-                            return
-                        analytics = ModuleUsageAnalytics.query.filter_by(
-                            module_id=m.id, org_id=org_id
-                        ).first()
-                        if not analytics:
-                            analytics = ModuleUsageAnalytics(module_id=m.id, org_id=org_id)
-                            db.session.add(analytics)
+                from app.infrastructure.database.models.models import Module, ModuleUsageAnalytics, db
+                from datetime import datetime, timezone
+                m = Module.query.filter_by(code=module_code).first()
+                if not m:
+                    return
+                analytics = ModuleUsageAnalytics.query.filter_by(
+                    module_id=m.id, org_id=org_id
+                ).first()
+                if not analytics:
+                    analytics = ModuleUsageAnalytics(module_id=m.id, org_id=org_id)
+                    db.session.add(analytics)
 
-                        if event_type == 'page_view':
-                            analytics.page_views = (analytics.page_views or 0) + 1
-                        elif event_type == 'export':
-                            analytics.export_count = (analytics.export_count or 0) + 1
-                        else:
-                            analytics.api_calls = (analytics.api_calls or 0) + 1
+                if event_type == 'page_view':
+                    analytics.page_views = (analytics.page_views or 0) + 1
+                elif event_type == 'export':
+                    analytics.export_count = (analytics.export_count or 0) + 1
+                else:
+                    analytics.api_calls = (analytics.api_calls or 0) + 1
 
-                        analytics.last_used_at = datetime.now(timezone.utc).replace(tzinfo=None)
-                        analytics.total_requests = (analytics.total_requests or 0) + 1
-                        db.session.commit()
+                analytics.last_used_at = datetime.datetime.now(timezone.utc).replace(tzinfo=None)
+                analytics.total_requests = (analytics.total_requests or 0) + 1
+                db.session.commit()
             except Exception:
-                try:
-                    db.session.rollback()
-                except Exception:
-                    pass
-            finally:
-                try:
-                    db.session.remove()
-                except Exception:
-                    pass
+                pass
 
-        t = threading.Thread(target=_do_track, args=(app_inst,), daemon=True)
+        t = threading.Thread(target=_do_track, daemon=True)
         t.start()
 
 
