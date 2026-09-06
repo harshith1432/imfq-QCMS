@@ -10,30 +10,41 @@ Below is the complete project lifecycle sequence showing submission paths, gatek
 
 ```mermaid
 graph TD
-    classDef tl fill:#d4edda,stroke:#28a745,color:#155724;
-    classDef rev fill:#cce5ff,stroke:#004085,color:#004085;
-    classDef fac fill:#fff3cd,stroke:#856404,color:#856404;
-    classDef system fill:#f8d7da,stroke:#721c24,color:#721c24;
+    classDef init fill:#d4edda,stroke:#28a745,color:#155724;
+    classDef auto fill:#e2e3e5,stroke:#383d41,color:#383d41;
+    classDef review fill:#cce5ff,stroke:#004085,color:#004085;
+    classDef ceo fill:#fff3cd,stroke:#856404,color:#856404;
+    classDef close fill:#d1ecf1,stroke:#0c5460,color:#0c5460;
+    classDef kb fill:#f8d7da,stroke:#721c24,color:#721c24;
 
-    S1[Stage 1: Identification & Project Initiation] -->|Facilitator & Management Approved| S2[Stage 2: Observation & Data Collection]
-    S2 -->|Reviewer Approved| S3[Stage 3: Cause Identification]
-    S3 -->|Facilitator Approved| S4[Stage 4: Root Cause Analysis & Verification]
-    S4 -->|Reviewer Approved| S5[Stage 5: Countermeasure Planning]
-    S5 -->|Reviewer Approved| S6[Stage 6: Implementation & Change Management]
-    S6 -->|Reviewer Approved| S7[Stage 7: Performance Verification & ROI]
-    S7 -->|Reviewer Approved| S8[Stage 8: Standardization & Project Closure]
-    
-    S8 -->|Final Administrative Review| S8_Approve{Final Reviewer Decision}
-    S8_Approve -->|Approved| Closed[Project Status: Closed]
-    S8_Approve -->|Sent Back / Revision| S8
-    
-    Closed --> Archive[Auto-Archive Engine]
-    Archive --> KB[(Knowledge Repository)]
-    KB --> RAG[RAG-AI Embedding Generation]
-    
-    class S1,S3 fac;
-    class S2,S4,S5,S6,S7,S8_Approve rev;
-    class Closed,Archive,KB,RAG system;
+    S1[Stage 1: Problem Definition & Project Initiation] -->|Mandatory Reviewer Approval| S2[Stage 2: Observation & Data Collection]
+
+    subgraph Auto_Progression["⚡ Continuous Execution (No Intermediate Gatekeepers)"]
+        S2 -->|Auto-Advances on Submit| S3[Stage 3: Cause Identification]
+        S3 -->|Auto-Advances on Submit| S4[Stage 4: Root Cause Analysis & Verification]
+        S4 -->|Auto-Advances on Submit| S5[Stage 5: Countermeasure Planning]
+        S5 -->|Auto-Advances on Submit| S6[Stage 6: Implementation & Change Management]
+        S6 -->|Auto-Advances on Submit| S7[Stage 7: Performance Verification & ROI]
+        S7 -->|Auto-Advances on Submit| S8[Stage 8: Standardization & Closure]
+    end
+
+    S8 -->|Submitted to Reviewer| REV_GATE["🎯 Stage 8 Reviewer Impact Verification<br/>(Verifies Baseline vs Final KPI Improvements)"]
+
+    REV_GATE -->|Option A: Direct Reviewer Closure| CLOSED[Project Status: Closed]
+    REV_GATE -->|Option B: Forward to Executive| CEO_GATE["👑 CEO Executive Final Review<br/>(Awaiting CEO Closure Decision)"]
+    CEO_GATE -->|CEO Approves & Signs Off| CLOSED
+    CEO_GATE -->|CEO Requests Revision| S8
+
+    CLOSED --> AUTO_ARCHIVE[📦 Auto-Archive Engine]
+    AUTO_ARCHIVE --> KB[(📚 Knowledge Repository)]
+    KB --> RAG_EMBED[🧠 Vector RAG Embedding Generation]
+
+    class S1 init;
+    class S2,S3,S4,S5,S6,S7,S8 auto;
+    class REV_GATE review;
+    class CEO_GATE ceo;
+    class CLOSED,AUTO_ARCHIVE close;
+    class KB,RAG_EMBED kb;
 ```
 
 ---
@@ -42,14 +53,14 @@ graph TD
 
 | Stage | Stage Name | Mandatory Approver Role | Database Fields Updated | Next Stage Trigger Condition |
 | :--- | :--- | :--- | :--- | :--- |
-| **1** | Identification & Project Initiation | **Facilitator** & **Management** | `facilitator_approved`, `management_approved` | Both approvals set to `True` |
-| **2** | Observation & Data Collection | **Reviewer** | `reviewer_approved`, `reviewer_id` | Reviewer approval set to `True` |
-| **3** | Cause Identification | **Facilitator** | `facilitator_approved`, `facilitator_approver_id` | Facilitator approval set to `True` |
-| **4** | Root Cause Analysis & Verification | **Reviewer** | `reviewer_approved`, `reviewer_id` | Reviewer approval set to `True` |
-| **5** | Countermeasure Planning & Solution Development | **Reviewer** | `reviewer_approved`, `reviewer_id` | Reviewer approval set to `True` |
-| **6** | Implementation & Change Management | **Reviewer** | `reviewer_approved`, `reviewer_id` | Reviewer approval set to `True` |
-| **7** | Performance Verification & Benefits Realization | **Reviewer** | `reviewer_approved`, `reviewer_id` | Reviewer approval set to `True` |
-| **8** | Standardization, Knowledge Sharing & Closure | **Reviewer** | `final_approval`, `final_approval_by` | Reviewer approves Stage 8 $\rightarrow$ Auto-Archives |
+| **1** | Identification & Project Initiation | **Reviewer** | `reviewer_approved`, `reviewer_id` | Reviewer approval initiates project and unlocks Stage 2 |
+| **2** | Observation & Data Collection | None *(Auto-Advance)* | `status='Completed'` | Auto-advances to Stage 3 upon stage completion |
+| **3** | Cause Identification | None *(Auto-Advance)* | `status='Completed'` | Auto-advances to Stage 4 upon stage completion |
+| **4** | Root Cause Analysis & Verification | None *(Auto-Advance)* | `status='Completed'` | Auto-advances to Stage 5 upon stage completion |
+| **5** | Countermeasure Planning & Solution Development | None *(Auto-Advance)* | `status='Completed'` | Auto-advances to Stage 6 upon stage completion |
+| **6** | Implementation & Change Management | None *(Auto-Advance)* | `status='Completed'` | Auto-advances to Stage 7 upon stage completion |
+| **7** | Performance Verification & Benefits Realization | None *(Auto-Advance)* | `status='Completed'` | Auto-advances to Stage 8 upon stage completion |
+| **8** | Standardization, Knowledge Sharing & Closure | **Reviewer** (Impact Verification) & **CEO** (Optional Final Gate) | `final_approval`, `final_approval_by` | Reviewer verifies impact and closes directly OR forwards to CEO for executive closure; project auto-archives to KB |
 
 ---
 
@@ -57,7 +68,7 @@ graph TD
 
 ### Stage 1: Problem Definition & Project Initiation
 * **Core Purpose**: Plan the milestone schedule, build the cross-functional project team, capture baseline project attributes, and define the problem statement using the 5W2H methodology.
-* **Gatekeeper**: **Facilitator & Management** (must approve before advancing to Stage 2).
+* **Gatekeeper**: **Reviewer** (The Reviewer approves the project in Stage 1 to formally authorize project initiation and unlock Stage 2).
 
 #### Section 1: Project Team
 * `circle_name` (Text): The name of the Quality Circle team.
@@ -356,7 +367,7 @@ graph TD
 
 ### Stage 8: Standardization, Knowledge Sharing & Closure
 * **Core Purpose**: Audit documentation releases, plan horizontal deployments to other lines/plants, compile final team recognitions, and submit the project for official administrative closure.
-* **Gatekeeper**: **Reviewer** (Final administrative approval $\rightarrow$ Triggers auto-archive).
+* **Gatekeeper**: **Reviewer** (Conducts Impact Verification and either directly signs off to close the project OR forwards to the **CEO** for final executive sign-off; closure triggers auto-archive to Knowledge Base).
 
 #### Section 1: Standardization Document Release
 * Standardization Rows (JSON Array):
@@ -401,7 +412,7 @@ graph TD
 
 ## 💾 Auto-Archive Engine & RAG-AI Integration
 
-Once a Reviewer approves a project at **Stage 8**, the backend intercepts the event and executes the **Auto-Archive Engine** (implemented in `repository_routes.py` $\rightarrow$ `auto_archive_project_to_repository`):
+Once a project is officially closed at **Stage 8** (either directly by the **Reviewer** upon Impact Verification or following executive sign-off by the **CEO**), the backend intercepts the closure event and executes the **Auto-Archive Engine** (implemented in `repository_routes.py` → `auto_archive_project_to_repository`):
 
 ### 1. Data Aggregation
 The engine queries the project's workflow state and extracts critical data across different stages:

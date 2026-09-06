@@ -63,7 +63,7 @@ An enterprise-grade, high-performance SaaS operating system engineered for struc
 **QCMS Enterprise OS** is engineered for manufacturing plants, industrial enterprises, automotive OEMs, and quality institutions (such as IFQM) to systematically detect, analyze, resolve, and institutionalize solutions for operational deviations, scrap rates, equipment downtime, and quality defects.
 
 ### Core Value Propositions:
-1. **Rigid 8-Stage DMAIC Discipline**: Enforces step-by-step problem resolution with independent reviewer and facilitator approval gates preventing premature or unverified stage progression.
+1. **Streamlined DMAIC Quality Discipline**: Enforces upfront Reviewer project authorization at Stage 1, seamless team-led automatic progression through intermediate stages (Stages 2–7) without gatekeeper bottlenecks, and rigorous Reviewer Impact Verification at Stage 8 with dual closure pathways (Direct Reviewer Closure or CEO Executive Sign-Off).
 2. **Client-Driven Business Logic**: The frontend client orchestrates data structures, formula evaluations (Pareto 80/20, Ishikawa 6M categorizations, ROI deltas), module visibility, and role navigation before dispatching validated payloads to the backend.
 3. **Real-Time Collaboration & Concurrency**: Live collaborator presence rosters, heartbeat tracking, and stage-level collision alerts.
 4. **Forensic Audit & Lifecycle Traceability**: Full timeline transparency into member transitions, mid-project additions, departures, and stakeholder handovers.
@@ -361,7 +361,7 @@ The internationalization engine (`assets/js/i18n.js`) provides live, dynamic tra
   1. Loads target dictionary from `/assets/i18n/<lang>.json`.
   2. Builds a flat dictionary map from English master strings to target language strings.
   3. Walks the DOM tree, replacing matching text nodes, input placeholders, titles, and `aria-label` attributes.
-  4. Caches original English values in `node._originalText` to allow seamless multi-hop language switching (e.g. Hindi $ightarrow$ Kannada $ightarrow$ Tamil) without text degradation.
+  4. Caches original English values in `node._originalText` to allow seamless multi-hop language switching (e.g. Hindi → Kannada → Tamil) without text degradation.
   5. Attaches a `MutationObserver` to watch for newly injected dynamic elements (e.g. AJAX tables, modal dialogs, KPI cards) and translates them instantly.
   6. Skips public auth pages (`login.html`, `register.html`) to preserve layout stability.
 
@@ -393,34 +393,45 @@ Industrial floor operators and quality facilitators often access QCMS on mobile 
 
 ## 🔄 The 8-Stage DMAIC Quality Circle Workflow
 
-QCMS enforces a sequential problem-solving lifecycle. Every project proceeds through eight rigid milestones governed by designated gatekeepers:
+QCMS enforces a streamlined problem-solving lifecycle with upfront project authorization, continuous team execution, and rigorous final impact verification:
 
 ```mermaid
 graph TD
-    classDef tl fill:#d4edda,stroke:#28a745,color:#155724;
-    classDef rev fill:#cce5ff,stroke:#004085,color:#004085;
-    classDef fac fill:#fff3cd,stroke:#856404,color:#856404;
-    classDef sys fill:#f8d7da,stroke:#721c24,color:#721c24;
+    classDef init fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a8a;
+    classDef auto fill:#f0fdf4,stroke:#16a34a,stroke-width:1.5px,color:#14532d;
+    classDef review fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#78350f;
+    classDef ceo fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#581c87;
+    classDef close fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#064e3b;
+    classDef kb fill:#f1f5f9,stroke:#475569,stroke-width:1.5px,color:#0f172a;
 
-    S1["Stage 1: Problem Definition & Initiation<br/>(5W2H, Team Roster, Containment, Baseline)"] -->|Facilitator & Management Sign-Off| S2["Stage 2: Observation & Data Collection<br/>(Stratification 4M/1E, SOP Deviations, Evidence)"]
-    S2 -->|Reviewer Sign-Off| S3["Stage 3: Cause Identification<br/>(Ishikawa 6M, 5-Why Analysis, Pareto 80/20)"]
-    S3 -->|Facilitator RCA Validation| S4["Stage 4: Root Cause Analysis & Verification<br/>(Hypothesis Validation, Risk Assessment)"]
-    S4 -->|Reviewer Sign-Off| S5["Stage 5: Countermeasure Planning<br/>(Action Matrix 3W1H, Trial Run Setup)"]
-    S5 -->|Reviewer Sign-Off| S6["Stage 6: Implementation & Execution<br/>(Milestone Tracking, Change Management)"]
-    S6 -->|Reviewer Sign-Off| S7["Stage 7: Performance Verification & ROI<br/>(Before/After Delta, Financial Savings)"]
-    S7 -->|Reviewer Sign-Off| S8["Stage 8: Standardization & Project Closure<br/>(SOP Institutionalization, Lessons Learned)"]
+    S1["Stage 1: Problem Definition & Initiation<br/>(5W2H, Team Circle, Baseline KPI, Containment)"] -->|Mandatory Reviewer Approval| S2["Stage 2: Observation & Data Collection<br/>(Stratification 4M/1E, SOP Deviations, Evidence)"]
 
-    S8 -->|Final Reviewer Sign-Off| S8_Decision{Final Approval?}
-    S8_Decision -->|Approved| CLOSED["Project Status: Closed"]
-    S8_Decision -->|Revision Requested| S8
+    subgraph Auto_Progression["⚡ CONTINUOUS EXECUTION PIPELINE (Automatic Progression — No Gatekeeper Bottlenecks)"]
+        S2 -->|Auto-Advances on Submit| S3["Stage 3: Cause Identification<br/>(Ishikawa 6M, 5-Why Analysis, Pareto 80/20)"]
+        S3 -->|Auto-Advances on Submit| S4["Stage 4: Root Cause Analysis & Verification<br/>(Hypothesis Validation, Risk Assessment)"]
+        S4 -->|Auto-Advances on Submit| S5["Stage 5: Countermeasure Planning<br/>(Action Matrix 3W1H, Trial Plan)"]
+        S5 -->|Auto-Advances on Submit| S6["Stage 6: Implementation & Execution<br/>(Milestone Tracking, Change Management)"]
+        S6 -->|Auto-Advances on Submit| S7["Stage 7: Performance Verification & ROI<br/>(Before/After Delta, Financial Savings)"]
+        S7 -->|Auto-Advances on Submit| S8["Stage 8: Standardization & Project Closure<br/>(SOP Institutionalization, Lessons Learned)"]
+    end
 
-    CLOSED --> AUTO_ARCHIVE["Auto-Archive Engine"]
-    AUTO_ARCHIVE --> KB[("Knowledge Repository")]
-    KB --> RAG_EMBED["Vector RAG Embedding Generation"]
+    S8 -->|Submitted to Reviewer| REV_GATE["🎯 Stage 8 Reviewer Impact Verification<br/>(Verifies Baseline vs Final KPI Improvements)"]
 
-    class S1,S3 fac;
-    class S2,S4,S5,S6,S7,S8_Decision rev;
-    class CLOSED,AUTO_ARCHIVE,KB,RAG_EMBED sys;
+    REV_GATE -->|Option A: Direct Reviewer Closure| CLOSED["Project Status: Closed<br/>(Reviewer Signs Off & Closes)"]
+    REV_GATE -->|Option B: Forward to Executive| CEO_GATE["👑 CEO Executive Final Review<br/>(Awaiting CEO Closure Decision)"]
+    CEO_GATE -->|CEO Approves & Signs Off| CLOSED
+    CEO_GATE -->|CEO Requests Revision| S8
+
+    CLOSED --> AUTO_ARCHIVE["📦 Auto-Archive Engine"]
+    AUTO_ARCHIVE --> KB[("📚 Knowledge Repository<br/>(/projects/repository.html)")]
+    KB --> RAG_EMBED["🧠 Vector RAG Embedding Generation<br/>(pgvector AI Search Index)"]
+
+    class S1 init;
+    class S2,S3,S4,S5,S6,S7,S8 auto;
+    class REV_GATE review;
+    class CEO_GATE ceo;
+    class CLOSED,AUTO_ARCHIVE close;
+    class KB,RAG_EMBED kb;
 ```
 
 ---
@@ -435,84 +446,48 @@ graph TD
   - *Baseline KPI*: Baseline scrap rate, PPM, defect rate, downtime hours, financial loss.
   - *Emergency Containment*: Containment actions taken immediately to protect customer/line.
   - *Gantt Milestones*: Target completion dates for each of the 8 stages.
-- **Mandatory Approvers**: **Facilitator** and **Management**.
+- **Mandatory Approver**: **Reviewer** (The Reviewer approves the project in Stage 1 to formally authorize project initiation).
 
-#### Stage 2: Observation & Data Collection
-- **Objective**: Collect empirical data from the gemba (shop floor) and stratify defects across categories.
-- **Core Sections**:
-  - *Stratification*: Data categorizations by 4M/1E (Man, Machine, Material, Method, Environment).
-  - *SOP Deviation Analysis*: Identifying where existing standards were bypassed or absent.
-  - *Evidence Uploads*: Timestamped photos, inspection sheets, and measurement logs.
-- **Mandatory Approver**: **Reviewer**.
+#### Stages 2 to 7: Continuous Execution & Automatic Progression
+Once Stage 1 is approved by the Reviewer, **no gatekeepers come in between to block or stall the project**. The team moves seamlessly through continuous investigation, root cause analysis, countermeasure development, and implementation:
+- **Stage 2: Observation & Data Collection**: Stratification by 4M/1E, SOP deviation analysis, and physical evidence logs. *Auto-advances to Stage 3 on submission.*
+- **Stage 3: Cause Identification**: 6M Ishikawa (Fishbone) diagram, 5-Why analysis drill-down tree, and Pareto 80/20 frequency chart. *Auto-advances to Stage 4 on submission.*
+- **Stage 4: Root Cause Verification**: Hypothesis testing against gemba observations, experimental validation, and risk assessment. *Auto-advances to Stage 5 on submission.*
+- **Stage 5: Countermeasure Planning**: 3W1H action matrix, cost-benefit evaluation, and trial run protocols. *Auto-advances to Stage 6 on submission.*
+- **Stage 6: Implementation & Change Management**: Execution tracking against milestones, trial run verification, and task completion sign-offs. *Auto-advances to Stage 7 on submission.*
+- **Stage 7: Performance Verification & ROI**: Tangible/intangible financial savings computation, Before vs. After KPI delta verification, and multi-shift sustainability audit. *Auto-advances to Stage 8 on submission.*
 
-#### Stage 3: Cause Identification & Analysis
-- **Objective**: Brainstorm and categorize potential causes using standard quality tools.
-- **Core Sections**:
-  - *Ishikawa (Fishbone) Diagram*: Interactive 6M cause mapping (Man, Machine, Material, Method, Measurement, Milieu/Environment).
-  - *5-Why Analysis*: Multi-level root cause drill-down tree.
-  - *Pareto 80/20 Chart*: Defect frequency ranking with cumulative percentage curve to pinpoint vital few causes.
-- **Mandatory Approver**: **Facilitator** (validates RCA logic).
-
-#### Stage 4: Root Cause Verification & Hypothesis Testing
-- **Objective**: Experimentally test and verify whether identified root causes reproduce the problem.
-- **Core Sections**:
-  - *Hypothesis Matrix*: Proposed causes tested against gemba observations.
-  - *Verification Tests*: Controlled trial testing to confirm true root causes.
-  - *Risk Assessment*: Evaluating potential side-effects of eliminating identified causes.
-- **Mandatory Approver**: **Reviewer**.
-
-#### Stage 5: Countermeasure Planning & Solution Development
-- **Objective**: Formulate targeted, permanent countermeasures preventing recurrence.
-- **Core Sections**:
-  - *Countermeasure Matrix (3W1H)*: What will be done, Who is responsible, When is the deadline, How will it be implemented.
-  - *Cost-Benefit Evaluation*: Capital expenditure vs. expected monthly defect savings.
-  - *Trial Implementation Plan*: Pilot testing protocols before full rollout.
-- **Mandatory Approver**: **Reviewer**.
-
-#### Stage 6: Implementation & Change Management
-- **Objective**: Execute approved countermeasures on the production line.
-- **Core Sections**:
-  - *Action Execution Logs*: Step-by-step progress tracking against milestones.
-  - *Trial Run Verification*: Production metrics during the pilot phase.
-  - *Task Completion Matrix*: Member-specific task sign-offs.
-- **Mandatory Approver**: **Reviewer**.
-
-#### Stage 7: Performance Verification & Benefits Realization
-- **Objective**: Measure post-countermeasure performance against baseline measurements from Stage 1 & 2.
-- **Core Sections**:
-  - *Before vs. After Comparison*: Side-by-side KPI metric verification (Yield, Defect %, OEE, Scrap).
-  - *Tangible Savings Calculator*: Direct material, labor, and rework cost reductions.
-  - *Intangible Benefits*: Safety improvements, morale boosts, customer satisfaction metrics.
-  - *Sustainability Verification*: Audit confirming stability across multiple consecutive shifts.
-- **Mandatory Approver**: **Reviewer**.
-
-#### Stage 8: Standardization & Project Closure
-- **Objective**: Institutionalize the solution across the organization to ensure defects never recur.
-- **Core Sections**:
-  - *SOP Integration*: Creation or modification of Standard Operating Procedures.
-  - *Training Roster*: Retraining operators on revised procedures.
-  - *Horizontal Deployment (Yokoten)*: Sharing findings with other plants or parallel production lines.
-  - *Lessons Learned & Final Sign-Off*: Project conclusion commentary.
-- **Mandatory Approver**: **Reviewer** (Final approval closes project).
+#### Stage 8: Standardization, Impact Verification & Dual Closure Options
+When Stage 8 is completed, the project is officially submitted to the **Reviewer**:
+- **Reviewer Impact Verification**: The Reviewer opens the project in the Reviewer Portal (`/dashboard/dashboard-reviewer.html` → Impact Verification), reviews the baseline vs. final KPI change, verifies the percentage improvement, and inspects linked SOPs.
+- **Dual Closure Pathways**:
+  1. **Option A (Direct Reviewer Closure)**: The Reviewer verifies the impact metrics, reviews lessons learned and preventive actions, and **directly signs off to close the project**.
+  2. **Option B (Forward to CEO for Final Executive Closure)**: The Reviewer verifies the impact metrics and forwards the project to the **CEO** (status updates to `Pending CEO Review`). The **CEO** reviews the project portfolio, financial benefits, and executive summary from the CEO Portal (`/dashboard/dashboard-ceo.html` → Pending Closures) and executes the **final executive closure sign-off**.
 
 ---
 
-### Approval Gates & Decision Logic
+### Stage Progression & Decision Matrix
 
-Every stage progression requires formal review:
-- **Approval Actions**: Gatekeepers can **Approve** (advancing to the next stage) or **Request Revisions** (sending the stage back with specific feedback notes).
-- **Validation Locks**: When a stage is submitted for review, input fields are locked in read-only mode for the author team until the reviewer acts.
-- **Notification Dispatch**: Submissions and review decisions trigger immediate notifications and audit log events.
+| Stage | Stage Name | Milestone Action | Gatekeeper / Progression Behavior | Next Step |
+| :--- | :--- | :--- | :--- | :--- |
+| **Stage 1** | Problem Definition & Initiation | Charter, 5W2H, Team, Baseline, Containment | **Reviewer Approval** *(Mandatory Gate)* | Advances to Stage 2 upon Reviewer sign-off |
+| **Stage 2** | Observation & Data Collection | 4M/1E Stratification, SOP Deviations, Evidence | ⚡ **Automatic Progression** *(No gatekeeper bottleneck)* | Auto-advances to Stage 3 on submit |
+| **Stage 3** | Cause Identification | 6M Ishikawa Fishbone, 5-Why, Pareto 80/20 | ⚡ **Automatic Progression** *(No gatekeeper bottleneck)* | Auto-advances to Stage 4 on submit |
+| **Stage 4** | Root Cause Verification | Hypothesis Testing, Gemba Trials, Risk Matrix | ⚡ **Automatic Progression** *(No gatekeeper bottleneck)* | Auto-advances to Stage 5 on submit |
+| **Stage 5** | Countermeasure Planning | 3W1H Action Matrix, Cost-Benefit, Pilot Plan | ⚡ **Automatic Progression** *(No gatekeeper bottleneck)* | Auto-advances to Stage 6 on submit |
+| **Stage 6** | Implementation & Execution | Milestone Tracking, Trial Runs, Task Matrix | ⚡ **Automatic Progression** *(No gatekeeper bottleneck)* | Auto-advances to Stage 7 on submit |
+| **Stage 7** | Performance Verification | Before/After Delta, Financial Savings Calculator | ⚡ **Automatic Progression** *(No gatekeeper bottleneck)* | Auto-advances to Stage 8 on submit |
+| **Stage 8** | Standardization & Closure | SOP Institutionalization, Lessons, Yokoten | 🎯 **Reviewer Impact Verification**<br/>• **Option A**: Reviewer Closes Directly<br/>• **Option B**: Reviewer forwards to **CEO** | Project Status → `Closed`<br/>Auto-Archives to Knowledge Base |
 
 ---
 
 ### Knowledge Repository Auto-Archiving
 
-When **Stage 8** receives final approval:
-1. The project status shifts to `Closed`.
-2. The **Auto-Archive Engine** captures the entire 8-stage dataset, attachments, and final metrics.
+When the project receives final closure (either directly from the **Reviewer** or from the **CEO**):
+1. Project status is permanently updated to `Closed`.
+2. The **Auto-Archive Engine** captures the complete 8-stage record, charts, financial savings, and SOP documentation.
 3. The project is indexed in the **Knowledge Repository** (`/projects/repository.html`).
-4. Vector embeddings are generated for the problem statement, root cause, and countermeasures via the backend **pgvector** service, allowing future teams to search and retrieve historical solutions using natural language queries.
+4. Vector embeddings are generated via **pgvector** (`/api/rag`), allowing future teams across all plants to query, search, and replicate proven countermeasures.
 
 ---
 
@@ -712,7 +687,7 @@ cd backend
 python -m venv venv
 
 # Windows:
-venv\Scriptsctivate
+venv\Scripts\activate
 # Linux/macOS:
 # source venv/bin/activate
 
@@ -731,7 +706,7 @@ python run.py
 ```bash
 cd backend
 # Windows:
-venv\Scriptsctivate
+venv\Scripts\activate
 # Linux/macOS:
 # source venv/bin/activate
 
