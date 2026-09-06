@@ -1196,10 +1196,9 @@ const PlatformSettings = {
     async loadSecurityKPIs() {
         try {
             const API_BASE = window.OctaQube_API_BASE || '/api/super-admin';
-            // Cookie authentication handled via credentials: 'include'
-            const r = await fetch(`${API_BASE}/settings/security-kpis`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const token = (window.api && window.api.token) || sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            const r = await fetch(`${API_BASE}/settings/security-kpis`, { headers });
             if (!r.ok) return;
             const json = await r.json();
             const d = json.data || {};
@@ -1234,10 +1233,9 @@ const PlatformSettings = {
     async loadAuthKPIs() {
         try {
             const API_BASE = window.OctaQube_API_BASE || '/api/super-admin';
-            // Cookie authentication handled via credentials: 'include'
-            const r = await fetch(`${API_BASE}/settings/auth-kpis`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const token = (window.api && window.api.token) || sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            const r = await fetch(`${API_BASE}/settings/auth-kpis`, { headers });
             if (!r.ok) return;
             const json = await r.json();
             const d = json.data || {};

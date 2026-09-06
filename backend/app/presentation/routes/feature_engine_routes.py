@@ -23,6 +23,7 @@ def get_user_flags():
     """
     Returns full feature flag dict {module_code: bool} for current authenticated user's org.
     Unauthenticated users get public default flags.
+    Super Admin users (role = SuperAdmin / no org) always get all modules enabled.
     """
     user = None
     try:
@@ -32,6 +33,36 @@ def get_user_flags():
             user = db.session.get(User, int(user_id))
     except Exception:
         pass
+
+    # Super Admin users (no org, or role == SuperAdmin) bypass all plan restrictions.
+    # They manage the platform and must have access to every module.
+    is_super_admin = False
+    if user:
+        try:
+            role_name = user.role.name if user.role else None
+            is_super_admin = (role_name == 'SuperAdmin') or (user.org_id is None)
+        except Exception:
+            is_super_admin = (user.org_id is None)
+
+    if is_super_admin:
+        # Return all active non-archived modules as enabled
+        all_modules = Module.query.filter_by(is_archived=False).all()
+        flags = {}
+        details = {}
+        for m in all_modules:
+            entry = {"enabled": True, "reason": "ok", "required_plan": m.minimum_plan or "Starter", "name": m.name or m.code}
+            flags[m.code] = True
+            details[m.code] = entry
+            if m.name:
+                flags[m.name] = True
+                details[m.name] = entry
+        return jsonify({
+            "status": "success",
+            "org_id": None,
+            "is_super_admin": True,
+            "flags": flags,
+            "details": details
+        }), 200
 
     org_id = user.org_id if user else None
     flags = FeatureEngine.get_all_flags(org_id)

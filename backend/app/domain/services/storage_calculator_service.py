@@ -274,3 +274,94 @@ def calculate_org_storage_realtime(org_id=None):
         }
     }
 
+
+def calculate_platform_storage_summary():
+    """
+    Computes platform-level storage usage aggregate in single database queries.
+    Used by dashboard stats endpoint to eliminate N-per-org loop latency.
+    """
+    total_bytes = 0
+    try:
+        total_bytes += db.session.query(func.sum(SupportAttachment.file_size)).scalar() or 0
+    except Exception:
+        pass
+    try:
+        total_bytes += db.session.query(func.sum(AnnouncementAttachment.file_size)).scalar() or 0
+    except Exception:
+        pass
+    try:
+        total_bytes += db.session.query(
+            func.sum(
+                func.length(func.coalesce(Project.title, '')) + 
+                func.length(func.coalesce(Project.description, '')) +
+                func.length(func.coalesce(Project.category, '')) +
+                func.length(func.coalesce(Project.work_area, '')) +
+                func.length(func.coalesce(Project.plant, ''))
+            )
+        ).scalar() or 0
+    except Exception:
+        pass
+    try:
+        total_bytes += db.session.query(
+            func.sum(func.length(func.cast(ProjectWorkflow.data, db.String)))
+        ).scalar() or 0
+    except Exception:
+        pass
+    try:
+        total_bytes += db.session.query(
+            func.sum(
+                func.length(func.coalesce(KnowledgeRepository.title, '')) +
+                func.length(func.coalesce(KnowledgeRepository.problem_summary, '')) +
+                func.length(func.coalesce(KnowledgeRepository.root_cause, '')) +
+                func.length(func.coalesce(KnowledgeRepository.solution_summary, '')) +
+                func.length(func.coalesce(KnowledgeRepository.keywords, ''))
+            )
+        ).scalar() or 0
+    except Exception:
+        pass
+    try:
+        total_bytes += db.session.query(
+            func.sum(
+                func.length(func.coalesce(AuditLog.action, '')) +
+                func.length(func.coalesce(AuditLog.target_table, '')) +
+                func.length(func.cast(AuditLog.details, db.String))
+            )
+        ).scalar() or 0
+    except Exception:
+        pass
+    try:
+        total_bytes += db.session.query(
+            func.sum(
+                func.length(func.coalesce(User.full_name, '')) +
+                func.length(func.coalesce(User.email, '')) +
+                func.length(func.coalesce(User.username, '')) +
+                func.length(func.cast(User.custom_fields, db.String))
+            )
+        ).scalar() or 0
+    except Exception:
+        pass
+    try:
+        total_bytes += db.session.query(
+            func.sum(
+                func.length(func.coalesce(SupportTicket.subject, '')) +
+                func.length(func.coalesce(SupportTicket.message, ''))
+            )
+        ).scalar() or 0
+    except Exception:
+        pass
+
+    total_mb = round(total_bytes / (1024.0 * 1024.0), 3)
+    if total_mb >= 1024.0:
+        total_used_fmt = f"{(total_mb / 1024.0):.2f} GB"
+    elif total_mb >= 0.1:
+        total_used_fmt = f"{total_mb:.2f} MB"
+    elif total_mb > 0:
+        total_used_fmt = f"{total_mb:.3f} MB"
+    else:
+        total_used_fmt = "0.00 MB"
+
+    return {
+        "total_used_mb": total_mb,
+        "total_used_fmt": total_used_fmt
+    }
+

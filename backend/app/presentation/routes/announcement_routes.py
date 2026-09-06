@@ -248,8 +248,34 @@ def deliver_email(announcement, user_ids):
             except Exception as commit_err:
                 target_app.logger.error(f"[AsyncAnnouncement] Commit error: {commit_err}")
 
-    from app.infrastructure.mailer.email_service import email_executor
-    email_executor.submit(_async_announcement_email_worker, app, ann_id, delivery_records, email_provider)
+    # 2. Dispatch the actual email sending loop to Celery or background thread pool
+    ann_id = announcement.id
+    email_provider = None
+    if isinstance(announcement.channels, dict):
+        email_provider = announcement.channels.get('email_provider')
+
+    app = current_app._get_current_object()
+
+    dispatched_celery = False
+    try:
+        cel_app = current_app.extensions.get('celery')
+        if cel_app and not current_app.config.get('TESTING', False):
+            from app.infrastructure.tasks.email_tasks import send_async_email
+            from app.domain.services.document_branding_service import DocumentBrandingService
+            for uid in delivery_records:
+                u = db.session.get(User, uid)
+                if u and u.email:
+                    sub = f"📢 [{announcement.category or 'Announcement'}] {announcement.title}"
+                    b_html = f"<h2 style='color: #2563eb;'>{announcement.title}</h2><div style='margin: 20px 0;'>{announcement.body}</div>"
+                    h_content = DocumentBrandingService.wrap_email_html(b_html, title=announcement.title, org_id=u.org_id)
+                    send_async_email.delay(recipient=u.email, subject=sub, html_body=h_content, org_id=u.org_id)
+            dispatched_celery = True
+    except Exception:
+        dispatched_celery = False
+
+    if not dispatched_celery:
+        from app.infrastructure.mailer.email_service import email_executor
+        email_executor.submit(_async_announcement_email_worker, app, ann_id, delivery_records, email_provider)
 
     return len(delivery_records)
 

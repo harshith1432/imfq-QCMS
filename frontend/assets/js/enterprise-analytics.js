@@ -321,7 +321,7 @@ const EnterpriseAnalytics = {
         try {
             const query = this.buildQueryParams();
             const res = await api.get(`/analytics/enterprise/dashboard?${query}`);
-            if (res.status === 'success') {
+            if (res && res.status === 'success') {
                 const data = res.data;
                 
                 const formatVal = (key, val) => {
@@ -1103,11 +1103,14 @@ const EnterpriseAnalytics = {
         }
 
         if (btns) {
-            let btnHtml = `<button class="ds-btn ds-btn-sm ds-btn-ghost" ${page <= 1 ? 'disabled' : ''} onclick="EnterpriseAnalytics.revDrillGoToPage(${page - 1})"><i data-lucide="chevron-left" style="width:14px;height:14px;"></i></button>`;
-            for (let i = 1; i <= totalPages; i++) {
-                btnHtml += `<button class="ds-btn ds-btn-sm ${i === page ? 'ds-btn-primary' : 'ds-btn-ghost'}" onclick="EnterpriseAnalytics.revDrillGoToPage(${i})">${i}</button>`;
-            }
-            btnHtml += `<button class="ds-btn ds-btn-sm ds-btn-ghost" ${page >= totalPages ? 'disabled' : ''} onclick="EnterpriseAnalytics.revDrillGoToPage(${page + 1})"><i data-lucide="chevron-right" style="width:14px;height:14px;"></i></button>`;
+            let btnHtml = `
+                <button class="ds-btn ds-btn-sm ds-btn-ghost d-flex align-items-center gap-1" ${page <= 1 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} onclick="EnterpriseAnalytics.revDrillGoToPage(${page - 1})">
+                    <i data-lucide="chevron-left" style="width:14px;height:14px;"></i> Previous
+                </button>
+                <button class="ds-btn ds-btn-sm ds-btn-ghost d-flex align-items-center gap-1" ${page >= totalPages ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} onclick="EnterpriseAnalytics.revDrillGoToPage(${page + 1})">
+                    Next <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                </button>
+            `;
             btns.innerHTML = btnHtml;
         }
 
@@ -1121,7 +1124,9 @@ const EnterpriseAnalytics = {
     },
 
     revDrillGoToPage(p) {
-        this._revDrillPage = p;
+        const total = (this._revDrillList || []).length;
+        const totalPages = Math.max(1, Math.ceil(total / (this._revDrillPerPage || 5)));
+        this._revDrillPage = Math.max(1, Math.min(p, totalPages));
         this.renderRevDrillTable();
     },
 

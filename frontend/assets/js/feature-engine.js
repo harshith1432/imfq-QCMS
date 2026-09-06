@@ -10,7 +10,7 @@
  *  - Usage tracking
  */
 
-class FeatureEngineClient {
+var FeatureEngineClient = window.FeatureEngineClient || class FeatureEngineClient {
     constructor() {
         this.flags = {};
         this.moduleDetails = {};
@@ -389,7 +389,7 @@ class FeatureEngineClient {
 }
 
 // Global Singleton
-window.FeatureEngine = new FeatureEngineClient();
+window.FeatureEngine = window.FeatureEngine || new FeatureEngineClient();
 
 // Auto-initialize on DOMReady
 document.addEventListener('DOMContentLoaded', () => {

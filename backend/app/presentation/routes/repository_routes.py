@@ -63,7 +63,7 @@ def calculate_weighted_progress(current_stage, weights=None):
     return min(100.0, max(0.0, cum_pct))
 
 
-def calculate_project_realtime_efficiency(project_id, project_current_stage=1):
+def calculate_project_realtime_efficiency(project_id, project_current_stage=1, preloaded_wfs=None):
     """
     Calculates real-time project efficiency & KPI improvement % across all QC Story workflow stages:
     1. Verified results from Stage 7 (before vs after, KPI verification, ROI improvement)
@@ -71,6 +71,7 @@ def calculate_project_realtime_efficiency(project_id, project_current_stage=1):
     3. Dedicated Stage 7 & 8 relational models and Knowledge Repository records
     4. Interim realized efficiency from Stage 1-6 targets scaled by stage completion
     5. Fallback workflow milestone execution efficiency based on stage completion velocity
+    Supports optional preloaded_wfs dict ({stage_id: data}) for zero-query batch calculation.
     """
     from app.infrastructure.database.models.models import (
         ProjectWorkflow,
@@ -82,9 +83,13 @@ def calculate_project_realtime_efficiency(project_id, project_current_stage=1):
     stage_num = max(1, min(8, int(project_current_stage or 1)))
 
     # 1. Check ProjectWorkflow Stage 7 (Verified Before vs After / KPI Verification / ROI)
-    wf7 = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=7).first()
-    if wf7 and wf7.data:
-        d7 = wf7.data
+    if preloaded_wfs is not None:
+        d7 = preloaded_wfs.get(7)
+    else:
+        wf7 = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=7).first()
+        d7 = wf7.data if wf7 else None
+
+    if d7:
         # A. before_vs_after
         bva = d7.get('before_vs_after') or d7.get('s7_before_vs_after') or []
         if isinstance(bva, list) and len(bva) > 0:
@@ -125,9 +130,13 @@ def calculate_project_realtime_efficiency(project_id, project_current_stage=1):
                 return round(kpi_imp, 1)
 
     # 2. Check ProjectWorkflow Stage 8 (Benefits Summary / Impact)
-    wf8 = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=8).first()
-    if wf8 and wf8.data:
-        d8 = wf8.data
+    if preloaded_wfs is not None:
+        d8 = preloaded_wfs.get(8)
+    else:
+        wf8 = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=8).first()
+        d8 = wf8.data if wf8 else None
+
+    if d8:
         bs = d8.get('benefits_summary') or d8.get('s8_benefits_summary') or []
         if isinstance(bs, list) and len(bs) > 0:
             b_imps = []
@@ -146,7 +155,10 @@ def calculate_project_realtime_efficiency(project_id, project_current_stage=1):
                 return round(sum(b_imps) / len(b_imps), 1)
 
     # 3. Check Dedicated Stage Models
-    s7_model = Stage7PerformanceVerificationBenefitsRealization.query.filter_by(project_id=project_id).first()
+    if preloaded_wfs is not None:
+        s7_model = preloaded_wfs.get('s7_model')
+    else:
+        s7_model = Stage7PerformanceVerificationBenefitsRealization.query.filter_by(project_id=project_id).first()
     if s7_model:
         bva = s7_model.before_vs_after
         if isinstance(bva, list) and len(bva) > 0:
@@ -154,7 +166,10 @@ def calculate_project_realtime_efficiency(project_id, project_current_stage=1):
             if imp_list:
                 return round(sum(imp_list) / len(imp_list), 1)
 
-    s8_model = Stage8StandardizationKnowledgeSharingProjectClosure.query.filter_by(project_id=project_id).first()
+    if preloaded_wfs is not None:
+        s8_model = preloaded_wfs.get('s8_model')
+    else:
+        s8_model = Stage8StandardizationKnowledgeSharingProjectClosure.query.filter_by(project_id=project_id).first()
     if s8_model:
         if s8_model.kpi_improvement_pct:
             return round(float(s8_model.kpi_improvement_pct), 1)
@@ -164,14 +179,21 @@ def calculate_project_realtime_efficiency(project_id, project_current_stage=1):
                 return round(p_gain, 1)
 
     # 4. Check Knowledge Repository (if archived/completed project)
-    repo = KnowledgeRepository.query.filter_by(project_id=project_id).first()
+    if preloaded_wfs is not None:
+        repo = preloaded_wfs.get('repo')
+    else:
+        repo = KnowledgeRepository.query.filter_by(project_id=project_id).first()
     if repo and repo.kpi_improvement_pct:
         return round(float(repo.kpi_improvement_pct), 1)
 
     # 5. Calculate Interim Realized Efficiency from Stage 1 Targets
-    wf1 = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=1).first()
-    if wf1 and wf1.data:
-        d1 = wf1.data
+    if preloaded_wfs is not None:
+        d1 = preloaded_wfs.get(1)
+    else:
+        wf1 = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=1).first()
+        d1 = wf1.data if wf1 else None
+
+    if d1:
         tts = d1.get('theme_target_schedule') or d1.get('s1_theme_target_schedule') or {}
         cur = parse_clean_float(tts.get('current_level') or d1.get('s1_tts_current'))
         tgt = parse_clean_float(tts.get('target_level') or d1.get('s1_tts_target'))

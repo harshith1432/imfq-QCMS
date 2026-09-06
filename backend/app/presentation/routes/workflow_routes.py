@@ -59,63 +59,57 @@ def snapshot_stage_template(project, stage_number):
     except Exception as e:
         print(f"[QCMS] Error snapshotting stage template: {e}")
 
-# ==============================================================================
-# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
-# Function: get_stage_data (Lines 62-112)
-# Reason: Redundant unaliased route. Frontend uses /projects/<id>/stages/<stage_id>.
-# ==============================================================================
-# @workflow_bp.route('/<int:project_id>/stage/<int:stage_id>', methods=['GET'])
-# @jwt_required()
-# def get_stage_data(project_id, stage_id):
-#     user_id = get_jwt_identity()
-#     user = db.session.get(User, user_id)
-#     if not user:
-#         return jsonify({"msg": "User not found"}), 404
-#     project = db.session.get(Project, project_id)
-#     if not project:
-#         return jsonify({"msg": "Project not found"}), 404
-#     if user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
-#         return jsonify({"msg": "Project not found"}), 404
+@workflow_bp.route('/<int:project_id>/stage/<int:stage_id>', methods=['GET'])
+@jwt_required()
+def get_stage_data(project_id, stage_id):
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+    project = db.session.get(Project, project_id)
+    if not project:
+        return jsonify({"msg": "Project not found"}), 404
+    if user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
 
-#     # Enforce role-based access control
-#     role = user.role.name
-#     if role in ('SuperAdmin', 'CEO', 'Admin'):
-#         pass
-#     elif role == 'Team Member':
-#         from app.infrastructure.database.models.models import ProjectMember
-#         is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
-#         if not is_member:
-#             return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
-#     elif role == 'Team Leader':
-#         from app.infrastructure.database.models.models import ProjectMember
-#         is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
-#         if project.team_leader_id != user.id and project.creator_id != user.id and not is_member:
-#             return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
-#     elif role == 'Facilitator':
-#         if project.facilitator_id != user.id:
-#             return jsonify({"msg": "Unauthorized access. You are not the facilitator for this project."}), 403
+    # Enforce role-based access control
+    role = user.role.name
+    if role in ('SuperAdmin', 'CEO', 'Admin'):
+        pass
+    elif role == 'Team Member':
+        from app.infrastructure.database.models.models import ProjectMember
+        is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
+        if not is_member:
+            return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
+    elif role == 'Team Leader':
+        from app.infrastructure.database.models.models import ProjectMember
+        is_member = ProjectMember.query.filter_by(project_id=project.id, user_id=user.id).first()
+        if project.team_leader_id != user.id and project.creator_id != user.id and not is_member:
+            return jsonify({"msg": "Unauthorized access. You are not assigned to this project."}), 403
+    elif role == 'Facilitator':
+        if project.facilitator_id != user.id:
+            return jsonify({"msg": "Unauthorized access. You are not the facilitator for this project."}), 403
 
-#     from app.infrastructure.database.models.models import ProjectWorkflow
-#     wf = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=stage_id).first()
-#     if wf and wf.data:
-#         return jsonify({
-#             "data": wf.data,
-#             "version_id": getattr(wf, 'version_id', 1),
-#             "updated_at": wf.updated_at.isoformat() if wf.updated_at else None
-#         }), 200
+    from app.infrastructure.database.models.models import ProjectWorkflow
+    wf = ProjectWorkflow.query.filter_by(project_id=project_id, stage_id=stage_id).first()
+    if wf and wf.data:
+        return jsonify({
+            "data": wf.data,
+            "version_id": getattr(wf, 'version_id', 1),
+            "updated_at": wf.updated_at.isoformat() if wf.updated_at else None
+        }), 200
 
-#     model = STAGE_MODEL_MAP.get(stage_id)
-#     if not model:
-#         return jsonify({"msg": "Invalid stage"}), 400
+    model = STAGE_MODEL_MAP.get(stage_id)
+    if not model:
+        return jsonify({"msg": "Invalid stage"}), 400
 
-#     data = model.query.filter_by(project_id=project_id).first()
-#     if not data:
-#         return jsonify({"data": {}, "version_id": 1}), 200
+    data = model.query.filter_by(project_id=project_id).first()
+    if not data:
+        return jsonify({"data": {}, "version_id": 1}), 200
 
-#     # Convert model to dict (excluding internal SQLAlchemy fields)
-#     result = {c.name: getattr(data, c.name) for c in data.__table__.columns}
-#     return jsonify({"data": result, "version_id": 1}), 200
-# [END DEAD CODE: get_stage_data]
+    # Convert model to dict (excluding internal SQLAlchemy fields)
+    result = {c.name: getattr(data, c.name) for c in data.__table__.columns}
+    return jsonify({"data": result, "version_id": 1}), 200
 
 
 @workflow_bp.route('/<int:project_id>/stage/<int:stage_id>', methods=['POST', 'PUT'])
@@ -531,30 +525,25 @@ def advance_stage(project_id):
         "status": "In Progress"
     }), 200
 
-# ==============================================================================
-# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
-# Function: get_project_reviews (Lines 520-537)
-# Reason: Legacy reviews fetch.
-# ==============================================================================
-# @workflow_bp.route('/projects/<int:project_id>/reviews', methods=['GET'])
-# @jwt_required()
-# def get_project_reviews(project_id):
-#     user_id = get_jwt_identity()
-#     user = db.session.get(db.session.get(Project, project_id).org_id if db.session.get(Project, project_id) else None) 
-#     # Actually just check org match
-#     project = Project.query.get_or_404(project_id)
-#     reviews = ProjectReview.query.filter_by(project_id=project_id).order_by(ProjectReview.created_at.desc()).all()
+@workflow_bp.route('/projects/<int:project_id>/reviews', methods=['GET'])
+@jwt_required()
+def get_project_reviews(project_id):
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    project = Project.query.get_or_404(project_id)
+    if user.role.name != 'SuperAdmin' and project.org_id != user.org_id:
+        return jsonify({"msg": "Project not found"}), 404
+    reviews = ProjectReview.query.filter_by(project_id=project_id).order_by(ProjectReview.created_at.desc()).all()
 
-#     return jsonify([{
-#         "id": r.id,
-#         "stage_number": r.stage_number,
-#         "status": r.status,
-#         "decision": r.decision,
-#         "comments": r.comments,
-#         "reviewer_id": r.reviewer_id,
-#         "decided_at": r.decided_at.isoformat() + "Z" if r.decided_at else None
-#     } for r in reviews]), 200
-# [END DEAD CODE: get_project_reviews]
+    return jsonify([{
+        "id": r.id,
+        "stage_number": r.stage_number,
+        "status": r.status,
+        "decision": r.decision,
+        "comments": r.comments,
+        "reviewer_id": r.reviewer_id,
+        "decided_at": r.decided_at.isoformat() + "Z" if r.decided_at else None
+    } for r in reviews]), 200
 
 
 # Legacy/Frontend Compatibility Aliases

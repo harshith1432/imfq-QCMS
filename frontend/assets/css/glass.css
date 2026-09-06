@@ -2271,6 +2271,20 @@ body.sidebar-collapsed .sidebar-toggle-btn {
     color: #94a3b8 !important;
 }
 
+.helpdesk-success-screen button,
+.helpdesk-success-screen .ds-btn-outline {
+    color: #ffffff !important;
+    background-color: #2563eb !important;
+    border-color: #3b82f6 !important;
+}
+
+.helpdesk-success-screen button:hover,
+.helpdesk-success-screen .ds-btn-outline:hover {
+    background-color: #1d4ed8 !important;
+    border-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
 .helpdesk-success-icon {
     width: 64px;
     height: 64px;
@@ -2340,9 +2354,20 @@ body.sidebar-collapsed .sidebar-toggle-btn {
 .skeleton-shimmer {
     background: linear-gradient(
         90deg,
-        rgba(255, 255, 255, 0.08) 25%,
-        rgba(255, 255, 255, 0.15) 37%,
-        rgba(255, 255, 255, 0.08) 63%
+        rgba(148, 163, 184, 0.12) 25%,
+        rgba(148, 163, 184, 0.28) 37%,
+        rgba(148, 163, 184, 0.12) 63%
+    );
+    background-size: 400% 100%;
+    animation: skeleton-loading 1.4s ease infinite;
+}
+
+[data-theme="dark"] .skeleton-shimmer {
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.06) 25%,
+        rgba(255, 255, 255, 0.14) 37%,
+        rgba(255, 255, 255, 0.06) 63%
     );
     background-size: 400% 100%;
     animation: skeleton-loading 1.4s ease infinite;

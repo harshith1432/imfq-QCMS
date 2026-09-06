@@ -28,6 +28,10 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = 1800   # 30 Minutes — reduces XSS token-theft window
     JWT_REFRESH_TOKEN_EXPIRES = 1209600  # 14 Days
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Security work factor: 12 in production, 4 in test/development for 10x faster execution
+    is_testing = (ENVIRONMENT in ('test', 'testing') or os.getenv('TESTING', '').lower() in ('true', '1') or bool(os.getenv('PYTEST_CURRENT_TEST')))
+    BCRYPT_LOG_ROUNDS = 4 if is_testing else 12
     INTEGRATION_BASE_URL = os.getenv('INTEGRATION_BASE_URL', os.getenv('BASE_URL', '')).rstrip('/')
     
     # Connection Pool Settings

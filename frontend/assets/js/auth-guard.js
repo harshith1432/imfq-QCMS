@@ -31,19 +31,36 @@
         }
         if (!roleStr || typeof roleStr !== 'string') return null;
         const r = roleStr.trim().toLowerCase();
-        if (r === 'superadmin' || r === 'super admin' || r === 'super_admin') return 'SuperAdmin';
-        if (r === 'admin') return 'Admin';
-        if (r === 'team leader' || r === 'teamleader' || r === 'team_leader') return 'Team Leader';
-        if (r === 'team member' || r === 'teammember' || r === 'team_member') return 'Team Member';
-        if (r === 'facilitator') return 'Facilitator';
-        if (r === 'reviewer') return 'Reviewer';
-        if (r === 'ceo') return 'CEO';
+        if (r.includes('super')) return 'SuperAdmin';
+        if (r === 'admin' || r.includes('organization admin') || r.includes('org admin') || r.includes('organization_admin') || r === 'owner') return 'Admin';
+        if (r.includes('leader')) return 'Team Leader';
+        if (r.includes('member')) return 'Team Member';
+        if (r.includes('facilitator')) return 'Facilitator';
+        if (r.includes('reviewer')) return 'Reviewer';
+        if (r.includes('ceo') || r.includes('exec')) return 'CEO';
         return roleStr;
     }
 
     let userRole = null;
 
-    if (userStr) {
+    // Cryptographically bound token payload extraction to prevent client-side storage tampering
+    if (token) {
+        try {
+            const parts = token.split('.');
+            if (parts.length === 3) {
+                const payloadStr = safeBase64Decode(parts[1]);
+                if (payloadStr) {
+                    const payload = JSON.parse(payloadStr);
+                    const tokenRole = payload.role || payload.role_name || (payload.user && (payload.user.role || payload.user.role_name));
+                    if (tokenRole) {
+                        userRole = normalizeRole(tokenRole);
+                    }
+                }
+            }
+        } catch (_) {}
+    }
+
+    if (!userRole && userStr) {
         try {
             const user = JSON.parse(userStr);
             if (user) {
@@ -483,6 +500,28 @@
         'CEO': '/dashboard/dashboard-ceo.html'
     };
 
+    // ── Role Dashboard Access Whitelist ─────────────────────────────
+    // Strict isolation so no role can access another role's dashboard
+    const dashboardPermissions = {
+        'dashboard-admin.html': ['Admin'],
+        'dashboard-ceo.html': ['CEO', 'Admin'],
+        'dashboard-reviewer.html': ['Reviewer', 'Admin'],
+        'dashboard-facilitator.html': ['Facilitator', 'Admin'],
+        'dashboard-team-leader.html': ['Team Leader', 'Admin'],
+        'dashboard-team-member.html': ['Team Member', 'Team Leader', 'Admin']
+    };
+
+    // ── Admin-Only Tenant Configuration Pages ─────────────────────────
+    const adminOnlyPages = [
+        'plants.html',
+        'departments.html',
+        'stage-template.html',
+        'sop-masters.html',
+        'subscriptions.html',
+        'users.html',
+        'user-management.html'
+    ];
+
     // ── Module mapping for Organization pages ────────
     const pageModuleMap = {
         'repository.html': 'knowledge_base',
@@ -500,7 +539,8 @@
         'settings.html': 'settings'
     };
 
-    const isSuperAdminUser = (userRole === 'SuperAdmin' || userRole === 'Super Admin');
+    const effectiveRole = normalizeRole(userRole) || 'Team Member';
+    const isSuperAdminUser = (effectiveRole === 'SuperAdmin');
 
     if (isAuthPage) {
         const urlParams = new URLSearchParams(window.location.search);
@@ -523,45 +563,100 @@
             }
         } catch (_) {}
         return;
-    } else if (token && !isSuperAdminUser) {
+    } else if (token) {
         let isDenied = false;
 
-        // Block non-SuperAdmin from super-admin portal pages
-        if (page === 'super-admin.html' || window.location.pathname.includes('super-admin')) {
-            isDenied = true;
-        }
+        if (isSuperAdminUser) {
+            // SuperAdmin is a platform operator and has no tenant context.
+            // Restrict SuperAdmin from tenant-specific dashboards and tenant master configs
+            if (page === 'dashboard.html' || dashboardPermissions[page]) {
+                console.warn(`[RBAC] SuperAdmin cannot access tenant dashboard "${page}". Redirecting to super-admin portal.`);
+                isDenied = true;
+            } else if (page === 'stage-template.html') {
+                // Redirect to global super-admin stage template
+                window.location.replace('/admin/super-admin-stage-template.html');
+                return;
+            } else if (['plants.html', 'departments.html', 'sop-masters.html', 'subscriptions.html'].includes(page)) {
+                console.warn(`[RBAC] SuperAdmin cannot access tenant-scoped page "${page}". Redirecting to super-admin portal.`);
+                isDenied = true;
+            }
+        } else {
+            // Non-SuperAdmin users (Admin, CEO, Reviewer, Facilitator, Team Leader, Team Member)
+            
+            // 1. Strictly block non-SuperAdmin from super-admin portal pages
+            if (page.includes('super-admin') || window.location.pathname.includes('super-admin')) {
+                console.warn(`[RBAC] Non-SuperAdmin role "${effectiveRole}" blocked from super-admin portal page "${page}".`);
+                isDenied = true;
+            }
 
-        // Check Organization Role Access Control (RBAC) permissions dynamically
-        const modKey = pageModuleMap[page];
-        if (modKey) {
-            try {
-                const userObj = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
-                const rolePerms = userObj.role_permissions || JSON.parse(sessionStorage.getItem('role_permissions') || localStorage.getItem('role_permissions') || 'null');
-                let targetRole = userRole || userObj.role || 'Team Member';
-                if (targetRole === 'Team Leader' || targetRole === 'teamleader' || targetRole === 'team_leader') targetRole = 'Team Member';
-                
-                // Settings is permanent system default for Admin/SuperAdmin to prevent lockout
-                if (['Admin', 'admin', 'SuperAdmin', 'superadmin', 'Owner'].includes(targetRole) && modKey === 'settings') {
-                    isDenied = false;
-                } else if (rolePerms && rolePerms[targetRole] && typeof rolePerms[targetRole][modKey] === 'boolean') {
-                    if (rolePerms[targetRole][modKey] === false) {
-                        console.warn(`[RBAC] Module "${modKey}" is disabled for role "${targetRole}". Access denied to "${page}".`);
-                        isDenied = true;
-                    }
+            // 2. Generic dashboard redirection
+            if (page === 'dashboard.html') {
+                redirectByRole(effectiveRole);
+                return;
+            }
+
+            // 3. Strict dashboard isolation: ensure user cannot access other roles' dashboards
+            if (dashboardPermissions[page]) {
+                const allowedRoles = dashboardPermissions[page];
+                if (!allowedRoles.includes(effectiveRole)) {
+                    console.warn(`[RBAC] Role "${effectiveRole}" unauthorized for dashboard "${page}". Allowed: ${allowedRoles.join(', ')}.`);
+                    isDenied = true;
                 }
-            } catch (e) {
-                console.warn('Error reading role_permissions in auth-guard:', e);
+            }
+
+            // 4. Admin-only tenant configuration pages
+            if (adminOnlyPages.includes(page) && effectiveRole !== 'Admin') {
+                let hasExplicitAccess = false;
+                const modKey = pageModuleMap[page];
+                try {
+                    const userObj = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+                    const rolePerms = userObj.role_permissions || JSON.parse(sessionStorage.getItem('role_permissions') || localStorage.getItem('role_permissions') || 'null');
+                    let targetRole = effectiveRole;
+                    if (targetRole === 'Team Leader') targetRole = 'Team Member';
+                    if (modKey && rolePerms && rolePerms[targetRole] && rolePerms[targetRole][modKey] === true) {
+                        hasExplicitAccess = true;
+                    }
+                } catch (_) {}
+
+                if (!hasExplicitAccess) {
+                    console.warn(`[RBAC] Administrative configuration page "${page}" restricted to Admin. Role "${effectiveRole}" denied.`);
+                    isDenied = true;
+                }
+            }
+
+            // 5. Dynamic Module RBAC (feature flags and module disables)
+            const modKey = pageModuleMap[page];
+            if (modKey && !isDenied) {
+                try {
+                    const userObj = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+                    const rolePerms = userObj.role_permissions || JSON.parse(sessionStorage.getItem('role_permissions') || localStorage.getItem('role_permissions') || 'null');
+                    let targetRole = effectiveRole;
+                    if (targetRole === 'Team Leader') targetRole = 'Team Member';
+                    
+                    // Settings is permanent system default for Admin to prevent lockout
+                    if (effectiveRole === 'Admin' && modKey === 'settings') {
+                        isDenied = false;
+                    } else if (rolePerms && rolePerms[targetRole] && typeof rolePerms[targetRole][modKey] === 'boolean') {
+                        if (rolePerms[targetRole][modKey] === false) {
+                            console.warn(`[RBAC] Module "${modKey}" is disabled for role "${targetRole}". Access denied to "${page}".`);
+                            isDenied = true;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Error reading role_permissions in auth-guard:', e);
+                }
             }
         }
 
         if (isDenied) {
-            console.warn(`[RBAC] Redirecting role "${userRole}" away from restricted page "${page}".`);
-            redirectByRole(userRole);
+            console.warn(`[RBAC] Redirecting role "${effectiveRole}" away from restricted page "${page}".`);
+            redirectByRole(effectiveRole);
+            return;
         }
     }
 
     function redirectByRole(role) {
-        const normRole = normalizeRole(role);
+        const normRole = normalizeRole(role) || 'Team Member';
         const dashboard = dashboardMap[normRole] || dashboardMap[role] || '/dashboard/dashboard-team-member.html';
         const targetPage = dashboard.split('/').pop().toLowerCase();
         const currentPage = page.toLowerCase();

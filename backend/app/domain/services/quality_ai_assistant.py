@@ -778,6 +778,60 @@ class QualityAIAssistant:
                 "sources": []
             }
 
+        # Manufacturing Defect Root Cause Intelligence (Welding, Casting, Machining, Molding, Assembly)
+        if any(w in lq for w in ['weld', 'welding', 'porosity', 'spatter', 'undercut', 'slag', 'fusion']):
+            return {
+                "answer": (
+                    "### ⚡ Welding Quality & Defect Root Cause Analysis\n\n"
+                    "In Quality Circle projects addressing welding anomalies (e.g., porosity, lack of penetration, undercut, spatter), apply the **6M Ishikawa framework** across Stages 3 & 4:\n\n"
+                    "1. **Common Welding Defects & Likely Root Causes**:\n"
+                    "   - **Porosity / Blowholes**: Gas entrapment caused by moisture on electrodes, insufficient shielding gas flow rate, or oil/rust contamination on workpiece.\n"
+                    "   - **Lack of Penetration / Fusion**: Low welding current, improper torch travel angle, excessive travel speed, or incorrect joint groove bevel.\n"
+                    "   - **Undercut**: Excessive arc voltage/current, overly rapid travel speed, or improper weave technique.\n"
+                    "   - **Excessive Spatter**: Current too high for wire diameter, arc length too long, or incorrect shielding gas mixture (e.g., pure CO₂ vs Ar/CO₂).\n"
+                    "   - **Cracks (Hot/Cold)**: High thermal stress, hydrogen embrittlement, improper preheat/post-weld heat treatment, or sulfur/phosphorus impurities.\n\n"
+                    "2. **Recommended 8-Stage QC Methodology Steps**:\n"
+                    "   - **Stage 2 (Observation)**: Stratify defect data by welder ID, shift, joint geometry, and gas cylinder batch on a Pareto Chart.\n"
+                    "   - **Stage 3 (Fishbone)**: Map potential 6M causes covering gas purity (Material), torch maintenance (Machine), and welder technique (Manpower).\n"
+                    "   - **Stage 4 (Root Cause Verification)**: Conduct cross-sectional macro-etch testing and Good vs. Bad parameter comparison.\n"
+                    "   - **Stage 5 & 6 (Countermeasures)**: Implement Poka-Yoke gas flow interlocks, standard parameter cards, and Welder Qualification (WQR).\n"
+                    "   - **Stage 8 (SOP)**: Update the Welding Procedure Specification (WPS) and institutionalize pre-weld surface cleaning checklists."
+                ),
+                "sources": []
+            }
+
+        if any(w in lq for w in ['casting', 'shrinkage', 'blowhole', 'flash defect', 'misrun']):
+            return {
+                "answer": (
+                    "### 🔩 Casting Quality & Defect Root Cause Analysis\n\n"
+                    "For casting anomalies (shrinkage cavity, blowholes, misrun, sand inclusion):\n\n"
+                    "1. **Primary Root Causes**:\n"
+                    "   - **Shrinkage Porosity**: Inadequate riser volume, incorrect gating ratio, or improper pouring temperature.\n"
+                    "   - **Blowholes**: High moisture content in molding sand, low sand permeability, or insufficient venting.\n"
+                    "   - **Misrun / Cold Shut**: Low pouring temperature, sluggish metal fluidity, or thin section wall design.\n\n"
+                    "2. **Recommended QC Tools**:\n"
+                    "   - **Stage 3**: 6M Fishbone focusing on Mold Permeability (Method) and Melt Chemistry (Material).\n"
+                    "   - **Stage 5**: Adjust gating design and implement strict mold temperature pyrometer controls."
+                ),
+                "sources": []
+            }
+
+        if any(w in lq for w in ['machining', 'tool wear', 'surface finish', 'burr', 'chatter', 'roughness', 'dimensional deviation']):
+            return {
+                "answer": (
+                    "### ⚙️ Machining Quality & Dimensional Defect Analysis\n\n"
+                    "For CNC turning, milling, and grinding quality challenges:\n\n"
+                    "1. **Primary Root Causes**:\n"
+                    "   - **Surface Roughness (High Ra)**: Tool edge built-up (BUE), incorrect feed per tooth, or worn insert radius.\n"
+                    "   - **Chatter Marks**: Insufficient workpiece clamping rigidity, excessive tool overhang, or spindle bearing play.\n"
+                    "   - **Dimensional Drift**: Thermal expansion of spindle/coolant, tool deflection, or fixture locator wear.\n\n"
+                    "2. **Recommended QC Tools**:\n"
+                    "   - **Stage 2**: Run SPC X-bar & R control charts to distinguish common cause vs. assignable cause variations.\n"
+                    "   - **Stage 6**: Standardize tool life management counters and implement dial indicator fixture zero-checks."
+                ),
+                "sources": []
+            }
+
         return None
 
     @classmethod

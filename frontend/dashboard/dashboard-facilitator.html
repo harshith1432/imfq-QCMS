@@ -6,17 +6,115 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
-    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.ef8bd5b8.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.72947852.min.js" as="script">
+    <script src="/assets/dist/auth-guard.72947852.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Facilitator Dashboard | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <link rel="stylesheet" href="/assets/dist/core.ef8bd5b8.min.css">
     <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Mobile Scroll & Column Protection */
+        @media (max-width: 768px) {
+            #facTabs {
+                display: flex !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior-x: contain !important;
+                touch-action: pan-x pan-y !important;
+                flex-wrap: nowrap !important;
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+                padding: 4px !important;
+                gap: 6px !important;
+            }
+            #facTabs::-webkit-scrollbar {
+                display: none !important;
+                width: 0 !important;
+                height: 0 !important;
+            }
+            #facTabs .ds-btn-tab {
+                flex: 0 0 auto !important;
+                white-space: nowrap !important;
+            }
+            .tab-content-panel .glass-card {
+                padding: 0 !important;
+                overflow: hidden !important;
+                border-radius: 12px !important;
+            }
+            .tab-content-panel .ds-card-header {
+                padding: 12px 14px !important;
+            }
+            .tab-content-panel .ds-card-body {
+                padding: 0 !important;
+            }
+            .tab-content-panel .table-responsive {
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior-x: contain !important;
+                touch-action: pan-x pan-y !important;
+                scrollbar-width: thin !important;
+            }
+            /* Explicit column constraints to prevent title blowout */
+            #tab-pipeline table.ds-table {
+                min-width: 680px !important;
+            }
+            #tab-pipeline table.ds-table th:nth-child(1),
+            #tab-pipeline table.ds-table td:nth-child(1) {
+                min-width: 190px !important;
+                max-width: 260px !important;
+                white-space: normal !important;
+            }
+            #tab-pipeline table.ds-table th:nth-child(2),
+            #tab-pipeline table.ds-table td:nth-child(2) {
+                min-width: 140px !important;
+                white-space: nowrap !important;
+            }
+            #tab-pipeline table.ds-table th:nth-child(3),
+            #tab-pipeline table.ds-table td:nth-child(3) {
+                min-width: 85px !important;
+                white-space: nowrap !important;
+            }
+            #tab-pipeline table.ds-table th:nth-child(4),
+            #tab-pipeline table.ds-table td:nth-child(4) {
+                min-width: 95px !important;
+                white-space: nowrap !important;
+            }
+            #tab-pipeline table.ds-table th:nth-child(5),
+            #tab-pipeline table.ds-table td:nth-child(5) {
+                min-width: 125px !important;
+                white-space: nowrap !important;
+            }
+
+            #tab-assistance table.ds-table {
+                min-width: 980px !important;
+            }
+            #tab-assistance table.ds-table th:nth-child(1),
+            #tab-assistance table.ds-table td:nth-child(1) {
+                min-width: 190px !important;
+                max-width: 260px !important;
+                white-space: normal !important;
+            }
+            #tab-assistance table.ds-table th:nth-child(5),
+            #tab-assistance table.ds-table td:nth-child(5) {
+                min-width: 220px !important;
+                max-width: 300px !important;
+                white-space: normal !important;
+            }
+
+            #tab-assisted-history table.ds-table {
+                min-width: 1100px !important;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="app-layout">
@@ -95,7 +193,7 @@
                         <div class="glass-card">
                             <div class="ds-card-header">
                                 <h5 class="card-title"><i data-lucide="message-square" class="inline-block text-primary me-2" style="width:20px;height:20px;vertical-align:text-bottom;"></i>Team Assistance Requests</h5>
-                                <span class="ds-badge blue" id="assistanceCount">0 Requests</span>
+                                <div class="d-flex align-items-center gap-2"><span class="badge bg-light text-muted border d-inline-flex align-items-center gap-1 d-md-none" style="font-size:10.5px;font-weight:500;padding:3px 7px;"><i data-lucide="arrow-left-right" style="width:11px;height:11px;"></i> Scroll</span><span class="ds-badge blue" id="assistanceCount">0 Requests</span></div>
                             </div>
                             <div class="ds-card-body p-0">
                                 <div class="table-responsive">
@@ -126,7 +224,7 @@
                         <div class="glass-card">
                             <div class="ds-card-header">
                                 <h5 class="card-title"><i data-lucide="folder-open" class="inline-block text-primary me-2" style="width:20px;height:20px;vertical-align:text-bottom;"></i>Projects — Active Assignments</h5>
-                                <span class="ds-badge blue" id="pipelineCount">Loading...</span>
+                                <div class="d-flex align-items-center gap-2"><span class="badge bg-light text-muted border d-inline-flex align-items-center gap-1 d-md-none" style="font-size:10.5px;font-weight:500;padding:3px 7px;"><i data-lucide="arrow-left-right" style="width:11px;height:11px;"></i> Scroll</span><span class="ds-badge blue" id="pipelineCount">Loading...</span></div>
                             </div>
                             <div class="ds-card-body p-0">
                                 <div class="table-responsive">
@@ -154,7 +252,7 @@
                         <div class="glass-card">
                             <div class="ds-card-header">
                                 <h5 class="card-title"><i data-lucide="history" class="inline-block text-primary me-2" style="width:20px;height:20px;vertical-align:text-bottom;"></i>Assisted Project History</h5>
-                                <span class="ds-badge purple" id="assistedHistoryCount">0 Assisted</span>
+                                <div class="d-flex align-items-center gap-2"><span class="badge bg-light text-muted border d-inline-flex align-items-center gap-1 d-md-none" style="font-size:10.5px;font-weight:500;padding:3px 7px;"><i data-lucide="arrow-left-right" style="width:11px;height:11px;"></i> Scroll</span><span class="ds-badge purple" id="assistedHistoryCount">0 Assisted</span></div>
                             </div>
                             <div class="ds-card-body p-0">
                                 <div class="table-responsive">
@@ -347,7 +445,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
+    <script src="/assets/dist/core-bundle.2f888e93.min.js"></script>
     <script>
     const facDash = {
         noteModal: null,
@@ -364,6 +462,36 @@
         allDepartments: [],
         currentSearchQuery: '',
 
+        enableDragScroll(element) {
+            if (!element) return;
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            element.addEventListener('mousedown', (e) => {
+                if (e.target.closest('button, a, input, select, textarea')) return;
+                isDown = true;
+                startX = e.pageX - element.offsetLeft;
+                scrollLeft = element.scrollLeft;
+            });
+
+            element.addEventListener('mouseleave', () => {
+                isDown = false;
+            });
+
+            element.addEventListener('mouseup', () => {
+                isDown = false;
+            });
+
+            element.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - element.offsetLeft;
+                const walk = (x - startX) * 1.5;
+                element.scrollLeft = scrollLeft - walk;
+            });
+        },
+
         switchTab(tabId) {
             const btn = document.querySelector(`[data-tab="${tabId}"]`);
             if (btn) {
@@ -377,11 +505,17 @@
             this.validateModal = new bootstrap.Modal(document.getElementById('validateRcaModal'));
             this.assistedDetailsModal = new bootstrap.Modal(document.getElementById('assistedDetailsModal'));
 
+            // Enable drag/touch scrolling
+            const facTabsEl = document.getElementById('facTabs');
+            if (facTabsEl) this.enableDragScroll(facTabsEl);
+            document.querySelectorAll('.table-responsive').forEach(tr => this.enableDragScroll(tr));
+
             // Tab switching
             document.querySelectorAll('[data-tab]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
+                    btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                     document.querySelectorAll('.tab-content-panel').forEach(p => p.classList.add('d-none'));
                     const panel = document.getElementById('tab-' + btn.dataset.tab);
                     if (panel) panel.classList.remove('d-none');

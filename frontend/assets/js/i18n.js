@@ -34,18 +34,22 @@ class LanguageManager {
     }
 
     /**
-     * Resolve the relative path to /assets/i18n/ regardless of page depth.
+     * Resolve the absolute or root-relative path to /assets/i18n/ regardless of page depth or bundling.
      */
     _resolveBasePath() {
         const scripts = document.querySelectorAll('script[src]');
         for (const s of scripts) {
-            const src = s.getAttribute('src');
-            if (src && src.includes('i18n.js')) {
-                const dir = src.replace('assets/js/i18n.js', '').replace('/assets/js/i18n.js', '');
-                return (dir || '') + 'assets/i18n/';
+            const src = s.getAttribute('src') || '';
+            if (src.includes('/assets/')) {
+                const prefix = src.split('/assets/')[0];
+                return (prefix || '') + '/assets/i18n/';
+            }
+            if (src.includes('assets/')) {
+                const prefix = src.split('assets/')[0];
+                return (prefix || '') + '/assets/i18n/';
             }
         }
-        return 'assets/i18n/';
+        return '/assets/i18n/';
     }
 
     /**
@@ -63,15 +67,19 @@ class LanguageManager {
                 const userLang = localStorage.getItem(userLangKey);
                 if (userLang && this.supportedLanguages.includes(userLang)) {
                     localStorage.setItem('octaqube-language', userLang);
+                    sessionStorage.setItem('octaqube-language', userLang);
                     return userLang;
                 }
                 // Fallback to user.language from the stored user object (from backend)
                 if (user.language && this.supportedLanguages.includes(user.language)) {
+                    localStorage.setItem('octaqube-language', user.language);
+                    sessionStorage.setItem('octaqube-language', user.language);
                     return user.language;
                 }
             }
         } catch (e) { /* ignore */ }
-        return localStorage.getItem('octaqube-language') || 'en';
+        const stored = localStorage.getItem('octaqube-language') || sessionStorage.getItem('octaqube-language') || 'en';
+        return this.supportedLanguages.includes(stored) ? stored : 'en';
     }
 
     /**
@@ -120,27 +128,53 @@ class LanguageManager {
 
     async loadTranslations(lang) {
         try {
+            if (!lang || !this.supportedLanguages.includes(lang)) {
+                lang = 'en';
+            }
+
+            // Always verify base path
+            if (!this._basePath || this._basePath === 'assets/i18n/') {
+                this._basePath = this._resolveBasePath();
+            }
+
             // Pre-load English translations as baseline reference for flat mapping
             if (!this.enTranslations) {
                 const enUrl = this._basePath + 'en.json';
                 const enResponse = await fetch(enUrl);
-                if (enResponse.ok) {
+                const enContentType = enResponse.headers.get('content-type') || '';
+                if (enResponse.ok && enContentType.includes('json')) {
                     this.enTranslations = await enResponse.json();
+                } else {
+                    console.warn(`[i18n] Failed to load baseline en.json from ${enUrl} (status: ${enResponse.status}, type: ${enContentType})`);
                 }
+            }
+
+            if (lang === 'en') {
+                this.translations = this.enTranslations || {};
+                this.currentLanguage = 'en';
+                localStorage.setItem('octaqube-language', 'en');
+                sessionStorage.setItem('octaqube-language', 'en');
+                document.documentElement.setAttribute('lang', 'en');
+                this._buildFlatTranslationMap();
+                return;
             }
 
             const url = this._basePath + lang + '.json';
             const response = await fetch(url);
-            if (!response.ok) throw new Error(`Could not load ${lang} translations (${url})`);
+            const contentType = response.headers.get('content-type') || '';
+            if (!response.ok || !contentType.includes('json')) {
+                throw new Error(`Could not load ${lang} translations (${url}) - status ${response.status}, contentType ${contentType}`);
+            }
             this.translations = await response.json();
             this.currentLanguage = lang;
             localStorage.setItem('octaqube-language', lang);
+            sessionStorage.setItem('octaqube-language', lang);
             document.documentElement.setAttribute('lang', lang);
 
             // Compile the English -> Target language string map
             this._buildFlatTranslationMap();
         } catch (error) {
-            console.error('Translation loading failed:', error);
+            console.error('[i18n] Translation loading failed:', error);
             if (lang !== 'en') {
                 await this.loadTranslations('en');
             }
@@ -149,9 +183,11 @@ class LanguageManager {
 
     /**
      * Build flat text maps of exact English phrases to target language equivalents.
+     * Includes both case-sensitive and case-insensitive (lowercase) dictionaries.
      */
     _buildFlatTranslationMap() {
         this.translationMap = {};
+        this.lowerTranslationMap = {};
         if (!this.enTranslations || !this.translations) return;
 
         const flatEn = this._flattenObject(this.enTranslations);
@@ -162,8 +198,10 @@ class LanguageManager {
             const targetText = flatTarget[key];
             if (enText && targetText && typeof enText === 'string' && typeof targetText === 'string') {
                 const enTrimmed = enText.trim();
-                if (enTrimmed) {
-                    this.translationMap[enTrimmed] = targetText;
+                const targetTrimmed = targetText.trim();
+                if (enTrimmed && targetTrimmed) {
+                    this.translationMap[enTrimmed] = targetTrimmed;
+                    this.lowerTranslationMap[enTrimmed.toLowerCase()] = targetTrimmed;
                 }
             }
         }
@@ -354,7 +392,35 @@ class LanguageManager {
         }
 
         const origTrimmed = node._originalText.trim();
-        const translation = this.translationMap[origTrimmed];
+        let translation = this.translationMap[origTrimmed] || (this.lowerTranslationMap && this.lowerTranslationMap[origTrimmed.toLowerCase()]);
+
+        // If no direct match, check for numeric prefix: e.g. "18 Active Projects", "0 Projects Pending Sign-Off"
+        if (!translation) {
+            const numPrefixMatch = origTrimmed.match(/^(\d+(?:[.,]\d+)?\s*)(.+)$/);
+            if (numPrefixMatch) {
+                const prefixNum = numPrefixMatch[1];
+                const restText = numPrefixMatch[2].trim();
+                const restTrans = this.translationMap[restText] || (this.lowerTranslationMap && this.lowerTranslationMap[restText.toLowerCase()]);
+                if (restTrans) {
+                    translation = prefixNum + restTrans;
+                }
+            }
+        }
+
+        // Check for colon prefix: e.g. "Timeline: Last 6 Months"
+        if (!translation) {
+            const colonMatch = origTrimmed.match(/^([^:]+:\s*)(.+)$/);
+            if (colonMatch) {
+                const prefixColon = colonMatch[1].trim(); // e.g. "Timeline:"
+                const restText = colonMatch[2].trim();   // e.g. "Last 6 Months"
+                const prefixTrans = this.translationMap[prefixColon] || (this.lowerTranslationMap && this.lowerTranslationMap[prefixColon.toLowerCase()]) || prefixColon;
+                const restTrans = this.translationMap[restText] || (this.lowerTranslationMap && this.lowerTranslationMap[restText.toLowerCase()]);
+                if (restTrans) {
+                    translation = `${prefixTrans} ${restTrans}`;
+                }
+            }
+        }
+
         if (translation) {
             const leadingWs = node._originalText.match(/^\s*/)[0];
             const trailingWs = node._originalText.match(/\s*$/)[0];
@@ -435,7 +501,21 @@ class LanguageManager {
                 }
 
                 const origTrimmed = el[originalKey].trim();
-                const translation = this.translationMap[origTrimmed];
+                let translation = this.translationMap[origTrimmed] || (this.lowerTranslationMap && this.lowerTranslationMap[origTrimmed.toLowerCase()]);
+
+                if (!translation) {
+                    const colonMatch = origTrimmed.match(/^([^:]+:\s*)(.+)$/);
+                    if (colonMatch) {
+                        const prefixColon = colonMatch[1].trim();
+                        const restText = colonMatch[2].trim();
+                        const prefixTrans = this.translationMap[prefixColon] || (this.lowerTranslationMap && this.lowerTranslationMap[prefixColon.toLowerCase()]) || prefixColon;
+                        const restTrans = this.translationMap[restText] || (this.lowerTranslationMap && this.lowerTranslationMap[restText.toLowerCase()]);
+                        if (restTrans) {
+                            translation = `${prefixTrans} ${restTrans}`;
+                        }
+                    }
+                }
+
                 if (translation) {
                     const leadingWs = el[originalKey].match(/^\s*/)[0];
                     const trailingWs = el[originalKey].match(/\s*$/)[0];
@@ -573,10 +653,11 @@ class LanguageManager {
 
     /**
      * Change the active language.
-     * - Updates localStorage (global & per-user keys)
-     * - Syncs to the backend (user profile endpoint)
+     * - Updates localStorage & sessionStorage immediately (global & per-user keys)
+     * - Loads new translations and immediately re-translates DOM
      * - Re-renders sidebar & navbar via event
-     * - Re-translates all static data-i18n elements
+     * - Syncs to the backend (user profile endpoint)
+     * - Reloads the page for clean chart & full UI reinitialization
      */
     async setLanguage(lang) {
         if (!this.supportedLanguages.includes(lang)) {
@@ -584,31 +665,36 @@ class LanguageManager {
             return;
         }
 
-        await this.loadTranslations(lang);
-
-        // Re-render dynamic components (sidebar/navbar) which contain data-i18n
-        window.dispatchEvent(new CustomEvent('octaqube-language-change', { detail: { language: lang } }));
-
-        // Translate all static elements after a short delay to allow component re-renders
-        setTimeout(() => this.translatePage(), 100);
-
-        // Persist per-user preference
+        // 1. Immediately persist selection across storage keys
+        localStorage.setItem('octaqube-language', lang);
+        sessionStorage.setItem('octaqube-language', lang);
         try {
             const userStr = sessionStorage.getItem('user');
             if (userStr) {
                 const user = JSON.parse(userStr);
                 const userId = user.id || user.username;
-
-                // Save per-user language
                 if (userId) {
                     localStorage.setItem(`octaqube-language-${userId}`, lang);
                 }
-
-                // Update user object in localStorage
                 user.language = lang;
                 sessionStorage.setItem('user', JSON.stringify(user));
+            }
+        } catch (e) {}
 
-                // Sync to backend
+        // 2. Load translations and apply immediately
+        await this.loadTranslations(lang);
+        this.translatePage();
+
+        // 3. Dispatch event to re-render sidebar/navbar
+        window.dispatchEvent(new CustomEvent('octaqube-language-change', { detail: { language: lang } }));
+
+        // 4. Translate again after dynamic re-render
+        setTimeout(() => this.translatePage(), 50);
+
+        // 5. Sync to backend (non-blocking) and reload for complete application refresh
+        try {
+            const userStr = sessionStorage.getItem('user');
+            if (userStr) {
                 const syncFn = async () => {
                     if (window.api) {
                         await window.api.put('/auth/profile', { language: lang });
@@ -616,18 +702,16 @@ class LanguageManager {
                         await fetch('/api/auth/profile', {
                             method: 'PUT',
                             headers: {
-                                'Content-Type': 'application/json',
-                                /* cookie auth */
+                                'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({ language: lang })
                         });
                     }
                 };
-
                 await syncFn();
             }
         } catch (e) {
-            console.warn('[i18n] Failed to update user language preference:', e);
+            console.warn('[i18n] Failed to update user language preference on server:', e);
         } finally {
             window.location.reload();
         }

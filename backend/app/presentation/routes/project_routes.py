@@ -258,11 +258,58 @@ def get_projects():
 
     query = query.order_by(Project.created_at.desc())
 
-    from app.presentation.routes.repository_routes import calculate_project_realtime_efficiency
+    # Performance optimization: Eager load relationships to eliminate N+1 query storm
+    from sqlalchemy.orm import joinedload
+    query = query.options(
+        joinedload(Project.department),
+        joinedload(Project.creator),
+        joinedload(Project.team_leader),
+        joinedload(Project.facilitator),
+        joinedload(Project.reviewer)
+    )
 
-    def serialize_proj(p):
+    from app.presentation.routes.repository_routes import calculate_project_realtime_efficiency
+    from app.infrastructure.database.models.models import ProjectWorkflow
+
+    def batch_prefetch_workflow_map(projects):
+        p_ids = [p.id for p in projects if p]
+        if not p_ids:
+            return {}
+        raw_wfs = ProjectWorkflow.query.filter(
+            ProjectWorkflow.project_id.in_(p_ids),
+            ProjectWorkflow.stage_id.in_([1, 7, 8])
+        ).all()
+        from app.infrastructure.database.models.models import (
+            Stage7PerformanceVerificationBenefitsRealization,
+            Stage8StandardizationKnowledgeSharingProjectClosure,
+            KnowledgeRepository
+        )
+        s7_models = Stage7PerformanceVerificationBenefitsRealization.query.filter(
+            Stage7PerformanceVerificationBenefitsRealization.project_id.in_(p_ids)
+        ).all()
+        s8_models = Stage8StandardizationKnowledgeSharingProjectClosure.query.filter(
+            Stage8StandardizationKnowledgeSharingProjectClosure.project_id.in_(p_ids)
+        ).all()
+        repos = KnowledgeRepository.query.filter(
+            KnowledgeRepository.project_id.in_(p_ids)
+        ).all()
+
+        wf_map = {pid: {'s7_model': None, 's8_model': None, 'repo': None} for pid in p_ids}
+        for w in raw_wfs:
+            if w.data:
+                wf_map[w.project_id][w.stage_id] = w.data
+        for s7 in s7_models:
+            wf_map[s7.project_id]['s7_model'] = s7
+        for s8 in s8_models:
+            wf_map[s8.project_id]['s8_model'] = s8
+        for r in repos:
+            wf_map[r.project_id]['repo'] = r
+        return wf_map
+
+    def serialize_proj(p, wf_data_map=None):
         created_iso = p.created_at.isoformat() if p.created_at else None
-        eff_val = calculate_project_realtime_efficiency(p.id, p.current_stage)
+        p_wf = wf_data_map.get(p.id) if wf_data_map else None
+        eff_val = calculate_project_realtime_efficiency(p.id, p.current_stage, preloaded_wfs=p_wf)
         return {
             "id": p.id,
             "project_uid": p.project_uid,
@@ -287,12 +334,32 @@ def get_projects():
         }
 
     if page is not None:
-        from app.shared.pagination import paginate_query
-        return jsonify(paginate_query(query, page=page, per_page=per_page, serializer_fn=serialize_proj)), 200
+        try:
+            page_int = max(1, int(page))
+        except (ValueError, TypeError):
+            page_int = 1
+        try:
+            per_page_int = max(1, min(int(per_page), 250))
+        except (ValueError, TypeError):
+            per_page_int = 25
+
+        pagination = query.paginate(page=page_int, per_page=per_page_int, error_out=False)
+        wf_map = batch_prefetch_workflow_map(pagination.items)
+        items = [serialize_proj(p, wf_map) for p in pagination.items]
+        return jsonify({
+            "items": items,
+            "page": pagination.page,
+            "per_page": pagination.per_page,
+            "total": pagination.total,
+            "total_pages": pagination.pages,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev
+        }), 200
 
     # Unbounded guard: cap unpaginated requests at 200 items
     projects = query.limit(200).all()
-    return jsonify([serialize_proj(p) for p in projects]), 200
+    wf_map = batch_prefetch_workflow_map(projects)
+    return jsonify([serialize_proj(p, wf_map) for p in projects]), 200
 
 @project_bp.route('/potential-members', methods=['GET'])
 @jwt_required()
@@ -773,122 +840,116 @@ def create_project():
 # STAGE 1 – QC STORY ROUTES (Save / Submit / Review)
 # ─────────────────────────────────────────────────────────────────────────
 
-# ==============================================================================
-# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
-# Function: save_stage1 (Lines 776-885)
-# Reason: Legacy stage1 saving route. Frontend saves via generic /stage/1/submit or dynamic workflow renderer.
-# ==============================================================================
-# @project_bp.route('/<int:id>/stage1/save', methods=['POST'])
-# @jwt_required()
-# def save_stage1(id):
-#     """Save Stage 1 progress without submitting for review."""
-#     user_id = get_jwt_identity()
-#     user = db.session.get(User, user_id)
-#     project = db.session.get(Project, id)
+@project_bp.route('/<int:id>/stage1/save', methods=['POST'])
+@jwt_required()
+def save_stage1(id):
+    """Save Stage 1 progress without submitting for review."""
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    project = db.session.get(Project, id)
 
-#     user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
-#     if not project or (not user_is_sa and project.org_id != user.org_id):
-#         return jsonify({"msg": "Project not found"}), 404
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
+        return jsonify({"msg": "Project not found"}), 404
 
-#     # Check if project is permanently rejected
-#     if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
-#         return jsonify({"msg": "This project has been permanently rejected and cannot be modified or re-submitted."}), 400
+    # Check if project is permanently rejected
+    if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
+        return jsonify({"msg": "This project has been permanently rejected and cannot be modified or re-submitted."}), 400
 
-#     # STRICT RULE: Only assigned Team Leader or Team Member can edit Stage 1 (Admin is read-only)
-#     is_authorized = user.role.name in ('Team Leader', 'Team Member')
-#     if not is_authorized:
-#         return jsonify({"msg": "Access denied. Only assigned Team Leaders and Team Members can edit project details."}), 403
+    # STRICT RULE: Only assigned Team Leader or Team Member can edit Stage 1 (Admin is read-only)
+    is_authorized = user.role.name in ('Team Leader', 'Team Member')
+    if not is_authorized:
+        return jsonify({"msg": "Access denied. Only assigned Team Leaders and Team Members can edit project details."}), 403
 
-#     payload = request.get_json() or {}
-#     workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=1).first()
+    payload = request.get_json() or {}
+    workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=1).first()
 
-#     if not workflow:
-#         workflow = ProjectWorkflow(project_id=id, org_id=user.org_id, stage_id=1, data={})
-#         db.session.add(workflow)
+    if not workflow:
+        workflow = ProjectWorkflow(project_id=id, org_id=user.org_id, stage_id=1, data={})
+        db.session.add(workflow)
 
-#     # Merge incoming sections into existing data
-#     existing = dict(workflow.data or {})
-#     for section, section_data in payload.items():
-#         existing[section] = section_data
-#     workflow.data = existing
-#     flag_modified(workflow, 'data')
-#     workflow.updated_by = user_id
-#     workflow.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    # Merge incoming sections into existing data
+    existing = dict(workflow.data or {})
+    for section, section_data in payload.items():
+        existing[section] = section_data
+    workflow.data = existing
+    flag_modified(workflow, 'data')
+    workflow.updated_by = user_id
+    workflow.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
-#     # Sync Team Members, Facilitator, and Reviewer to the database so access control works
-#     team_data = payload.get('team')
-#     if team_data:
-#         from app.infrastructure.database.models.models import ProjectMember
+    # Sync Team Members, Facilitator, and Reviewer to the database so access control works
+    team_data = payload.get('team')
+    if team_data:
+        from app.infrastructure.database.models.models import ProjectMember
 
-#         # 1. Sync Team Members
-#         if 'team_members' in team_data and isinstance(team_data['team_members'], list):
-#             old_member_ids = set([m.user_id for m in ProjectMember.query.filter_by(project_id=id).all()])
-#             new_member_ids = set()
-#             if project.team_leader_id:
-#                 new_member_ids.add(project.team_leader_id)
-#             for mem in team_data['team_members']:
-#                 uid = mem.get('user_id') if isinstance(mem, dict) else mem
-#                 if uid:
-#                     try:
-#                         uid_int = int(uid)
-#                         if uid_int > 0:
-#                             new_member_ids.add(uid_int)
-#                     except (ValueError, TypeError):
-#                         pass
+        # 1. Sync Team Members
+        if 'team_members' in team_data and isinstance(team_data['team_members'], list):
+            old_member_ids = set([m.user_id for m in ProjectMember.query.filter_by(project_id=id).all()])
+            new_member_ids = set()
+            if project.team_leader_id:
+                new_member_ids.add(project.team_leader_id)
+            for mem in team_data['team_members']:
+                uid = mem.get('user_id') if isinstance(mem, dict) else mem
+                if uid:
+                    try:
+                        uid_int = int(uid)
+                        if uid_int > 0:
+                            new_member_ids.add(uid_int)
+                    except (ValueError, TypeError):
+                        pass
 
-#             now_dt = datetime.now(timezone.utc).replace(tzinfo=None)
-#             added_ids = new_member_ids - old_member_ids
-#             removed_ids = old_member_ids - new_member_ids
+            now_dt = datetime.now(timezone.utc).replace(tzinfo=None)
+            added_ids = new_member_ids - old_member_ids
+            removed_ids = old_member_ids - new_member_ids
 
-#             for added_id in added_ids:
-#                 u_obj = db.session.get(User, added_id)
-#                 u_name = (u_obj.full_name or u_obj.username) if u_obj else f"User #{added_id}"
-#                 db.session.add(AuditLog(
-#                     org_id=user.org_id, project_id=id, user_id=user_id,
-#                     action="Team Member Joined Project",
-#                     details=f"{u_name} was added and joined the active project team.",
-#                     ip_address=request.remote_addr if hasattr(request, 'remote_addr') else None,
-#                     target_table="project_members", target_id=added_id,
-#                     created_at=now_dt
-#                 ))
+            for added_id in added_ids:
+                u_obj = db.session.get(User, added_id)
+                u_name = (u_obj.full_name or u_obj.username) if u_obj else f"User #{added_id}"
+                db.session.add(AuditLog(
+                    org_id=user.org_id, project_id=id, user_id=user_id,
+                    action="Team Member Joined Project",
+                    details=f"{u_name} was added and joined the active project team.",
+                    ip_address=request.remote_addr if hasattr(request, 'remote_addr') else None,
+                    target_table="project_members", target_id=added_id,
+                    created_at=now_dt
+                ))
 
-#             for rem_id in removed_ids:
-#                 u_obj = db.session.get(User, rem_id)
-#                 u_name = (u_obj.full_name or u_obj.username) if u_obj else f"User #{rem_id}"
-#                 db.session.add(AuditLog(
-#                     org_id=user.org_id, project_id=id, user_id=user_id,
-#                     action="Team Member Left Project (Transitioned in Middle)",
-#                     details=f"{u_name} left the project team / membership was removed from active roster.",
-#                     ip_address=request.remote_addr if hasattr(request, 'remote_addr') else None,
-#                     target_table="project_members", target_id=rem_id,
-#                     created_at=now_dt
-#                 ))
+            for rem_id in removed_ids:
+                u_obj = db.session.get(User, rem_id)
+                u_name = (u_obj.full_name or u_obj.username) if u_obj else f"User #{rem_id}"
+                db.session.add(AuditLog(
+                    org_id=user.org_id, project_id=id, user_id=user_id,
+                    action="Team Member Left Project (Transitioned in Middle)",
+                    details=f"{u_name} left the project team / membership was removed from active roster.",
+                    ip_address=request.remote_addr if hasattr(request, 'remote_addr') else None,
+                    target_table="project_members", target_id=rem_id,
+                    created_at=now_dt
+                ))
 
-#             ProjectMember.query.filter_by(project_id=id).delete()
-#             for uid in new_member_ids:
-#                 db.session.add(ProjectMember(project_id=id, user_id=uid))
+            ProjectMember.query.filter_by(project_id=id).delete()
+            for uid in new_member_ids:
+                db.session.add(ProjectMember(project_id=id, user_id=uid))
 
-#     init_data = payload.get('init')
-#     if init_data and isinstance(init_data, dict):
-#         if 'facilitator_id' in init_data:
-#             fid = init_data.get('facilitator_id')
-#             project.facilitator_id = int(fid) if fid else None
-#         if 'reviewer_id' in init_data:
-#             rid = init_data.get('reviewer_id')
-#             project.reviewer_id = int(rid) if rid else None
+    init_data = payload.get('init')
+    if init_data and isinstance(init_data, dict):
+        if 'facilitator_id' in init_data:
+            fid = init_data.get('facilitator_id')
+            project.facilitator_id = int(fid) if fid else None
+        if 'reviewer_id' in init_data:
+            rid = init_data.get('reviewer_id')
+            project.reviewer_id = int(rid) if rid else None
 
-#     # Log
-#     from app.infrastructure.database.models.models import AuditLog
-#     db.session.add(AuditLog(
-#         org_id=user.org_id, project_id=id, user_id=user_id,
-#         action="Stage 1 Draft Saved",
-#         details=f"Stage 1 data draft saved by {user.username}.",
-#         ip_address=request.remote_addr, user_agent=request.user_agent.string,
-#         target_table="project_workflow", target_id=workflow.id
-#     ))
-#     db.session.commit()
-#     return jsonify({"msg": "Stage 1 progress saved.", "status": "Draft"}), 200
-# [END DEAD CODE: save_stage1]
+    # Log
+    from app.infrastructure.database.models.models import AuditLog
+    db.session.add(AuditLog(
+        org_id=user.org_id, project_id=id, user_id=user_id,
+        action="Stage 1 Draft Saved",
+        details=f"Stage 1 data draft saved by {user.username}.",
+        ip_address=request.remote_addr, user_agent=request.user_agent.string,
+        target_table="project_workflow", target_id=workflow.id
+    ))
+    db.session.commit()
+    return jsonify({"msg": "Stage 1 progress saved.", "status": "Draft"}), 200
 
 
 
@@ -1190,66 +1251,60 @@ def sync_sop_from_stage8(project_id, sop_data, user_id):
 
 # ── GENERIC ROUTES FOR STAGES 2-N (DYNAMIC) ──
 
-# ==============================================================================
-# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
-# Function: save_stage_generic (Lines 1186-1239)
-# Reason: Redundant stage draft save route.
-# ==============================================================================
-# @project_bp.route('/<int:id>/stage/<int:stage_id>/save', methods=['POST'])
-# @jwt_required()
-# def save_stage_generic(id, stage_id):
-#     """Save Stage progress without submitting for review."""
-#     if stage_id < 2:
-#         return jsonify({"msg": "Invalid stage ID for generic route."}), 400
+@project_bp.route('/<int:id>/stage/<int:stage_id>/save', methods=['POST'])
+@jwt_required()
+def save_stage_generic(id, stage_id):
+    """Save Stage progress without submitting for review."""
+    if stage_id < 2:
+        return jsonify({"msg": "Invalid stage ID for generic route."}), 400
 
-#     user_id = get_jwt_identity()
-#     user = db.session.get(User, user_id)
-#     project = db.session.get(Project, id)
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    project = db.session.get(Project, id)
 
-#     user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
-#     if not project or (not user_is_sa and project.org_id != user.org_id):
-#         return jsonify({"msg": "Project not found"}), 404
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
+        return jsonify({"msg": "Project not found"}), 404
 
-#     # Check if project is permanently rejected
-#     if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
-#         return jsonify({"msg": "This project has been permanently rejected and cannot be modified or re-submitted."}), 400
+    # Check if project is permanently rejected
+    if project.status in ('Rejected', 'Stage 1 Rejected') or (project.status and 'Rejected' in str(project.status)):
+        return jsonify({"msg": "This project has been permanently rejected and cannot be modified or re-submitted."}), 400
 
-#     # STRICT RULE: Only assigned Team Leader or Team Member can edit stage details (Admin is read-only)
-#     is_authorized = user.role.name in ('Team Leader', 'Team Member')
-#     if not is_authorized:
-#         return jsonify({"msg": f"Access denied. Only assigned Team Leaders and Team Members can edit Stage {stage_id} details."}), 403
+    # STRICT RULE: Only assigned Team Leader or Team Member can edit stage details (Admin is read-only)
+    is_authorized = user.role.name in ('Team Leader', 'Team Member')
+    if not is_authorized:
+        return jsonify({"msg": f"Access denied. Only assigned Team Leaders and Team Members can edit Stage {stage_id} details."}), 403
 
-#     payload = request.get_json() or {}
-#     workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=stage_id).first()
+    payload = request.get_json() or {}
+    workflow = ProjectWorkflow.query.filter_by(project_id=id, stage_id=stage_id).first()
 
-#     if not workflow:
-#         workflow = ProjectWorkflow(project_id=id, org_id=user.org_id, stage_id=stage_id, data={})
-#         db.session.add(workflow)
+    if not workflow:
+        workflow = ProjectWorkflow(project_id=id, org_id=user.org_id, stage_id=stage_id, data={})
+        db.session.add(workflow)
 
-#     # Merge incoming sections into existing data
-#     existing = dict(workflow.data or {})
-#     for section, section_data in payload.items():
-#         existing[section] = section_data
-#     workflow.data = existing
-#     flag_modified(workflow, 'data')
-#     workflow.updated_by = user_id
-#     workflow.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    # Merge incoming sections into existing data
+    existing = dict(workflow.data or {})
+    for section, section_data in payload.items():
+        existing[section] = section_data
+    workflow.data = existing
+    flag_modified(workflow, 'data')
+    workflow.updated_by = user_id
+    workflow.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
-#     # Sync SOP if payload includes SOP data
-#     if 'sop' in payload:
-#         sync_sop_from_stage8(id, payload['sop'], user_id)
+    # Sync SOP if payload includes SOP data
+    if 'sop' in payload:
+        sync_sop_from_stage8(id, payload['sop'], user_id)
 
-#     from app.infrastructure.database.models.models import AuditLog
-#     db.session.add(AuditLog(
-#         org_id=user.org_id, project_id=id, user_id=user_id,
-#         action=f"Stage {stage_id} Draft Saved",
-#         details=f"Stage {stage_id} data draft saved by {user.username}.",
-#         ip_address=request.remote_addr, user_agent=request.user_agent.string,
-#         target_table="project_workflow", target_id=workflow.id
-#     ))
-#     db.session.commit()
-#     return jsonify({"msg": f"Stage {stage_id} progress saved."}), 200
-# [END DEAD CODE: save_stage_generic]
+    from app.infrastructure.database.models.models import AuditLog
+    db.session.add(AuditLog(
+        org_id=user.org_id, project_id=id, user_id=user_id,
+        action=f"Stage {stage_id} Draft Saved",
+        details=f"Stage {stage_id} data draft saved by {user.username}.",
+        ip_address=request.remote_addr, user_agent=request.user_agent.string,
+        target_table="project_workflow", target_id=workflow.id
+    ))
+    db.session.commit()
+    return jsonify({"msg": f"Stage {stage_id} progress saved."}), 200
 
 
 @project_bp.route('/<int:id>/stage/<int:stage_id>/submit', methods=['POST'])
@@ -1837,151 +1892,139 @@ def create_stage_meeting(project_id, stage_id):
         "url": new_meeting.url
     }), 201
 
-# ==============================================================================
-# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
-# Function: get_project_stage_details (Lines 1826-1870)
-# Reason: Legacy stage data route.
-# ==============================================================================
-# @project_bp.route('/<int:id>/stage/<int:stage_num>', methods=['GET'])
-# @jwt_required()
-# def get_project_stage_details(id, stage_num):
-#     user_id = int(get_jwt_identity())
-#     user = db.session.get(User, user_id)
-#     project = db.session.get(Project, id)
+@project_bp.route('/<int:id>/stage/<int:stage_num>', methods=['GET'])
+@jwt_required()
+def get_project_stage_details(id, stage_num):
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    project = db.session.get(Project, id)
 
-#     user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
-#     if not project or (not user_is_sa and project.org_id != user.org_id):
-#         return jsonify({"msg": "Project not found"}), 404
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
+        return jsonify({"msg": "Project not found"}), 404
 
-#     from app.infrastructure.database.models.models import (
-#         Stage1ProblemDefinitionProjectInitiation, Stage2ObservationDataCollection, Stage3CauseIdentification,
-#         Stage4RootCauseAnalysisVerification, Stage5CountermeasurePlanningSolutionDevelopment, Stage6ImplementationChangeManagement,
-#         Stage7PerformanceVerificationBenefitsRealization, Stage8StandardizationKnowledgeSharingProjectClosure
-#     )
+    from app.infrastructure.database.models.models import (
+        Stage1ProblemDefinitionProjectInitiation, Stage2ObservationDataCollection, Stage3CauseIdentification,
+        Stage4RootCauseAnalysisVerification, Stage5CountermeasurePlanningSolutionDevelopment, Stage6ImplementationChangeManagement,
+        Stage7PerformanceVerificationBenefitsRealization, Stage8StandardizationKnowledgeSharingProjectClosure
+    )
 
-#     stage_models = {
-#         1: Stage1ProblemDefinitionProjectInitiation, 2: Stage2ObservationDataCollection, 3: Stage3CauseIdentification,
-#         4: Stage4RootCauseAnalysisVerification, 5: Stage5CountermeasurePlanningSolutionDevelopment, 6: Stage6ImplementationChangeManagement,
-#         7: Stage7PerformanceVerificationBenefitsRealization, 8: Stage8StandardizationKnowledgeSharingProjectClosure
-#     }
+    stage_models = {
+        1: Stage1ProblemDefinitionProjectInitiation, 2: Stage2ObservationDataCollection, 3: Stage3CauseIdentification,
+        4: Stage4RootCauseAnalysisVerification, 5: Stage5CountermeasurePlanningSolutionDevelopment, 6: Stage6ImplementationChangeManagement,
+        7: Stage7PerformanceVerificationBenefitsRealization, 8: Stage8StandardizationKnowledgeSharingProjectClosure
+    }
 
-#     model = stage_models.get(stage_num)
-#     if not model:
-#         return jsonify({"msg": "Invalid stage number"}), 400
+    model = stage_models.get(stage_num)
+    if not model:
+        return jsonify({"msg": "Invalid stage number"}), 400
 
-#     stage_data = model.query.filter_by(project_id=id).first()
+    stage_data = model.query.filter_by(project_id=id).first()
 
-#     # Standardize data to dict
-#     data = {}
-#     if stage_data:
-#         data = {c.name: getattr(stage_data, c.name) for c in stage_data.__table__.columns}
-#         if hasattr(stage_data, 'standard_verification') and 'standard_verification' not in data:
-#             data['standard_verification'] = stage_data.standard_verification
-#         # Clean up
-#         data.pop('id', None)
-#         data.pop('project_id', None)
-#         data.pop('org_id', None)
-#         # Convert datetimes to isoformat
-#         for k, v in data.items():
-#             if isinstance(v, datetime):
-#                 data[k] = v.isoformat() + "Z"
+    # Standardize data to dict
+    data = {}
+    if stage_data:
+        data = {c.name: getattr(stage_data, c.name) for c in stage_data.__table__.columns}
+        if hasattr(stage_data, 'standard_verification') and 'standard_verification' not in data:
+            data['standard_verification'] = stage_data.standard_verification
+        # Clean up
+        data.pop('id', None)
+        data.pop('project_id', None)
+        data.pop('org_id', None)
+        # Convert datetimes to isoformat
+        for k, v in data.items():
+            if isinstance(v, datetime):
+                data[k] = v.isoformat() + "Z"
 
-#     return jsonify(data), 200
-# [END DEAD CODE: get_project_stage_details]
+    return jsonify(data), 200
 
 
-# ==============================================================================
-# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
-# Function: update_project_stage (Lines 1872-1957)
-# Reason: Legacy stage update route.
-# ==============================================================================
-# @project_bp.route('/<int:id>/stage/<int:stage_num>', methods=['POST'])
-# @jwt_required()
-# def update_project_stage(id, stage_num):
-#     user_id = int(get_jwt_identity())
-#     user = db.session.get(User, user_id)
-#     project = db.session.get(Project, id)
+@project_bp.route('/<int:id>/stage/<int:stage_num>', methods=['POST'])
+@jwt_required()
+def update_project_stage(id, stage_num):
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    project = db.session.get(Project, id)
 
-#     user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
-#     if not project or (not user_is_sa and project.org_id != user.org_id):
-#         return jsonify({"msg": "Project not found"}), 404
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
+        return jsonify({"msg": "Project not found"}), 404
 
-#     if stage_num == 1:
-#         if user.role.name not in ('Admin', 'SuperAdmin', 'Team Leader', 'Team Member'):
-#             return jsonify({"msg": "Access denied. Only Admin, Team Leader and Team Member can add/edit Stage 1 details."}), 403
-#     elif 2 <= stage_num <= 8:
-#         if user.role.name not in ('Team Member', 'Team Leader'):
-#             return jsonify({"msg": f"Access denied. Only Team Members and Leaders can add/edit Stage {stage_num} details."}), 403
+    if stage_num == 1:
+        if user.role.name not in ('Admin', 'SuperAdmin', 'Team Leader', 'Team Member'):
+            return jsonify({"msg": "Access denied. Only Admin, Team Leader and Team Member can add/edit Stage 1 details."}), 403
+    elif 2 <= stage_num <= 8:
+        if user.role.name not in ('Team Member', 'Team Leader'):
+            return jsonify({"msg": f"Access denied. Only Team Members and Leaders can add/edit Stage {stage_num} details."}), 403
 
-#     # RBAC: TL, Admin, Facilitator or assigned members
-#     is_member = ProjectMember.query.filter_by(project_id=id, user_id=user_id).first()
-#     is_admin_or_global_role = user and user.role and user.role.name in ['Admin', 'Team Leader', 'Team Member', 'Facilitator']
-#     is_project_owner = project.creator_id == user_id
-#     is_project_leader = project.team_leader_id == user_id
-#     is_project_facilitator = project.facilitator_id == user_id
+    # RBAC: TL, Admin, Facilitator or assigned members
+    is_member = ProjectMember.query.filter_by(project_id=id, user_id=user_id).first()
+    is_admin_or_global_role = user and user.role and user.role.name in ['Admin', 'Team Leader', 'Team Member', 'Facilitator']
+    is_project_owner = project.creator_id == user_id
+    is_project_leader = project.team_leader_id == user_id
+    is_project_facilitator = project.facilitator_id == user_id
 
-#     if not any([is_member, is_admin_or_global_role, is_project_owner, is_project_leader, is_project_facilitator]):
-#         return jsonify({"msg": "Unauthorized"}), 403
+    if not any([is_member, is_admin_or_global_role, is_project_owner, is_project_leader, is_project_facilitator]):
+        return jsonify({"msg": "Unauthorized"}), 403
 
-#     from app.infrastructure.database.models.models import (
-#         Stage1ProblemDefinitionProjectInitiation, Stage2ObservationDataCollection, Stage3CauseIdentification,
-#         Stage4RootCauseAnalysisVerification, Stage5CountermeasurePlanningSolutionDevelopment, Stage6ImplementationChangeManagement,
-#         Stage7PerformanceVerificationBenefitsRealization, Stage8StandardizationKnowledgeSharingProjectClosure, ProjectStageTracker,
-#         AuditLog
-#     )
+    from app.infrastructure.database.models.models import (
+        Stage1ProblemDefinitionProjectInitiation, Stage2ObservationDataCollection, Stage3CauseIdentification,
+        Stage4RootCauseAnalysisVerification, Stage5CountermeasurePlanningSolutionDevelopment, Stage6ImplementationChangeManagement,
+        Stage7PerformanceVerificationBenefitsRealization, Stage8StandardizationKnowledgeSharingProjectClosure, ProjectStageTracker,
+        AuditLog
+    )
 
-#     stage_models = {
-#         1: Stage1ProblemDefinitionProjectInitiation, 2: Stage2ObservationDataCollection, 3: Stage3CauseIdentification,
-#         4: Stage4RootCauseAnalysisVerification, 5: Stage5CountermeasurePlanningSolutionDevelopment, 6: Stage6ImplementationChangeManagement,
-#         7: Stage7PerformanceVerificationBenefitsRealization, 8: Stage8StandardizationKnowledgeSharingProjectClosure
-#     }
+    stage_models = {
+        1: Stage1ProblemDefinitionProjectInitiation, 2: Stage2ObservationDataCollection, 3: Stage3CauseIdentification,
+        4: Stage4RootCauseAnalysisVerification, 5: Stage5CountermeasurePlanningSolutionDevelopment, 6: Stage6ImplementationChangeManagement,
+        7: Stage7PerformanceVerificationBenefitsRealization, 8: Stage8StandardizationKnowledgeSharingProjectClosure
+    }
 
-#     model = stage_models.get(stage_num)
-#     if not model:
-#         return jsonify({"msg": "Invalid stage number"}), 400
+    model = stage_models.get(stage_num)
+    if not model:
+        return jsonify({"msg": "Invalid stage number"}), 400
 
-#     data = request.get_json()
-#     stage_data = model.query.filter_by(project_id=id).first()
+    data = request.get_json()
+    stage_data = model.query.filter_by(project_id=id).first()
 
-#     if not stage_data:
-#         # Initialize if missing
-#         stage_data = model(project_id=id, org_id=user.org_id)
-#         db.session.add(stage_data)
+    if not stage_data:
+        # Initialize if missing
+        stage_data = model(project_id=id, org_id=user.org_id)
+        db.session.add(stage_data)
 
-#     # Dynamically update fields
-#     for key, value in data.items():
-#         if hasattr(stage_data, key) and key not in ['id', 'project_id', 'org_id']:
-#             setattr(stage_data, key, value)
+    # Dynamically update fields
+    for key, value in data.items():
+        if hasattr(stage_data, key) and key not in ['id', 'project_id', 'org_id']:
+            setattr(stage_data, key, value)
 
-#     # Update tracker if stage is being completed
-#     if data.get('action') == 'submit':
-#         tracker = ProjectStageTracker.query.filter_by(project_id=id, stage_number=stage_num).first()
-#         if tracker:
-#             tracker.status = 'Completed'
-#             tracker.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    # Update tracker if stage is being completed
+    if data.get('action') == 'submit':
+        tracker = ProjectStageTracker.query.filter_by(project_id=id, stage_number=stage_num).first()
+        if tracker:
+            tracker.status = 'Completed'
+            tracker.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
-#             # Note: Stage advancement is now handled via the /api/workflow/projects/<id>/transitions endpoint
-#             # to ensure all security gates (approvals/validations) are checked.
+            # Note: Stage advancement is now handled via the /api/workflow/projects/<id>/transitions endpoint
+            # to ensure all security gates (approvals/validations) are checked.
 
-#         # If it's the final stage, we still want to mark the project as completed
-#         if stage_num == 8:
-#             project.status = 'Completed'
+        # If it's the final stage, we still want to mark the project as completed
+        if stage_num == 8:
+            project.status = 'Completed'
 
-#     # Audit Log
-#     audit = AuditLog(
-#         org_id=user.org_id,
-#         project_id=id,
-#         user_id=user_id,
-#         action=f"Updated Stage {stage_num}",
-#         details=f"Stage {stage_num} updated. Action: {data.get('action', 'save')}",
-#         target_table=model.__tablename__,
-#         target_id=stage_data.id if stage_data.id else id
-#     )
-#     db.session.add(audit)
+    # Audit Log
+    audit = AuditLog(
+        org_id=user.org_id,
+        project_id=id,
+        user_id=user_id,
+        action=f"Updated Stage {stage_num}",
+        details=f"Stage {stage_num} updated. Action: {data.get('action', 'save')}",
+        target_table=model.__tablename__,
+        target_id=stage_data.id if stage_data.id else id
+    )
+    db.session.add(audit)
 
-#     db.session.commit()
-#     return jsonify({"msg": f"Stage {stage_num} updated successfully", "current_stage": project.current_stage}), 200
-# [END DEAD CODE: update_project_stage]
+    db.session.commit()
+    return jsonify({"msg": f"Stage {stage_num} updated successfully", "current_stage": project.current_stage}), 200
 
 
 @project_bp.route('/<int:id>/activity', methods=['GET'])
@@ -2022,163 +2065,157 @@ def get_project_activity(id):
         "created_at": log.created_at.isoformat() + "Z"
     } for log in logs]), 200
 
-# ==============================================================================
-# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
-# Function: update_project (Lines 1997-2147)
-# Reason: Legacy general project update route.
-# ==============================================================================
-# @project_bp.route('/<int:id>', methods=['PATCH', 'PUT'])
-# @jwt_required()
-# def update_project(id):
-#     user_id = get_jwt_identity()
-#     user = db.session.get(User, user_id)
-#     project = db.session.get(Project, id)
+@project_bp.route('/<int:id>', methods=['PATCH', 'PUT'])
+@jwt_required()
+def update_project(id):
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+    project = db.session.get(Project, id)
 
-#     user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
-#     if not project or (not user_is_sa and project.org_id != user.org_id):
-#         return jsonify({"msg": "Project not found"}), 404
+    user_is_sa = bool(user and user.role and user.role.name == 'SuperAdmin')
+    if not project or (not user_is_sa and project.org_id != user.org_id):
+        return jsonify({"msg": "Project not found"}), 404
 
-#     # RBAC: Only Admin, SuperAdmin, Project Creator, TL or TL of same dept
-#     can_edit = ((user.role and user.role.name in ('Admin', 'SuperAdmin')) or 
-#                 project.creator_id == user.id or 
-#                 project.team_leader_id == user.id or
-#                 (user.role and user.role.name == 'Team Leader' and project.department_id == user.department_id))
+    # RBAC: Only Admin, SuperAdmin, Project Creator, TL or TL of same dept
+    can_edit = ((user.role and user.role.name in ('Admin', 'SuperAdmin')) or 
+                project.creator_id == user.id or 
+                project.team_leader_id == user.id or
+                (user.role and user.role.name == 'Team Leader' and project.department_id == user.department_id))
 
-#     if not can_edit:
-#         return jsonify({"msg": "Permission denied"}), 403
+    if not can_edit:
+        return jsonify({"msg": "Permission denied"}), 403
 
-#     data = request.json
-#     if 'title' in data: project.title = data['title']
-#     if 'description' in data: project.description = data['description']
-#     if 'category' in data: project.category = data['category']
-#     if 'department_id' in data: project.department_id = data['department_id']
-#     old_tl = project.team_leader_id
-#     old_fac = project.facilitator_id
-#     old_rev = project.reviewer_id
-#     from app.infrastructure.database.models.models import AuditLog, User
-#     from flask import request as flask_request
-#     ua_str = getattr(flask_request.user_agent, 'string', str(flask_request.user_agent or ''))
+    data = request.json
+    if 'title' in data: project.title = data['title']
+    if 'description' in data: project.description = data['description']
+    if 'category' in data: project.category = data['category']
+    if 'department_id' in data: project.department_id = data['department_id']
+    old_tl = project.team_leader_id
+    old_fac = project.facilitator_id
+    old_rev = project.reviewer_id
+    from app.infrastructure.database.models.models import AuditLog, User
+    from flask import request as flask_request
+    ua_str = getattr(flask_request.user_agent, 'string', str(flask_request.user_agent or ''))
 
-#     if 'facilitator_id' in data:
-#         fid = data['facilitator_id']
-#         new_fac = int(fid) if fid is not None and str(fid).strip() != "" else None
-#         if new_fac != old_fac:
-#             project.facilitator_id = new_fac
-#             old_f = db.session.get(User, old_fac) if old_fac else None
-#             new_f = db.session.get(User, new_fac) if new_fac else None
-#             db.session.add(AuditLog(
-#                 org_id=user.org_id, project_id=id, user_id=user_id,
-#                 action="Facilitator Assigned / Transitioned",
-#                 details=f"Facilitator changed from {old_f.full_name or old_f.username if old_f else 'None'} to {new_f.full_name or new_f.username if new_f else 'Unassigned'}.",
-#                 ip_address=flask_request.remote_addr, user_agent=ua_str,
-#                 target_table="projects", target_id=id
-#             ))
-#             if new_fac and new_fac != user_id:
-#                 from app.presentation.routes.notification_routes import create_notification
-#                 create_notification(user.org_id, new_fac, "Project Assigned", f"You have been assigned as the Facilitator for project '{project.title}'.", f"/projects/project-details.html?id={project.id}", commit=False)
+    if 'facilitator_id' in data:
+        fid = data['facilitator_id']
+        new_fac = int(fid) if fid is not None and str(fid).strip() != "" else None
+        if new_fac != old_fac:
+            project.facilitator_id = new_fac
+            old_f = db.session.get(User, old_fac) if old_fac else None
+            new_f = db.session.get(User, new_fac) if new_fac else None
+            db.session.add(AuditLog(
+                org_id=user.org_id, project_id=id, user_id=user_id,
+                action="Facilitator Assigned / Transitioned",
+                details=f"Facilitator changed from {old_f.full_name or old_f.username if old_f else 'None'} to {new_f.full_name or new_f.username if new_f else 'Unassigned'}.",
+                ip_address=flask_request.remote_addr, user_agent=ua_str,
+                target_table="projects", target_id=id
+            ))
+            if new_fac and new_fac != user_id:
+                from app.presentation.routes.notification_routes import create_notification
+                create_notification(user.org_id, new_fac, "Project Assigned", f"You have been assigned as the Facilitator for project '{project.title}'.", f"/projects/project-details.html?id={project.id}", commit=False)
 
-#     if 'team_leader_id' in data:
-#         tl_val = data['team_leader_id']
-#         new_tl = int(tl_val) if tl_val is not None and str(tl_val).strip() != "" else None
-#         if new_tl != old_tl:
-#             project.team_leader_id = new_tl
-#             old_t = db.session.get(User, old_tl) if old_tl else None
-#             new_t = db.session.get(User, new_tl) if new_tl else None
-#             db.session.add(AuditLog(
-#                 org_id=user.org_id, project_id=id, user_id=user_id,
-#                 action="Team Leader Assigned / Transitioned",
-#                 details=f"Team Leader changed from {old_t.full_name or old_t.username if old_t else 'None'} to {new_t.full_name or new_t.username if new_t else 'Unassigned'}.",
-#                 ip_address=flask_request.remote_addr, user_agent=ua_str,
-#                 target_table="projects", target_id=id
-#             ))
-#             if new_tl and new_tl != user_id:
-#                 from app.presentation.routes.notification_routes import create_notification
-#                 create_notification(user.org_id, new_tl, "Project Assigned", f"You have been assigned as the Team Leader for project '{project.title}'.", f"/projects/project-details.html?id={project.id}", commit=False)
+    if 'team_leader_id' in data:
+        tl_val = data['team_leader_id']
+        new_tl = int(tl_val) if tl_val is not None and str(tl_val).strip() != "" else None
+        if new_tl != old_tl:
+            project.team_leader_id = new_tl
+            old_t = db.session.get(User, old_tl) if old_tl else None
+            new_t = db.session.get(User, new_tl) if new_tl else None
+            db.session.add(AuditLog(
+                org_id=user.org_id, project_id=id, user_id=user_id,
+                action="Team Leader Assigned / Transitioned",
+                details=f"Team Leader changed from {old_t.full_name or old_t.username if old_t else 'None'} to {new_t.full_name or new_t.username if new_t else 'Unassigned'}.",
+                ip_address=flask_request.remote_addr, user_agent=ua_str,
+                target_table="projects", target_id=id
+            ))
+            if new_tl and new_tl != user_id:
+                from app.presentation.routes.notification_routes import create_notification
+                create_notification(user.org_id, new_tl, "Project Assigned", f"You have been assigned as the Team Leader for project '{project.title}'.", f"/projects/project-details.html?id={project.id}", commit=False)
 
-#     if 'reviewer_id' in data:
-#         rid = data['reviewer_id']
-#         new_rev = int(rid) if rid is not None and str(rid).strip() != "" else None
-#         if new_rev != old_rev:
-#             project.reviewer_id = new_rev
-#             old_r = db.session.get(User, old_rev) if old_rev else None
-#             new_r = db.session.get(User, new_rev) if new_rev else None
-#             db.session.add(AuditLog(
-#                 org_id=user.org_id, project_id=id, user_id=user_id,
-#                 action="Reviewer Assigned / Transitioned",
-#                 details=f"Reviewer changed from {old_r.full_name or old_r.username if old_r else 'None'} to {new_r.full_name or new_r.username if new_r else 'Unassigned'}.",
-#                 ip_address=flask_request.remote_addr, user_agent=ua_str,
-#                 target_table="projects", target_id=id
-#             ))
-#             if new_rev and new_rev != user_id:
-#                 from app.presentation.routes.notification_routes import create_notification
-#                 create_notification(user.org_id, new_rev, "Project Assigned", f"You have been assigned as the Reviewer for project '{project.title}'.", f"/projects/project-details.html?id={project.id}", commit=False)
+    if 'reviewer_id' in data:
+        rid = data['reviewer_id']
+        new_rev = int(rid) if rid is not None and str(rid).strip() != "" else None
+        if new_rev != old_rev:
+            project.reviewer_id = new_rev
+            old_r = db.session.get(User, old_rev) if old_rev else None
+            new_r = db.session.get(User, new_rev) if new_rev else None
+            db.session.add(AuditLog(
+                org_id=user.org_id, project_id=id, user_id=user_id,
+                action="Reviewer Assigned / Transitioned",
+                details=f"Reviewer changed from {old_r.full_name or old_r.username if old_r else 'None'} to {new_r.full_name or new_r.username if new_r else 'Unassigned'}.",
+                ip_address=flask_request.remote_addr, user_agent=ua_str,
+                target_table="projects", target_id=id
+            ))
+            if new_rev and new_rev != user_id:
+                from app.presentation.routes.notification_routes import create_notification
+                create_notification(user.org_id, new_rev, "Project Assigned", f"You have been assigned as the Reviewer for project '{project.title}'.", f"/projects/project-details.html?id={project.id}", commit=False)
 
-#     if 'deadline' in data:
-#         try:
-#             if data['deadline']:
-#                 project.deadline = datetime.strptime(data['deadline'], '%Y-%m-%d').date()
-#             else:
-#                 project.deadline = None
-#         except (ValueError, TypeError):
-#             pass
+    if 'deadline' in data:
+        try:
+            if data['deadline']:
+                project.deadline = datetime.strptime(data['deadline'], '%Y-%m-%d').date()
+            else:
+                project.deadline = None
+        except (ValueError, TypeError):
+            pass
 
-#     if 'member_ids' in data:
-#         raw_member_ids = data['member_ids']
-#         if isinstance(raw_member_ids, list):
-#             old_member_ids = set([m.user_id for m in ProjectMember.query.filter_by(project_id=id).all()])
-#             cleaned_member_ids = set()
-#             for mid in raw_member_ids:
-#                 if mid is not None:
-#                     try:
-#                         uid_val = int(mid)
-#                         if uid_val > 0:
-#                             cleaned_member_ids.add(uid_val)
-#                     except (ValueError, TypeError):
-#                         pass
+    if 'member_ids' in data:
+        raw_member_ids = data['member_ids']
+        if isinstance(raw_member_ids, list):
+            old_member_ids = set([m.user_id for m in ProjectMember.query.filter_by(project_id=id).all()])
+            cleaned_member_ids = set()
+            for mid in raw_member_ids:
+                if mid is not None:
+                    try:
+                        uid_val = int(mid)
+                        if uid_val > 0:
+                            cleaned_member_ids.add(uid_val)
+                    except (ValueError, TypeError):
+                        pass
 
-#             # Ensure creator is always a member if creator_id exists and is valid
-#             if project.creator_id:
-#                 try:
-#                     c_id = int(project.creator_id)
-#                     if c_id > 0:
-#                         cleaned_member_ids.add(c_id)
-#                 except (ValueError, TypeError):
-#                     pass
+            # Ensure creator is always a member if creator_id exists and is valid
+            if project.creator_id:
+                try:
+                    c_id = int(project.creator_id)
+                    if c_id > 0:
+                        cleaned_member_ids.add(c_id)
+                except (ValueError, TypeError):
+                    pass
 
-#             # Detect added members
-#             added_ids = cleaned_member_ids - old_member_ids
-#             for added_id in added_ids:
-#                 u_obj = db.session.get(User, added_id)
-#                 u_name = u_obj.full_name or u_obj.username if u_obj else f"User #{added_id}"
-#                 db.session.add(AuditLog(
-#                     org_id=user.org_id, project_id=id, user_id=user_id,
-#                     action="Team Member Joined Project",
-#                     details=f"{u_name} was added and joined the active project team.",
-#                     ip_address=flask_request.remote_addr, user_agent=ua_str,
-#                     target_table="project_members", target_id=added_id
-#                 ))
+            # Detect added members
+            added_ids = cleaned_member_ids - old_member_ids
+            for added_id in added_ids:
+                u_obj = db.session.get(User, added_id)
+                u_name = u_obj.full_name or u_obj.username if u_obj else f"User #{added_id}"
+                db.session.add(AuditLog(
+                    org_id=user.org_id, project_id=id, user_id=user_id,
+                    action="Team Member Joined Project",
+                    details=f"{u_name} was added and joined the active project team.",
+                    ip_address=flask_request.remote_addr, user_agent=ua_str,
+                    target_table="project_members", target_id=added_id
+                ))
 
-#             # Detect removed members (left project in middle)
-#             removed_ids = old_member_ids - cleaned_member_ids
-#             for rem_id in removed_ids:
-#                 u_obj = db.session.get(User, rem_id)
-#                 u_name = u_obj.full_name or u_obj.username if u_obj else f"User #{rem_id}"
-#                 db.session.add(AuditLog(
-#                     org_id=user.org_id, project_id=id, user_id=user_id,
-#                     action="Team Member Left Project (Transitioned in Middle)",
-#                     details=f"{u_name} left the project team / membership was removed from active roster.",
-#                     ip_address=flask_request.remote_addr, user_agent=ua_str,
-#                     target_table="project_members", target_id=rem_id
-#                 ))
+            # Detect removed members (left project in middle)
+            removed_ids = old_member_ids - cleaned_member_ids
+            for rem_id in removed_ids:
+                u_obj = db.session.get(User, rem_id)
+                u_name = u_obj.full_name or u_obj.username if u_obj else f"User #{rem_id}"
+                db.session.add(AuditLog(
+                    org_id=user.org_id, project_id=id, user_id=user_id,
+                    action="Team Member Left Project (Transitioned in Middle)",
+                    details=f"{u_name} left the project team / membership was removed from active roster.",
+                    ip_address=flask_request.remote_addr, user_agent=ua_str,
+                    target_table="project_members", target_id=rem_id
+                ))
 
-#             # Clear existing members and re-insert sanitized list
-#             ProjectMember.query.filter_by(project_id=id).delete()
-#             for uid in cleaned_member_ids:
-#                 db.session.add(ProjectMember(project_id=id, user_id=uid))
+            # Clear existing members and re-insert sanitized list
+            ProjectMember.query.filter_by(project_id=id).delete()
+            for uid in cleaned_member_ids:
+                db.session.add(ProjectMember(project_id=id, user_id=uid))
 
-#     db.session.commit()
-#     return jsonify({"msg": "Project updated successfully"}), 200
-# [END DEAD CODE: update_project]
+    db.session.commit()
+    return jsonify({"msg": "Project updated successfully"}), 200
 
 
 @project_bp.route('/<int:id>', methods=['DELETE'])

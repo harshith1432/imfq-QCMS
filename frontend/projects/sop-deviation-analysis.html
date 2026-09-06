@@ -6,9 +6,9 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
-    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.ef8bd5b8.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.72947852.min.js" as="script">
+    <script src="/assets/dist/auth-guard.72947852.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOP Deviation Analysis | OctaQube Enterprise</title>
@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Custom styling matching premium aesthetics -->
-    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <link rel="stylesheet" href="/assets/dist/core.ef8bd5b8.min.css">
     <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -118,7 +118,7 @@
 
     <!-- API and JS logic -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
+    <script src="/assets/dist/core-bundle.2f888e93.min.js"></script>
     <script>
         let projectId = null;
         let type = 'sop';
@@ -211,6 +211,16 @@
                 document.getElementById('whyDeviated').value = devAnalysis.why_deviated || '';
                 document.getElementById('preventiveActions').value = devAnalysis.preventive_actions || '';
 
+                const sessionUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+                const role = ((sessionUser.role && sessionUser.role.name) ? sessionUser.role.name : (sessionUser.role || '')).toLowerCase().replace(/[^a-z0-9]/g, '');
+                const isReadOnly = projectData.status === 'Closed' || projectData.status === 'Completed' || projectData.status === 'Rejected' || projectData.status === 'Stage 1 Rejected' || !['teamleader', 'teammember'].includes(role);
+                if (isReadOnly) {
+                    document.getElementById('whyDeviated').disabled = true;
+                    document.getElementById('preventiveActions').disabled = true;
+                    const saveBtn = document.querySelector('[onclick="saveDeviation()"]');
+                    if (saveBtn) saveBtn.style.display = 'none';
+                }
+
                 document.getElementById('loader').classList.add('d-none');
                 document.getElementById('formCard').classList.remove('d-none');
             } catch (e) {
@@ -261,7 +271,7 @@
         }
 
         function goBack() {
-            window.location.href = `/projects/project-details.html?id=${projectId}`;
+            window.location.href = `/projects/project-details.html?id=${projectId}&stage=2`;
         }
     </script>
 </body>

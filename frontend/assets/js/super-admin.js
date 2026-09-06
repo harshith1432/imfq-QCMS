@@ -509,11 +509,14 @@ const SuperAdmin = {
     showSkeletons() {
         const kpiGrid = document.getElementById('superKpiGrid');
         if (kpiGrid) {
+            kpiGrid.style.display = 'grid';
+            kpiGrid.style.gridTemplateColumns = 'repeat(8, minmax(100px, 1fr))';
+            kpiGrid.style.overflowX = 'auto';
             kpiGrid.innerHTML = Array(8).fill(0).map(() => `
-                <div class="glass-card d-flex flex-column justify-content-center align-items-center" style="height: 140px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                    <div class="skeleton-shimmer" style="width: 40px; height: 40px; border-radius: 12px; background: rgba(255, 255, 255, 0.1); margin-bottom: 12px;"></div>
-                    <div class="skeleton-shimmer" style="width: 80px; height: 24px; border-radius: 4px; background: rgba(255, 255, 255, 0.1); margin-bottom: 8px;"></div>
-                    <div class="skeleton-shimmer" style="width: 120px; height: 14px; border-radius: 4px; background: rgba(255, 255, 255, 0.1);"></div>
+                <div class="glass-card d-flex flex-column justify-content-center align-items-center" style="height: 125px; padding: 0.85rem 0.4rem; background: var(--ds-surface, #ffffff); border: 1px solid var(--ds-border-color, #e2e8f0); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div class="skeleton-shimmer" style="width: 36px; height: 36px; border-radius: 10px; margin-bottom: 8px;"></div>
+                    <div class="skeleton-shimmer" style="width: 65px; height: 22px; border-radius: 4px; margin-bottom: 6px;"></div>
+                    <div class="skeleton-shimmer" style="width: 90px; height: 12px; border-radius: 4px;"></div>
                 </div>
             `).join('');
         }

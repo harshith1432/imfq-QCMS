@@ -733,6 +733,9 @@ def create_app():
                         db.session.add(BillingSettings(org_id=org.id, auto_collection=True, reminder_schedule=[3, 1, 0, -3], grace_period_days=7, payment_retry_attempts=3))
                 db.session.commit()
 
+                # Mark database seeding complete so subsequent app creations avoid 70+ SQL queries
+                _DB_AUTO_MIGRATED = True
+
             except Exception as e:
                 try:
                     db.session.rollback()
@@ -789,6 +792,13 @@ def create_app():
         if os.path.isfile(filepath):
             return send_from_directory(frontend_dir, filename)
             
+        # Check if requesting i18n translation assets even with nested route prefix
+        if 'assets/i18n/' in filename:
+            clean_i18n = filename.split('assets/i18n/')[-1]
+            i18n_path = os.path.join(frontend_dir, 'assets', 'i18n', clean_i18n)
+            if os.path.isfile(i18n_path):
+                return send_from_directory(os.path.join(frontend_dir, 'assets', 'i18n'), clean_i18n)
+            
         # 2. Check within feature folders
         if filename.endswith('.html') or '.' not in filename:
             html_name = filename if filename.endswith('.html') else f"{filename}.html"
@@ -826,13 +836,34 @@ def create_app():
         )
 
         if not is_public_asset:
-            try:
-                verify_jwt_in_request()
-                user_id = get_jwt_identity()
-                if isinstance(user_id, dict):
-                    user_id = user_id.get('id') or user_id.get('user_id')
-                user_id = int(user_id) if user_id else None
-            except Exception:
+            user_id = None
+            token = request.args.get('token')
+            if token:
+                try:
+                    from flask_jwt_extended import decode_token
+                    decoded = decode_token(token)
+                    sub = decoded.get('sub')
+                    if isinstance(sub, dict):
+                        sub = sub.get('id') or sub.get('user_id')
+                    user_id = int(sub) if sub else None
+                except Exception:
+                    pass
+
+            if not user_id:
+                try:
+                    verify_jwt_in_request(optional=True)
+                    ident = get_jwt_identity()
+                    if isinstance(ident, dict):
+                        ident = ident.get('id') or ident.get('user_id')
+                    user_id = int(ident) if ident else None
+                except Exception:
+                    pass
+
+            if not user_id:
+                from flask import session
+                user_id = session.get('user_id')
+
+            if not user_id:
                 return jsonify({"status": "error", "message": "Authentication required to access this file.", "code": "UNAUTHORIZED"}), 401
 
             from app.infrastructure.database.models.models import User
@@ -849,17 +880,66 @@ def create_app():
                         return jsonify({"status": "error", "message": "Access denied. You do not have permission to view this tenant file.", "code": "FORBIDDEN"}), 403
 
         primary_dir = app.config.get('UPLOAD_FOLDER')
-        if primary_dir and os.path.exists(os.path.join(primary_dir, clean_filename)):
-            return send_from_directory(primary_dir, clean_filename)
-        
         frontend_dir_local = os.path.abspath(os.path.join(app.root_path, '..', '..', 'frontend', 'uploads'))
-        if os.path.exists(os.path.join(frontend_dir_local, clean_filename)):
-            return send_from_directory(frontend_dir_local, clean_filename)
 
-        # Fallback to Unified Storage Service
+        def check_file(d, p):
+            if not d or not p:
+                return None
+            full = os.path.join(d, p.replace('/', os.sep))
+            if os.path.isfile(full):
+                return (d, p)
+            return None
+
+        resolved = None
+
+        # 1. Direct path check in primary_dir and frontend_dir_local
+        resolved = check_file(primary_dir, clean_filename) or check_file(frontend_dir_local, clean_filename)
+
+        # 2. Subdirectory flexibility for basename
+        base_name = os.path.basename(clean_filename)
+        if not resolved:
+            subfolders = ['project_evidence', 'sop', 'reports', 'support_attachments', 'branding', 'certificates', 'projects']
+            resolved = check_file(primary_dir, base_name) or check_file(frontend_dir_local, base_name)
+            if not resolved:
+                for sf in subfolders:
+                    resolved = check_file(primary_dir, os.path.join(sf, base_name).replace('\\', '/'))
+                    if resolved:
+                        break
+
+        # 3. Recursive exact base_name search in primary_dir
+        if not resolved and primary_dir and os.path.isdir(primary_dir):
+            for root, _, files in os.walk(primary_dir):
+                if base_name in files:
+                    rel = os.path.relpath(os.path.join(root, base_name), primary_dir)
+                    resolved = (primary_dir, rel.replace('\\', '/'))
+                    break
+
+        # 4. Suffix / Original name fallback (e.g. timestamp differences across seeds/imports)
+        if not resolved and primary_dir and os.path.isdir(primary_dir):
+            pure_name = re.sub(r'^(?:ev_|sop_|ticket_\d+_)?\d{8}(?:_\d{6})?_', '', base_name)
+            if pure_name and len(pure_name) > 3 and '.' in pure_name:
+                matching_candidates = []
+                for root, _, files in os.walk(primary_dir):
+                    for f in files:
+                        if f.endswith(pure_name) or f.lower().endswith(pure_name.lower()):
+                            full_p = os.path.join(root, f)
+                            matching_candidates.append((os.path.getmtime(full_p), full_p, root, f))
+                if matching_candidates:
+                    matching_candidates.sort(key=lambda x: x[0], reverse=True)
+                    best_root, best_file = matching_candidates[0][2], matching_candidates[0][3]
+                    rel = os.path.relpath(os.path.join(best_root, best_file), primary_dir)
+                    resolved = (primary_dir, rel.replace('\\', '/'))
+
+        if resolved:
+            res_dir, res_path = resolved
+            return send_from_directory(res_dir, res_path)
+
+        # 5. Fallback to Unified Storage Service
         try:
             from app.infrastructure.storage import storage
             content_bytes, content_type = storage.get_file_bytes(clean_filename)
+            if content_bytes is None and base_name != clean_filename:
+                content_bytes, content_type = storage.get_file_bytes(base_name)
             if content_bytes is not None:
                 from flask import Response
                 return Response(content_bytes, mimetype=content_type)

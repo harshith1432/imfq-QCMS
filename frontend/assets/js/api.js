@@ -101,7 +101,9 @@ const api = {
         const isWriteMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
         // Global Feature Engine Module Access Check across all 144 modules
-        if (window.OctaQube_MODULE_MAP && window.FeatureEngine && !endpoint.includes('/feature-engine/')) {
+        // Skip this guard on the Super Admin portal — super admins have unrestricted platform access.
+        const isSuperAdminPortalPage = typeof window !== 'undefined' && window.location.pathname.includes('/admin/super-admin.html');
+        if (!isSuperAdminPortalPage && window.OctaQube_MODULE_MAP && window.FeatureEngine && !endpoint.includes('/feature-engine/')) {
             const moduleCode = window.OctaQube_MODULE_MAP.findByRoute(endpoint);
             if (moduleCode && FeatureEngine.isEnabled(moduleCode) === false) {
                 console.warn(`[API Guard] Blocking request to disabled module: ${moduleCode}`);

@@ -281,155 +281,149 @@ def search_sops():
         
     return jsonify(results), 200
 
-# ==============================================================================
-# [DEAD CODE - UNUSED BY FRONTEND / REMOVED FEATURE]
-# Function: get_sop_details (Lines 284-426)
-# Reason: Unused single SOP detail fetch.
-# ==============================================================================
-# @sop_bp.route('/<int:sop_id>', methods=['GET'])
-# @jwt_required()
-# def get_sop_details(sop_id):
-#     """Retrieve full details of a specific SOP."""
-#     user_id = get_jwt_identity()
-#     user = db.session.get(User, user_id)
+@sop_bp.route('/<int:sop_id>', methods=['GET'])
+@jwt_required()
+def get_sop_details(sop_id):
+    """Retrieve full details of a specific SOP."""
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
 
-#     if user.role.name == 'SuperAdmin':
-#         query = SOP.query.filter_by(id=sop_id)
-#     else:
-#         query = SOP.query.filter_by(id=sop_id, org_id=user.org_id)
-#     sop = scope_sop_query(query, user).first_or_404()
+    if user.role.name == 'SuperAdmin':
+        query = SOP.query.filter_by(id=sop_id)
+    else:
+        query = SOP.query.filter_by(id=sop_id, org_id=user.org_id)
+    sop = scope_sop_query(query, user).first_or_404()
 
-#     # Format steps
-#     steps_list = [{
-#         "id": step.id,
-#         "step_number": step.step_number,
-#         "step_title": step.step_title,
-#         "instructions": step.instructions,
-#         "image_path": step.image_path,
-#         "video_path": step.video_path,
-#         "safety_notes": step.safety_notes,
-#         "quality_checkpoints": step.quality_checkpoints
-#     } for step in sorted(sop.steps, key=lambda x: x.step_number)]
+    # Format steps
+    steps_list = [{
+        "id": step.id,
+        "step_number": step.step_number,
+        "step_title": step.step_title,
+        "instructions": step.instructions,
+        "image_path": step.image_path,
+        "video_path": step.video_path,
+        "safety_notes": step.safety_notes,
+        "quality_checkpoints": step.quality_checkpoints
+    } for step in sorted(sop.steps, key=lambda x: x.step_number)]
 
-#     # Format approvals
-#     approvals_list = [{
-#         "id": app.id,
-#         "user_name": app.user.full_name or app.user.username if app.user else "System",
-#         "role": app.role,
-#         "action": app.action,
-#         "comments": app.comments,
-#         "signature": app.signature,
-#         "created_at": app.created_at.isoformat() + "Z"
-#     } for app in sorted(sop.approvals, key=lambda x: x.created_at, reverse=True)]
+    # Format approvals
+    approvals_list = [{
+        "id": app.id,
+        "user_name": app.user.full_name or app.user.username if app.user else "System",
+        "role": app.role,
+        "action": app.action,
+        "comments": app.comments,
+        "signature": app.signature,
+        "created_at": app.created_at.isoformat() + "Z"
+    } for app in sorted(sop.approvals, key=lambda x: x.created_at, reverse=True)]
 
-#     # Format version list
-#     versions_list = [{
-#         "id": v.id,
-#         "version_number": v.version_number,
-#         "changes_made": v.changes_made,
-#         "changed_by_name": v.changed_by.full_name or v.changed_by.username if v.changed_by else "System",
-#         "changed_date": v.changed_date.isoformat() + "Z",
-#         "approval_date": v.approval_date.isoformat() + "Z" if v.approval_date else None
-#     } for v in sorted(sop.versions, key=lambda x: x.version_number, reverse=True)]
+    # Format version list
+    versions_list = [{
+        "id": v.id,
+        "version_number": v.version_number,
+        "changes_made": v.changes_made,
+        "changed_by_name": v.changed_by.full_name or v.changed_by.username if v.changed_by else "System",
+        "changed_date": v.changed_date.isoformat() + "Z",
+        "approval_date": v.approval_date.isoformat() + "Z" if v.approval_date else None
+    } for v in sorted(sop.versions, key=lambda x: x.version_number, reverse=True)]
 
-#     # Check if this user is assigned training for this SOP
-#     training_record = SOPTraining.query.filter_by(sop_id=sop.id, user_id=user_id).first()
-#     my_training = {
-#         "assigned": training_record is not None,
-#         "id": training_record.id if training_record else None,
-#         "read_status": training_record.read_status if training_record else False,
-#         "acknowledgement_status": training_record.acknowledgement_status if training_record else False,
-#         "training_completion_status": training_record.training_completion_status if training_record else False,
-#         "assessment_score": training_record.assessment_score if training_record else None,
-#         "completed_at": training_record.completed_at.isoformat() + "Z" if training_record and training_record.completed_at else None,
-#         "status": training_record.status if training_record else "Not Started"
-#     } if training_record else None
+    # Check if this user is assigned training for this SOP
+    training_record = SOPTraining.query.filter_by(sop_id=sop.id, user_id=user_id).first()
+    my_training = {
+        "assigned": training_record is not None,
+        "id": training_record.id if training_record else None,
+        "read_status": training_record.read_status if training_record else False,
+        "acknowledgement_status": training_record.acknowledgement_status if training_record else False,
+        "training_completion_status": training_record.training_completion_status if training_record else False,
+        "assessment_score": training_record.assessment_score if training_record else None,
+        "completed_at": training_record.completed_at.isoformat() + "Z" if training_record and training_record.completed_at else None,
+        "status": training_record.status if training_record else "Not Started"
+    } if training_record else None
 
-#     # Format training records for managers/owners
-#     trainings_list = []
-#     if user.role.name in ('Admin', 'Facilitator', 'Team Leader', 'Team Member', 'SuperAdmin', 'Reviewer'):
-#         for t in sorted(sop.trainings, key=lambda x: x.assigned_date, reverse=True):
-#             user_projects = Project.query.filter(
-#                 (Project.creator_id == t.user_id) |
-#                 (Project.team_leader_id == t.user_id) |
-#                 (Project.facilitator_id == t.user_id) |
-#                 (Project.reviewer_id == t.user_id) |
-#                 Project.members.any(id=t.user_id)
-#             ).all()
-#             project_ids = [p.id for p in user_projects]
+    # Format training records for managers/owners
+    trainings_list = []
+    if user.role.name in ('Admin', 'Facilitator', 'Team Leader', 'Team Member', 'SuperAdmin', 'Reviewer'):
+        for t in sorted(sop.trainings, key=lambda x: x.assigned_date, reverse=True):
+            user_projects = Project.query.filter(
+                (Project.creator_id == t.user_id) |
+                (Project.team_leader_id == t.user_id) |
+                (Project.facilitator_id == t.user_id) |
+                (Project.reviewer_id == t.user_id) |
+                Project.members.any(id=t.user_id)
+            ).all()
+            project_ids = [p.id for p in user_projects]
 
-#             trainings_list.append({
-#                 "id": t.id,
-#                 "user_id": t.user_id,
-#                 "employee_name": t.user.full_name or t.user.username,
-#                 "employee_id": t.user_id,
-#                 "department": t.user.dept.name if t.user.dept else "N/A",
-#                 "department_id": t.user.department_id,
-#                 "role_id": t.user.role_id,
-#                 "project_ids": project_ids,
-#                 "assigned_date": t.assigned_date.isoformat() + "Z" if t.assigned_date else None,
-#                 "completed_at": t.completed_at.isoformat() + "Z" if t.completed_at else None,
-#                 "read_status": t.read_status,
-#                 "acknowledgement_status": t.acknowledgement_status,
-#                 "training_completion_status": t.training_completion_status,
-#                 "assessment_score": t.assessment_score,
-#                 "status": t.status
-#             })
+            trainings_list.append({
+                "id": t.id,
+                "user_id": t.user_id,
+                "employee_name": t.user.full_name or t.user.username,
+                "employee_id": t.user_id,
+                "department": t.user.dept.name if t.user.dept else "N/A",
+                "department_id": t.user.department_id,
+                "role_id": t.user.role_id,
+                "project_ids": project_ids,
+                "assigned_date": t.assigned_date.isoformat() + "Z" if t.assigned_date else None,
+                "completed_at": t.completed_at.isoformat() + "Z" if t.completed_at else None,
+                "read_status": t.read_status,
+                "acknowledgement_status": t.acknowledgement_status,
+                "training_completion_status": t.training_completion_status,
+                "assessment_score": t.assessment_score,
+                "status": t.status
+            })
 
-#     # Format comments list
-#     comments_list = [{
-#         "id": c.id,
-#         "user_name": c.user.full_name or c.user.username,
-#         "role": c.role,
-#         "comment_type": c.comment_type,
-#         "content": c.content,
-#         "created_at": c.created_at.isoformat() + "Z"
-#     } for c in sorted(sop.comments_list, key=lambda x: x.created_at, reverse=True)]
+    # Format comments list
+    comments_list = [{
+        "id": c.id,
+        "user_name": c.user.full_name or c.user.username,
+        "role": c.role,
+        "comment_type": c.comment_type,
+        "content": c.content,
+        "created_at": c.created_at.isoformat() + "Z"
+    } for c in sorted(sop.comments_list, key=lambda x: x.created_at, reverse=True)]
 
-#     return jsonify({
-#         "id": sop.id,
-#         "sop_uid": sop.sop_uid,
-#         "title": sop.title,
-#         "category": sop.category,
-#         "department_id": sop.department_id,
-#         "department_name": sop.department.name if sop.department else "Organization",
-#         "process_name": sop.process_name or (sop.project.title if sop.project else None) or "Operational",
-#         "project_name": sop.project.title if sop.project else (sop.process_name or None),
-#         "sop_type": sop.sop_type,
-#         "description": sop.description,
-#         "purpose": sop.purpose,
-#         "scope": sop.scope,
-#         "applicability": sop.applicability,
-#         "responsibilities": sop.responsibilities,
-#         "status": sop.status,
-#         "version": sop.version,
-#         "project_id": sop.project_id,
-#         "project_title": sop.project.title if sop.project else (sop.process_name or None),
-#         "project_uid": sop.project.project_uid if sop.project else None,
-#         "effective_date": sop.effective_date.isoformat() if sop.effective_date else None,
-#         "review_date": sop.review_date.isoformat() if sop.review_date else None,
-#         "expiry_date": sop.expiry_date.isoformat() if sop.expiry_date else None,
-#         "author_id": sop.author_id,
-#         "author_name": sop.author.full_name or sop.author.username if sop.author else "System",
-#         "owner_id": sop.owner_id,
-#         "owner_name": sop.owner.full_name or sop.owner.username if sop.owner else "System",
-#         "reviewer_id": sop.reviewer_id,
-#         "reviewer_name": sop.reviewer.full_name or sop.reviewer.username if sop.reviewer else None,
-#         "approver_id": sop.approver_id,
-#         "approver_name": sop.approver.full_name or sop.approver.username if sop.approver else None,
-#         "sop_document_path": sop.sop_document_path,
-#         "preventive_actions": sop.preventive_actions,
-#         "lessons_learned": sop.lessons_learned,
-#         "training_records_notes": sop.training_records,
-#         "steps": steps_list,
-#         "approvals": approvals_list,
-#         "versions": versions_list,
-#         "my_training": my_training,
-#         "trainings": trainings_list,
-#         "comments": comments_list,
-#         "attachments": sop.attachments or []
-#     }), 200
-# [END DEAD CODE: get_sop_details]
+    return jsonify({
+        "id": sop.id,
+        "sop_uid": sop.sop_uid,
+        "title": sop.title,
+        "category": sop.category,
+        "department_id": sop.department_id,
+        "department_name": sop.department.name if sop.department else "Organization",
+        "process_name": sop.process_name or (sop.project.title if sop.project else None) or "Operational",
+        "project_name": sop.project.title if sop.project else (sop.process_name or None),
+        "sop_type": sop.sop_type,
+        "description": sop.description,
+        "purpose": sop.purpose,
+        "scope": sop.scope,
+        "applicability": sop.applicability,
+        "responsibilities": sop.responsibilities,
+        "status": sop.status,
+        "version": sop.version,
+        "project_id": sop.project_id,
+        "project_title": sop.project.title if sop.project else (sop.process_name or None),
+        "project_uid": sop.project.project_uid if sop.project else None,
+        "effective_date": sop.effective_date.isoformat() if sop.effective_date else None,
+        "review_date": sop.review_date.isoformat() if sop.review_date else None,
+        "expiry_date": sop.expiry_date.isoformat() if sop.expiry_date else None,
+        "author_id": sop.author_id,
+        "author_name": sop.author.full_name or sop.author.username if sop.author else "System",
+        "owner_id": sop.owner_id,
+        "owner_name": sop.owner.full_name or sop.owner.username if sop.owner else "System",
+        "reviewer_id": sop.reviewer_id,
+        "reviewer_name": sop.reviewer.full_name or sop.reviewer.username if sop.reviewer else None,
+        "approver_id": sop.approver_id,
+        "approver_name": sop.approver.full_name or sop.approver.username if sop.approver else None,
+        "sop_document_path": sop.sop_document_path,
+        "preventive_actions": sop.preventive_actions,
+        "lessons_learned": sop.lessons_learned,
+        "training_records_notes": sop.training_records,
+        "steps": steps_list,
+        "approvals": approvals_list,
+        "versions": versions_list,
+        "my_training": my_training,
+        "trainings": trainings_list,
+        "comments": comments_list,
+        "attachments": sop.attachments or []
+    }), 200
 
 
 # ==============================================================================

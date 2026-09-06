@@ -128,7 +128,7 @@ const Stage2 = {
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
                                                 <input type="text" class="ds-input flex-grow-1" id="sv_sop_details" placeholder="Describe deviation..." required style="min-width:0; width:100%; font-size:0.8rem; padding:4px 8px;">
-                                                <button type="button" id="btn_analyze_sop_dev" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap; flex-shrink:0; font-size:0.75rem; padding:4px 10px;" onclick="StageModules[2].openDeviationPage('sop')">
+                                                <button type="button" id="btn_analyze_sop_dev" data-no-disable="true" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap; flex-shrink:0; font-size:0.75rem; padding:4px 10px; cursor:pointer;" onclick="StageModules[2].openDeviationPage('sop')">
                                                     Analyze Deviation
                                                 </button>
                                             </div>
@@ -142,7 +142,7 @@ const Stage2 = {
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
                                                 <input type="text" class="ds-input flex-grow-1" id="sv_spec_details" placeholder="Describe deviation..." required style="min-width:0; width:100%; font-size:0.8rem; padding:4px 8px;">
-                                                <button type="button" id="btn_analyze_spec_dev" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap; flex-shrink:0; font-size:0.75rem; padding:4px 10px;" onclick="StageModules[2].openDeviationPage('spec')">
+                                                <button type="button" id="btn_analyze_spec_dev" data-no-disable="true" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap; flex-shrink:0; font-size:0.75rem; padding:4px 10px; cursor:pointer;" onclick="StageModules[2].openDeviationPage('spec')">
                                                     Analyze Deviation
                                                 </button>
                                             </div>
@@ -156,7 +156,7 @@ const Stage2 = {
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
                                                 <input type="text" class="ds-input flex-grow-1" id="sv_cp_details" placeholder="Describe deviation..." required style="min-width:0; width:100%; font-size:0.8rem; padding:4px 8px;">
-                                                <button type="button" id="btn_analyze_cp_dev" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap; flex-shrink:0; font-size:0.75rem; padding:4px 10px;" onclick="StageModules[2].openDeviationPage('cp')">
+                                                <button type="button" id="btn_analyze_cp_dev" data-no-disable="true" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap; flex-shrink:0; font-size:0.75rem; padding:4px 10px; cursor:pointer;" onclick="StageModules[2].openDeviationPage('cp')">
                                                     Analyze Deviation
                                                 </button>
                                             </div>
@@ -170,7 +170,7 @@ const Stage2 = {
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
                                                 <input type="text" class="ds-input flex-grow-1" id="sv_pfmea_details" placeholder="Findings..." required style="min-width:0; width:100%; font-size:0.8rem; padding:4px 8px;">
-                                                <button type="button" id="btn_analyze_pfmea_dev" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap; flex-shrink:0; font-size:0.75rem; padding:4px 10px;" onclick="StageModules[2].openDeviationPage('pfmea')">
+                                                <button type="button" id="btn_analyze_pfmea_dev" data-no-disable="true" class="ds-btn ds-btn-primary ds-btn-sm" style="white-space:nowrap; flex-shrink:0; font-size:0.75rem; padding:4px 10px; cursor:pointer;" onclick="StageModules[2].openDeviationPage('pfmea')">
                                                     Analyze Deviation
                                                 </button>
                                             </div>
@@ -1806,6 +1806,8 @@ const Stage2 = {
         const btn = document.getElementById(`btn_analyze_${type}_dev`);
         if (btn) {
             btn.classList.remove('d-none');
+            btn.removeAttribute('disabled');
+            btn.disabled = false;
         }
     },
 
@@ -1814,16 +1816,34 @@ const Stage2 = {
     },
 
     async openDeviationPage(type) {
-        if (this.projectData && this.projectData.id) {
-            if (typeof ProjectApp !== 'undefined' && typeof ProjectApp.saveDraft === 'function') {
-                try {
-                    await ProjectApp.saveDraft();
-                } catch (e) {
-                    console.warn("Failed to auto-save stage 2 draft before navigating", e);
-                }
-            }
-            window.location.href = `/projects/sop-deviation-analysis.html?id=${this.projectData.id}&type=${type}`;
+        const pId = (this.projectData && this.projectData.id) || 
+                    (typeof ProjectApp !== 'undefined' && (ProjectApp.projectId || (ProjectApp.projectData && ProjectApp.projectData.id))) || 
+                    new URLSearchParams(window.location.search).get('id');
+
+        if (!pId) {
+            console.error("[Stage2] Project ID not found for deviation analysis page");
+            OctaQube.toast("Project ID not found.", "error");
+            return;
         }
+
+        // Only attempt auto-save if form is editable and user is assigned
+        const isReadOnly = typeof ProjectApp !== 'undefined' && ProjectApp.projectData && (
+            ProjectApp.projectData.status === 'Closed' || 
+            ProjectApp.projectData.status === 'Completed' ||
+            ProjectApp.projectData.status === 'Rejected' ||
+            ProjectApp.projectData.status === 'Stage 1 Rejected' ||
+            (document.getElementById('sv_sop_dev')?.disabled)
+        );
+
+        if (!isReadOnly && typeof ProjectApp !== 'undefined' && typeof ProjectApp.saveDraft === 'function') {
+            try {
+                await ProjectApp.saveDraft();
+            } catch (e) {
+                console.warn("[Stage2] Auto-save before navigating to deviation page failed:", e);
+            }
+        }
+
+        window.location.href = `/projects/sop-deviation-analysis.html?id=${pId}&type=${type || 'sop'}`;
     },
 
     onDeviationChange() {

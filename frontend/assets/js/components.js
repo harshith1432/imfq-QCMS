@@ -5,12 +5,13 @@
 
 // Auto-load FeatureEngine client and module map if not already present
 (function loadFeatureEngine() {
-    if (!window.OctaQube_MODULE_MAP && !window.QCMS_MODULE_MAP) {
+    if (document.querySelector('script[src*="core-bundle"]')) return;
+    if (!window.OctaQube_MODULE_MAP && !window.QCMS_MODULE_MAP && !document.querySelector('script[src*="module-map"]')) {
         const s1 = document.createElement('script');
         s1.src = '/assets/js/module-map.js';
         document.head.appendChild(s1);
     }
-    if (!window.FeatureEngine) {
+    if (!window.FeatureEngine && !window.FeatureEngineClient && !document.querySelector('script[src*="feature-engine"]')) {
         const s2 = document.createElement('script');
         s2.src = '/assets/js/feature-engine.js';
         document.head.appendChild(s2);
@@ -2529,22 +2530,28 @@ const OctaQube = {
             messages.scrollTop = messages.scrollHeight;
 
             try {
-                const response = await fetch('/api/rag/chat', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ query })
-                });
-
-                const data = await response.json();
+                const token = (typeof api !== 'undefined' && api.token) ? api.token : (sessionStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '');
+                let data;
+                if (typeof api !== 'undefined' && typeof api.post === 'function') {
+                    data = await api.post('/rag/chat', { query });
+                } else {
+                    const response = await fetch('/api/rag/chat', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ query })
+                    });
+                    data = await response.json();
+                }
                 typing.remove();
 
                 const aiMsg = document.createElement('div');
                 aiMsg.className = 'message system';
                 
-                if (data.answer) {
+                if (data && data.answer) {
                     const formatted = formatAIMarkdown(data.answer);
                     aiMsg.innerHTML = `<div class="answer text-sm">${formatted}</div>`;
                     if (data.sources && data.sources.length > 0) {
@@ -2552,7 +2559,7 @@ const OctaQube = {
                         aiMsg.innerHTML += `<div class="sources mt-3 pt-2 border-top text-xs"><strong>Knowledge Sources (${data.sources.length}):</strong><ul class="ps-3 mb-0">${sourcesHtml}</ul></div>`;
                     }
                 } else {
-                    aiMsg.textContent = data.error || "Sorry, I encountered an error querying your Quality AI Assistant.";
+                    aiMsg.textContent = (data && (data.error || data.message || data.msg)) || "Sorry, I encountered an error querying your Quality AI Assistant.";
                 }
 
                 messages.appendChild(aiMsg);
@@ -2560,7 +2567,7 @@ const OctaQube = {
                 typing.remove();
                 const errorMsg = document.createElement('div');
                 errorMsg.className = 'message system error';
-                errorMsg.textContent = "Failed to connect to the AI service.";
+                errorMsg.textContent = err?.message || "Failed to connect to the AI service.";
                 messages.appendChild(errorMsg);
             }
             messages.scrollTop = messages.scrollHeight;
@@ -2715,36 +2722,45 @@ const OctaQube = {
                 submitBtn.innerHTML = `Submitting...`;
 
                 try {
-                    const response = await fetch('/api/auth/support/tickets', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({ subject, category, priority, message })
-                    });
-                    const data = await response.json();
+                    const token = (typeof api !== 'undefined' && api.token) ? api.token : (sessionStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '');
+                    let data;
+                    if (typeof api !== 'undefined' && typeof api.post === 'function') {
+                        data = await api.post('/auth/support/tickets', { subject, category, priority, message });
+                    } else {
+                        const response = await fetch('/api/auth/support/tickets', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                            },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ subject, category, priority, message })
+                        });
+                        data = await response.json();
+                    }
 
-                    if (response.ok && data.status === 'success') {
+                    if (data && (data.status === 'success' || data.ticket_id)) {
                         // Success screen
                         contentArea.innerHTML = `
                             <div class="helpdesk-success-screen">
                                 <div class="helpdesk-success-icon"><i data-lucide="check-circle" style="width:36px;height:36px;"></i></div>
                                 <h5 class="text-white fw-bold mb-2">Ticket Submitted!</h5>
-                                <p class="text-sm text-secondary mb-4">Your requested tokens id is <span class="text-white fw-bold font-monospace">#TKT-${data.ticket_id}</span></p>
-                                <button id="helpdesk-success-back" class="ds-btn ds-btn-outline ds-btn-sm">Create Another</button>
+                                <p class="text-sm text-secondary mb-4">Your requested ticket ID is <span class="text-white fw-bold font-monospace">#TKT-${data.ticket_id}</span></p>
+                                <button id="helpdesk-success-back" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 text-sm fw-semibold shadow" style="background-color: #2563eb !important; color: #ffffff !important; border: 1px solid #3b82f6 !important; border-radius: 8px; cursor: pointer; text-decoration: none;">
+                                    <i data-lucide="plus" style="width:16px;height:16px;"></i> Create Another
+                                </button>
                             </div>
                         `;
                         if (window.lucide) lucide.createIcons();
                         document.getElementById('helpdesk-success-back').onclick = () => renderForm();
                     } else {
-                        alert(data.msg || "Failed to submit ticket.");
+                        alert(data?.msg || data?.message || "Failed to submit ticket.");
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = `<i data-lucide="send" class="me-2" style="width:16px;height:16px;vertical-align:middle;display:inline-block;"></i>Submit Ticket`;
                         if (window.lucide) lucide.createIcons();
                     }
                 } catch (err) {
-                    alert("An error occurred. Please try again.");
+                    alert(err?.message || "An error occurred. Please try again.");
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = `<i data-lucide="send" class="me-2" style="width:16px;height:16px;vertical-align:middle;display:inline-block;"></i>Submit Ticket`;
                     if (window.lucide) lucide.createIcons();
@@ -2761,13 +2777,22 @@ const OctaQube = {
             contentArea.innerHTML = `<div class="text-center text-secondary py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading history...</div>`;
 
             try {
-                const response = await fetch('/api/auth/support/tickets', {
-                    credentials: 'same-origin'
-                });
-                const data = await response.json();
+                const token = (typeof api !== 'undefined' && api.token) ? api.token : (sessionStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '');
+                let data;
+                if (typeof api !== 'undefined' && typeof api.get === 'function') {
+                    data = await api.get('/auth/support/tickets');
+                } else {
+                    const response = await fetch('/api/auth/support/tickets', {
+                        headers: {
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        },
+                        credentials: 'same-origin'
+                    });
+                    data = await response.json();
+                }
 
-                if (response.ok && data.status === 'success') {
-                    const allTickets = data.data || [];
+                if (data && (data.status === 'success' || Array.isArray(data.data) || Array.isArray(data))) {
+                    const allTickets = Array.isArray(data) ? data : (data.data || []);
                     if (!allTickets || allTickets.length === 0) {
                         contentArea.innerHTML = `<div class="text-center text-secondary py-5">No support tickets submitted yet.</div>`;
                         return;
@@ -2783,11 +2808,6 @@ const OctaQube = {
 
                     let paginationHtml = '';
                     if (totalPages > 1) {
-                        let pageBtns = '';
-                        for (let p = 1; p <= totalPages; p++) {
-                            const activeClass = p === validPage ? 'btn-primary' : 'btn-outline-secondary text-white';
-                            pageBtns += `<button type="button" class="btn btn-sm ${activeClass} py-0 px-2 text-xs fw-bold hd-page-btn" data-page="${p}" style="min-width:24px;height:24px;padding:0 6px;">${p}</button>`;
-                        }
                         paginationHtml = `
                             <div class="d-flex align-items-center justify-content-between pt-2.5 mt-3 border-top" style="border-color: rgba(255,255,255,0.08)!important;">
                                 <span class="text-xxs text-secondary">
@@ -2797,7 +2817,6 @@ const OctaQube = {
                                     <button type="button" class="btn btn-sm btn-outline-secondary text-white py-0 px-2 text-xs d-inline-flex align-items-center gap-1" style="height:24px;padding:0 6px;" ${validPage <= 1 ? 'disabled' : ''} id="hd-prev-btn">
                                         <i data-lucide="chevron-left" style="width:12px;height:12px;"></i> Prev
                                     </button>
-                                    ${pageBtns}
                                     <button type="button" class="btn btn-sm btn-outline-secondary text-white py-0 px-2 text-xs d-inline-flex align-items-center gap-1" style="height:24px;padding:0 6px;" ${validPage >= totalPages ? 'disabled' : ''} id="hd-next-btn">
                                         Next <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
                                     </button>
@@ -2914,17 +2933,12 @@ const OctaQube = {
                     const nextBtn = document.getElementById('hd-next-btn');
                     if (nextBtn) nextBtn.onclick = () => renderHistory(validPage + 1);
 
-                    document.querySelectorAll('.hd-page-btn').forEach(btn => {
-                        btn.onclick = () => {
-                            const p = parseInt(btn.getAttribute('data-page'), 10);
-                            if (p) renderHistory(p);
-                        };
-                    });
+
                 } else {
-                    contentArea.innerHTML = `<div class="text-center text-danger py-4">Failed to load history.</div>`;
+                    contentArea.innerHTML = `<div class="text-center text-danger py-4">${OctaQube.escapeHtml(data?.msg || data?.message || "Failed to load history.")}</div>`;
                 }
             } catch (err) {
-                contentArea.innerHTML = `<div class="text-center text-danger py-4">Error loading history.</div>`;
+                contentArea.innerHTML = `<div class="text-center text-danger py-4">${OctaQube.escapeHtml(err?.message || "Error loading history.")}</div>`;
             }
         };
 

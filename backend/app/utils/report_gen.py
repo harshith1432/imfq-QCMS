@@ -32,6 +32,12 @@ def generate_excel_report(projects, org_id=None):
             writer.writerows(data)
         return output.getvalue().encode('utf-8')
 
+def _clean_for_fpdf(txt):
+    if not txt:
+        return ""
+    txt = str(txt).replace('—', '-').replace('–', '-').replace('₹', 'Rs. ').replace('•', '*').replace('…', '...')
+    return txt.encode('latin-1', 'replace').decode('latin-1')
+
 class DynamicBrandedPDF(FPDF):
     def __init__(self, org_id=None, template_key='project'):
         super().__init__()
@@ -41,28 +47,41 @@ class DynamicBrandedPDF(FPDF):
 
     def header(self):
         self.set_font('Arial', 'B', 14)
-        self.cell(0, 10, f"{self.ctx['software_name']} — {self.tmpl['header_title']}", 0, 1, 'C')
+        sw_name = _clean_for_fpdf(self.ctx.get('software_name', 'QCMS'))
+        h_title = _clean_for_fpdf(self.tmpl.get('header_title', 'Report'))
+        self.cell(0, 10, f"{sw_name} - {h_title}", 0, 1, 'C')
         self.set_font('Arial', 'I', 9)
-        self.cell(0, 5, f"{self.ctx['legal_company_name']} | {self.ctx['organization_name']}", 0, 1, 'C')
+        leg_name = _clean_for_fpdf(self.ctx.get('legal_company_name', ''))
+        org_name = _clean_for_fpdf(self.ctx.get('organization_name', ''))
+        self.cell(0, 5, f"{leg_name} | {org_name}", 0, 1, 'C')
         self.ln(5)
 
     def footer(self):
         self.set_y(-15)
         self.set_font('Arial', 'I', 8)
-        self.cell(0, 10, f"{self.tmpl['footer_text']} | Page {self.page_no()}", 0, 0, 'C')
+        foot_text = _clean_for_fpdf(self.tmpl.get('footer_text', ''))
+        self.cell(0, 10, f"{foot_text} | Page {self.page_no()}", 0, 0, 'C')
 
 def generate_pdf_summary(project, kpi, org_id=None):
     pdf = DynamicBrandedPDF(org_id=org_id, template_key='project')
     pdf.add_page()
     pdf.set_font('Arial', '', 11)
-    pdf.cell(0, 10, f"Organization: {pdf.ctx['organization_name']}", 0, 1)
-    pdf.cell(0, 10, f"Project ID: {project.project_uid}", 0, 1)
-    pdf.cell(0, 10, f"Title: {project.title}", 0, 1)
-    pdf.cell(0, 10, f"Status: {project.status}", 0, 1)
+    org_name = _clean_for_fpdf(pdf.ctx.get('organization_name', ''))
+    p_uid = _clean_for_fpdf(project.project_uid)
+    p_title = _clean_for_fpdf(project.title)
+    p_status = _clean_for_fpdf(project.status)
+    curr = _clean_for_fpdf(pdf.ctx.get('default_currency', 'Rs.'))
+    cost_sav = getattr(kpi, 'cost_saving', 0) if kpi else 0
+    prod_gain = getattr(kpi, 'productivity_gain', 0) if kpi else 0
+
+    pdf.cell(0, 10, f"Organization: {org_name}", 0, 1)
+    pdf.cell(0, 10, f"Project ID: {p_uid}", 0, 1)
+    pdf.cell(0, 10, f"Title: {p_title}", 0, 1)
+    pdf.cell(0, 10, f"Status: {p_status}", 0, 1)
     pdf.ln(5)
     pdf.cell(0, 10, "Business Impact Summary:", 0, 1, 'B')
-    pdf.cell(0, 10, f"Cost Savings: {pdf.ctx['default_currency']} {kpi.cost_saving}", 0, 1)
-    pdf.cell(0, 10, f"Productivity Gain: {kpi.productivity_gain}%", 0, 1)
+    pdf.cell(0, 10, f"Cost Savings: {curr} {cost_sav}", 0, 1)
+    pdf.cell(0, 10, f"Productivity Gain: {prod_gain}%", 0, 1)
     return pdf.output()
 
 def generate_qc_plots(project_id, s2, d2):

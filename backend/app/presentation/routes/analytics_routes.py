@@ -2046,11 +2046,6 @@ def get_enterprise_dashboard():
         prev_start = start - duration
         prev_end   = start
 
-        # Trigger real-time storage calculation across organizations
-        try:
-            calculate_org_storage_realtime(f['org_id'])
-        except Exception as st_err:
-            print(f"[Storage Calculation Warning] {st_err}")
 
         def calc_growth(curr, prev):
             if prev is None or prev <= 0:
@@ -2162,7 +2157,13 @@ def get_enterprise_dashboard():
             return q.count()
 
         def get_storage_usage():
-            res = calculate_org_storage_realtime(f['org_id'] if f.get('org_id') else None)
+            # For platform-wide view (org_id=None), use the fast single-query aggregation.
+            # For single-org view, use the per-org detailed calculator.
+            if not f.get('org_id'):
+                from app.domain.services.storage_calculator_service import calculate_platform_storage_summary
+                summary = calculate_platform_storage_summary()
+                return summary.get('total_used_mb', 0.0), summary.get('total_used_fmt', '0.00 MB')
+            res = calculate_org_storage_realtime(f['org_id'])
             summary = res.get('summary', {})
             return summary.get('total_used_mb', 0.0), summary.get('total_used_fmt', '0.00 MB')
 

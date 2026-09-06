@@ -1050,7 +1050,12 @@ const ProjectApp = {
 
             // Permanently rejected or Read-only state (including submitted, approved, completed, or previous stages)
             if (isProjectRejected || isReadOnly) {
-                document.getElementById('stageContentContainer')?.querySelectorAll('input, textarea, select, button').forEach(el => el.disabled = true);
+                document.getElementById('stageContentContainer')?.querySelectorAll('input, textarea, select, button').forEach(el => {
+                    if (el.id && el.id.startsWith('btn_analyze_')) return;
+                    if (el.dataset && el.dataset.noDisable === 'true') return;
+                    if (el.classList.contains('btn-view') || el.classList.contains('btn-preview') || el.classList.contains('btn-open')) return;
+                    el.disabled = true;
+                });
                 if (saveBtn) saveBtn.classList.add('d-none');
                 if (submitBtn) submitBtn.classList.add('d-none');
                 if (saveBtnBottom) saveBtnBottom.classList.add('d-none');
@@ -2826,8 +2831,23 @@ const ProjectApp = {
                 finalUrl = window.location.origin + '/uploads/' + finalUrl;
             }
         }
+        if (finalUrl.startsWith(window.location.origin + '/uploads/')) {
+            const token = (window.api && window.api.token) || sessionStorage.getItem('token') || sessionStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+            if (token && !finalUrl.includes('token=')) {
+                finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token);
+            }
+        }
         const win = window.open(finalUrl, '_blank', 'noopener,noreferrer');
         if (win) win.focus();
+    },
+
+    openDeviationPage(type) {
+        if (window.StageModules && window.StageModules[2] && typeof window.StageModules[2].openDeviationPage === 'function') {
+            window.StageModules[2].openDeviationPage(type);
+        } else {
+            const pId = (this.projectData && this.projectData.id) || this.projectId || new URLSearchParams(window.location.search).get('id');
+            window.location.href = `/projects/sop-deviation-analysis.html?id=${pId}&type=${type || 'sop'}`;
+        }
     },
 
     extractAllProjectDocuments() {

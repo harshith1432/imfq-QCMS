@@ -204,9 +204,10 @@ def get_dashboard_stats():
         Organization.is_deleted == False,
         Organization.is_platform_org == False
     ).all()
+    recent_active_org_ids = set(r[0] for r in User.query.with_entities(User.org_id).filter(User.last_login >= cutoff_20d).all())
     inactive_20d_orgs = len([
         o for o in all_non_deleted_orgs
-        if _to_naive_utc(o.created_at) and _to_naive_utc(o.created_at) < cutoff_20d and not any(_to_naive_utc(u.last_login) and _to_naive_utc(u.last_login) >= cutoff_20d for u in o.users)
+        if _to_naive_utc(o.created_at) and _to_naive_utc(o.created_at) < cutoff_20d and o.id not in recent_active_org_ids
     ])
 
     # 5. Total Users (registered tenant users only)
@@ -216,10 +217,10 @@ def get_dashboard_stats():
     ).count()
 
     # 6. Storage Used (Real-time calculation across customer tenant organizations)
-    from app.domain.services.storage_calculator_service import calculate_org_storage_realtime
-    storage_data = calculate_org_storage_realtime()
-    storage_used = storage_data["summary"]["total_used_mb"]
-    storage_used_fmt = storage_data["summary"]["total_used_fmt"]
+    from app.domain.services.storage_calculator_service import calculate_platform_storage_summary
+    storage_data = calculate_platform_storage_summary()
+    storage_used = storage_data["total_used_mb"]
+    storage_used_fmt = storage_data["total_used_fmt"]
 
     pmt_amount_col = func.coalesce(SubscriptionPayment.final_amount, SubscriptionPayment.amount)
     sub_amount_col = func.coalesce(Subscription.final_amount, Subscription.base_price)
@@ -502,13 +503,13 @@ def get_dashboard_stats():
                 "adoption_rate_pct": adoption_rate_pct,
                 "peak_month": peak_month_str
             },
-            "realized_project_value": calculate_org_realized_project_value(range_str),
+            "realized_project_value": calculate_org_realized_project_value(range_str, include_projects=False),
             "timestamp": now.isoformat()
         }
     })
 
 
-def calculate_org_realized_project_value(range_str='all'):
+def calculate_org_realized_project_value(range_str='all', include_projects=True):
     """
     Calculates verified economic revenue and tangible cost savings realized by customer organizations
     STRICTLY from CLOSED / COMPLETED / ARCHIVED QC projects.
@@ -531,23 +532,39 @@ def calculate_org_realized_project_value(range_str='all'):
     # Monthly timeline of value realized from closed projects
     monthly_impact_map = {}
 
+    org_ids = [org.id for org in orgs]
+    all_closed_projects = Project.query.filter(
+        Project.org_id.in_(org_ids),
+        Project.status.in_(['Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED', 'ARCHIVED'])
+    ).order_by(Project.created_at.desc()).all()
+
+    all_kr_entries = KnowledgeRepository.query.filter(KnowledgeRepository.org_id.in_(org_ids)).all()
+    kr_by_project = {kr.project_id: kr for kr in all_kr_entries if kr.project_id}
+    kr_by_org = {}
+    for kr in all_kr_entries:
+        if kr.org_id:
+            kr_by_org.setdefault(kr.org_id, []).append(kr)
+
+    projects_by_org = {}
+    projects_by_id = {}
+    for p in all_closed_projects:
+        projects_by_org.setdefault(p.org_id, []).append(p)
+        projects_by_id[p.id] = p
+
     for org in orgs:
         # Strictly closed / completed / archived projects
-        closed_projects = Project.query.filter(
-            Project.org_id == org.id,
-            Project.status.in_(['Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED', 'ARCHIVED'])
-        ).order_by(Project.created_at.desc()).all()
-
-        kr_entries = KnowledgeRepository.query.filter_by(org_id=org.id).all()
-        kr_map = {kr.project_id: kr for kr in kr_entries if kr.project_id}
+        closed_projects = projects_by_org.get(org.id, [])
+        kr_map = kr_by_project
 
         seen_project_ids = set()
         org_projects_list = []
         org_total_savings = 0.0
         org_kpi_list = []
+        org_closed_count = 0
 
         for p in closed_projects:
             seen_project_ids.add(p.id)
+            org_closed_count += 1
             kr = kr_map.get(p.id)
             savings = 0.0
             kpi_imp = 0.0
@@ -584,29 +601,31 @@ def calculate_org_realized_project_value(range_str='all'):
             monthly_impact_map[m_sort_key]["savings"] += savings
             monthly_impact_map[m_sort_key]["closed_count"] += 1
 
-            cat_str = p.category if isinstance(p.category, str) else (", ".join(p.category) if p.category else "Process Improvement")
+            if include_projects:
+                cat_str = p.category if isinstance(p.category, str) else (", ".join(p.category) if p.category else "Process Improvement")
+                org_projects_list.append({
+                    "project_id": p.id,
+                    "title": p.title,
+                    "ref_number": getattr(p, 'ref_number', '') or f"QC-{p.id:04d}",
+                    "category": cat_str,
+                    "department": dept_name,
+                    "status": p.status,
+                    "closed_date": closed_dt.strftime('%d %b %Y'),
+                    "cost_savings": round(savings, 2),
+                    "cost_savings_fmt": f"₹{savings:,.2f}",
+                    "kpi_improvement_pct": round(kpi_imp, 1),
+                    "problem_summary": kr.problem_summary if kr else (p.description or '—'),
+                    "solution_summary": kr.solution_summary if kr else '—'
+                })
 
-            org_projects_list.append({
-                "project_id": p.id,
-                "title": p.title,
-                "ref_number": getattr(p, 'ref_number', '') or f"QC-{p.id:04d}",
-                "category": cat_str,
-                "department": dept_name,
-                "status": p.status,
-                "closed_date": closed_dt.strftime('%d %b %Y'),
-                "cost_savings": round(savings, 2),
-                "cost_savings_fmt": f"₹{savings:,.2f}",
-                "kpi_improvement_pct": round(kpi_imp, 1),
-                "problem_summary": kr.problem_summary if kr else (p.description or '—'),
-                "solution_summary": kr.solution_summary if kr else '—'
-            })
-
-        # Process any KnowledgeRepository entries not caught above
-        for p_id, kr in kr_map.items():
-            if p_id not in seen_project_ids:
-                p = db.session.get(Project, p_id)
+        # Process any KnowledgeRepository entries not caught above for this organization
+        for kr in kr_by_org.get(org.id, []):
+            p_id = kr.project_id
+            if p_id and p_id not in seen_project_ids:
+                p = projects_by_id.get(p_id)
                 if p and p.status in ['Closed', 'Completed', 'Archived', 'CLOSED', 'COMPLETED', 'ARCHIVED']:
                     seen_project_ids.add(p_id)
+                    org_closed_count += 1
                     savings = float(kr.cost_savings or 0.0)
                     kpi_imp = float(kr.kpi_improvement_pct or 0.0)
                     org_total_savings += savings
@@ -627,23 +646,24 @@ def calculate_org_realized_project_value(range_str='all'):
                     monthly_impact_map[m_sort_key]["savings"] += savings
                     monthly_impact_map[m_sort_key]["closed_count"] += 1
 
-                    org_projects_list.append({
-                        "project_id": p.id,
-                        "title": p.title,
-                        "ref_number": getattr(p, 'ref_number', '') or f"QC-{p.id:04d}",
-                        "category": kr.category or "Process Improvement",
-                        "department": dept_name,
-                        "status": p.status,
-                        "closed_date": closed_dt.strftime('%d %b %Y'),
-                        "cost_savings": round(savings, 2),
-                        "cost_savings_fmt": f"₹{savings:,.2f}",
-                        "kpi_improvement_pct": round(kpi_imp, 1),
-                        "problem_summary": kr.problem_summary or (p.description or '—'),
-                        "solution_summary": kr.solution_summary or '—'
-                    })
+                    if include_projects:
+                        org_projects_list.append({
+                            "project_id": p.id,
+                            "title": p.title,
+                            "ref_number": getattr(p, 'ref_number', '') or f"QC-{p.id:04d}",
+                            "category": kr.category or "Process Improvement",
+                            "department": dept_name,
+                            "status": p.status,
+                            "closed_date": closed_dt.strftime('%d %b %Y'),
+                            "cost_savings": round(savings, 2),
+                            "cost_savings_fmt": f"₹{savings:,.2f}",
+                            "kpi_improvement_pct": round(kpi_imp, 1),
+                            "problem_summary": kr.problem_summary or (p.description or '—'),
+                            "solution_summary": kr.solution_summary or '—'
+                        })
 
         total_platform_savings += org_total_savings
-        closed_cnt = len(org_projects_list)
+        closed_cnt = org_closed_count
         total_closed_projects_count += closed_cnt
 
         avg_org_savings = org_total_savings / closed_cnt if closed_cnt > 0 else 0.0
@@ -662,7 +682,7 @@ def calculate_org_realized_project_value(range_str='all'):
             "avg_savings_per_project": round(avg_org_savings, 2),
             "avg_savings_per_project_fmt": f"₹{avg_org_savings:,.2f}",
             "avg_kpi_improvement": round(avg_org_kpi, 1),
-            "projects": org_projects_list
+            "projects": org_projects_list if include_projects else []
         })
 
     # Sort organizations by total savings descending

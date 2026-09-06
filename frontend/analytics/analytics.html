@@ -6,14 +6,14 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://unpkg.com">
-    <link rel="preload" href="/assets/dist/core.564b1158.min.css" as="style">
-    <link rel="preload" href="/assets/dist/auth-guard.f1c43f88.min.js" as="script">
-    <script src="/assets/dist/auth-guard.f1c43f88.min.js"></script>
+    <link rel="preload" href="/assets/dist/core.ef8bd5b8.min.css" as="style">
+    <link rel="preload" href="/assets/dist/auth-guard.72947852.min.js" as="script">
+    <script src="/assets/dist/auth-guard.72947852.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Performance Analytics | OctaQube Enterprise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/dist/core.564b1158.min.css">
+    <link rel="stylesheet" href="/assets/dist/core.ef8bd5b8.min.css">
     <script src="/assets/dist/breadcrumbs.0d2669bd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -156,6 +156,455 @@
         [data-theme="dark"] .bg-light-soft {
             background-color: rgba(15, 23, 42, 0.5) !important;
             border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #f8fafc !important;
+        }
+
+
+        /* Audit Trail & Lifecycle Activity Styles (Light & Dark) */
+        .audit-log-item {
+            padding: var(--ds-space-3, 0.75rem);
+            background-color: #ffffff;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.625rem;
+            transition: all 0.2s ease;
+        }
+
+        .audit-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e2e8f0;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .audit-role-pill {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .audit-timestamp-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+            font-size: 0.72rem;
+            font-weight: 500;
+        }
+
+        /* Event type badges */
+        .audit-badge {
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .audit-badge-gov {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+        }
+        .audit-badge-entry {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+        .audit-badge-meeting {
+            background: #f0f9ff;
+            color: #0284c7;
+            border: 1px solid #bae6fd;
+        }
+        .audit-badge-lead {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .audit-badge-fac {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+        }
+        .audit-badge-rev {
+            background: #f3e8ff;
+            color: #6b21a8;
+            border: 1px solid #e9d5ff;
+        }
+        .audit-badge-join {
+            background: #ede9fe;
+            color: #5b21b6;
+            border: 1px solid #ddd6fe;
+        }
+        .audit-badge-left {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .audit-badge-default {
+            background: #f8fafc;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Governance detail cards */
+        .audit-governance-box {
+            margin-top: 0.625rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+        }
+        .audit-governance-box.approved {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+            border-left: 4px solid #047857;
+        }
+        .audit-governance-box.rejected,
+        .audit-governance-box.revision {
+            background: #fef2f2;
+            border-color: #fecaca;
+            border-left: 4px solid #b91c1c;
+        }
+        .audit-governance-box.pending {
+            background: #fffbeb;
+            border-color: #fde68a;
+            border-left: 4px solid #b45309;
+        }
+
+        .audit-stage-badge {
+            background: #ffffff;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+            font-weight: 600;
+            font-size: 0.72rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .audit-decision-badge {
+            font-weight: 700;
+            font-size: 0.74rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .audit-decision-badge.approved {
+            background: #ffffff;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+        }
+        .audit-decision-badge.rejected,
+        .audit-decision-badge.revision {
+            background: #ffffff;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+        .audit-decision-badge.pending {
+            background: #ffffff;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+
+        .audit-remarks {
+            margin-top: 0.375rem;
+            padding-top: 0.375rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.08);
+            font-size: 0.78rem;
+            color: #1e293b;
+        }
+        .audit-remarks strong {
+            color: #64748b;
+        }
+
+        /* Member Lifecycle detail card */
+        .audit-member-box {
+            margin-top: 0.625rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.76rem;
+            transition: all 0.2s ease;
+        }
+        .audit-member-box.left {
+            background: #fef2f2;
+            border-color: #fecaca;
+            border-left: 4px solid #ef4444;
+        }
+        .audit-member-box.leader {
+            background: #fffbeb;
+            border-color: #fde68a;
+            border-left: 4px solid #f59e0b;
+        }
+        .audit-member-box.facilitator {
+            background: #f0f9ff;
+            border-color: #bae6fd;
+            border-left: 4px solid #0ea5e9;
+        }
+        .audit-member-box.reviewer {
+            background: #faf5ff;
+            border-color: #e9d5ff;
+            border-left: 4px solid #a855f7;
+        }
+        .audit-member-box.member {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            border-left: 4px solid #6366f1;
+        }
+
+        /* ── Dark Mode Overrides for Audit Trail ── */
+        [data-theme="dark"] .audit-log-item,
+        body.dark-mode .audit-log-item,
+        html[data-theme="dark"] .audit-log-item {
+            background-color: rgba(30, 41, 59, 0.7) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: #f8fafc !important;
+        }
+
+        [data-theme="dark"] .audit-log-item .text-dark,
+        body.dark-mode .audit-log-item .text-dark,
+        html[data-theme="dark"] .audit-log-item .text-dark {
+            color: #f8fafc !important;
+        }
+
+        [data-theme="dark"] .audit-log-item .text-muted,
+        [data-theme="dark"] .audit-log-item .text-secondary,
+        body.dark-mode .audit-log-item .text-muted,
+        body.dark-mode .audit-log-item .text-secondary,
+        html[data-theme="dark"] .audit-log-item .text-muted,
+        html[data-theme="dark"] .audit-log-item .text-secondary {
+            color: #94a3b8 !important;
+        }
+
+        [data-theme="dark"] .audit-avatar,
+        body.dark-mode .audit-avatar,
+        html[data-theme="dark"] .audit-avatar {
+            border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+
+        [data-theme="dark"] .audit-role-pill,
+        body.dark-mode .audit-role-pill,
+        html[data-theme="dark"] .audit-role-pill {
+            background: rgba(255, 255, 255, 0.08) !important;
+            color: #cbd5e1 !important;
+            border-color: rgba(255, 255, 255, 0.15) !important;
+        }
+
+        [data-theme="dark"] .audit-timestamp-pill,
+        body.dark-mode .audit-timestamp-pill,
+        html[data-theme="dark"] .audit-timestamp-pill {
+            background: rgba(15, 23, 42, 0.6) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: #94a3b8 !important;
+        }
+
+        /* Dark Badges */
+        [data-theme="dark"] .audit-badge-gov,
+        body.dark-mode .audit-badge-gov,
+        html[data-theme="dark"] .audit-badge-gov {
+            background: rgba(16, 185, 129, 0.18) !important;
+            color: #34d399 !important;
+            border-color: rgba(16, 185, 129, 0.35) !important;
+        }
+        [data-theme="dark"] .audit-badge-entry,
+        body.dark-mode .audit-badge-entry,
+        html[data-theme="dark"] .audit-badge-entry {
+            background: rgba(59, 130, 246, 0.18) !important;
+            color: #93c5fd !important;
+            border-color: rgba(59, 130, 246, 0.35) !important;
+        }
+        [data-theme="dark"] .audit-badge-meeting,
+        body.dark-mode .audit-badge-meeting,
+        html[data-theme="dark"] .audit-badge-meeting {
+            background: rgba(14, 165, 233, 0.18) !important;
+            color: #7dd3fc !important;
+            border-color: rgba(14, 165, 233, 0.35) !important;
+        }
+        [data-theme="dark"] .audit-badge-lead,
+        body.dark-mode .audit-badge-lead,
+        html[data-theme="dark"] .audit-badge-lead {
+            background: rgba(245, 158, 11, 0.18) !important;
+            color: #fcd34d !important;
+            border-color: rgba(245, 158, 11, 0.35) !important;
+        }
+        [data-theme="dark"] .audit-badge-fac,
+        body.dark-mode .audit-badge-fac,
+        html[data-theme="dark"] .audit-badge-fac {
+            background: rgba(14, 165, 233, 0.18) !important;
+            color: #7dd3fc !important;
+            border-color: rgba(14, 165, 233, 0.35) !important;
+        }
+        [data-theme="dark"] .audit-badge-rev,
+        body.dark-mode .audit-badge-rev,
+        html[data-theme="dark"] .audit-badge-rev {
+            background: rgba(168, 85, 247, 0.18) !important;
+            color: #d8b4fe !important;
+            border-color: rgba(168, 85, 247, 0.35) !important;
+        }
+        [data-theme="dark"] .audit-badge-join,
+        body.dark-mode .audit-badge-join,
+        html[data-theme="dark"] .audit-badge-join {
+            background: rgba(139, 92, 246, 0.18) !important;
+            color: #c4b5fd !important;
+            border-color: rgba(139, 92, 246, 0.35) !important;
+        }
+        [data-theme="dark"] .audit-badge-left,
+        body.dark-mode .audit-badge-left,
+        html[data-theme="dark"] .audit-badge-left {
+            background: rgba(239, 68, 68, 0.18) !important;
+            color: #fca5a5 !important;
+            border-color: rgba(239, 68, 68, 0.35) !important;
+        }
+        [data-theme="dark"] .audit-badge-default,
+        body.dark-mode .audit-badge-default,
+        html[data-theme="dark"] .audit-badge-default {
+            background: rgba(255, 255, 255, 0.08) !important;
+            color: #94a3b8 !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        /* Dark Governance Box */
+        [data-theme="dark"] .audit-governance-box.approved,
+        body.dark-mode .audit-governance-box.approved,
+        html[data-theme="dark"] .audit-governance-box.approved {
+            background: rgba(6, 78, 59, 0.3) !important;
+            border-color: rgba(16, 185, 129, 0.35) !important;
+            border-left: 4px solid #10b981 !important;
+        }
+        [data-theme="dark"] .audit-governance-box.rejected,
+        [data-theme="dark"] .audit-governance-box.revision,
+        body.dark-mode .audit-governance-box.rejected,
+        body.dark-mode .audit-governance-box.revision,
+        html[data-theme="dark"] .audit-governance-box.rejected,
+        html[data-theme="dark"] .audit-governance-box.revision {
+            background: rgba(127, 29, 29, 0.3) !important;
+            border-color: rgba(239, 68, 68, 0.35) !important;
+            border-left: 4px solid #ef4444 !important;
+        }
+        [data-theme="dark"] .audit-governance-box.pending,
+        body.dark-mode .audit-governance-box.pending,
+        html[data-theme="dark"] .audit-governance-box.pending {
+            background: rgba(120, 53, 15, 0.3) !important;
+            border-color: rgba(245, 158, 11, 0.35) !important;
+            border-left: 4px solid #f59e0b !important;
+        }
+
+        /* Dark Stage & Decision badges inside governance box */
+        [data-theme="dark"] .audit-stage-badge,
+        body.dark-mode .audit-stage-badge,
+        html[data-theme="dark"] .audit-stage-badge {
+            background: rgba(15, 23, 42, 0.7) !important;
+            color: #e2e8f0 !important;
+            border-color: rgba(255, 255, 255, 0.15) !important;
+        }
+        [data-theme="dark"] .audit-decision-badge.approved,
+        body.dark-mode .audit-decision-badge.approved,
+        html[data-theme="dark"] .audit-decision-badge.approved {
+            background: rgba(16, 185, 129, 0.2) !important;
+            color: #34d399 !important;
+            border-color: rgba(16, 185, 129, 0.4) !important;
+        }
+        [data-theme="dark"] .audit-decision-badge.rejected,
+        [data-theme="dark"] .audit-decision-badge.revision,
+        body.dark-mode .audit-decision-badge.rejected,
+        body.dark-mode .audit-decision-badge.revision,
+        html[data-theme="dark"] .audit-decision-badge.rejected,
+        html[data-theme="dark"] .audit-decision-badge.revision {
+            background: rgba(239, 68, 68, 0.2) !important;
+            color: #f87171 !important;
+            border-color: rgba(239, 68, 68, 0.4) !important;
+        }
+        [data-theme="dark"] .audit-decision-badge.pending,
+        body.dark-mode .audit-decision-badge.pending,
+        html[data-theme="dark"] .audit-decision-badge.pending {
+            background: rgba(245, 158, 11, 0.2) !important;
+            color: #fbbf24 !important;
+            border-color: rgba(245, 158, 11, 0.4) !important;
+        }
+
+        [data-theme="dark"] .audit-remarks,
+        body.dark-mode .audit-remarks,
+        html[data-theme="dark"] .audit-remarks {
+            border-top-color: rgba(255, 255, 255, 0.12) !important;
+            color: #e2e8f0 !important;
+        }
+        [data-theme="dark"] .audit-remarks strong,
+        body.dark-mode .audit-remarks strong,
+        html[data-theme="dark"] .audit-remarks strong {
+            color: #94a3b8 !important;
+        }
+
+        /* Dark Member Lifecycle Box */
+        [data-theme="dark"] .audit-member-box.left,
+        body.dark-mode .audit-member-box.left,
+        html[data-theme="dark"] .audit-member-box.left {
+            background: rgba(127, 29, 29, 0.25) !important;
+            border-color: rgba(239, 68, 68, 0.35) !important;
+            border-left: 4px solid #ef4444 !important;
+            color: #e2e8f0 !important;
+        }
+        [data-theme="dark"] .audit-member-box.leader,
+        body.dark-mode .audit-member-box.leader,
+        html[data-theme="dark"] .audit-member-box.leader {
+            background: rgba(120, 53, 15, 0.25) !important;
+            border-color: rgba(245, 158, 11, 0.35) !important;
+            border-left: 4px solid #f59e0b !important;
+            color: #e2e8f0 !important;
+        }
+        [data-theme="dark"] .audit-member-box.facilitator,
+        body.dark-mode .audit-member-box.facilitator,
+        html[data-theme="dark"] .audit-member-box.facilitator {
+            background: rgba(12, 74, 110, 0.25) !important;
+            border-color: rgba(14, 165, 233, 0.35) !important;
+            border-left: 4px solid #0ea5e9 !important;
+            color: #e2e8f0 !important;
+        }
+        [data-theme="dark"] .audit-member-box.reviewer,
+        body.dark-mode .audit-member-box.reviewer,
+        html[data-theme="dark"] .audit-member-box.reviewer {
+            background: rgba(88, 28, 135, 0.25) !important;
+            border-color: rgba(168, 85, 247, 0.35) !important;
+            border-left: 4px solid #a855f7 !important;
+            color: #e2e8f0 !important;
+        }
+        [data-theme="dark"] .audit-member-box.member,
+        body.dark-mode .audit-member-box.member,
+        html[data-theme="dark"] .audit-member-box.member {
+            background: rgba(49, 46, 129, 0.25) !important;
+            border-color: rgba(99, 102, 241, 0.35) !important;
+            border-left: 4px solid #6366f1 !important;
+            color: #e2e8f0 !important;
+        }
+        [data-theme="dark"] .audit-member-box .border-bottom,
+        body.dark-mode .audit-member-box .border-bottom,
+        html[data-theme="dark"] .audit-member-box .border-bottom {
+            border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+        }
+        [data-theme="dark"] .audit-member-box .text-dark,
+        body.dark-mode .audit-member-box .text-dark,
+        html[data-theme="dark"] .audit-member-box .text-dark {
             color: #f8fafc !important;
         }
 
@@ -517,7 +966,7 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/dist/core-bundle.bb3146b2.min.js"></script>
+    <script src="/assets/dist/core-bundle.2f888e93.min.js"></script>
     <script>
         const Analytics = {
             currentScope: 'overall',
@@ -1360,7 +1809,6 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                 };
 
                 const getBadge = (eventType, log) => {
-                    const badgeBase = "font-size: 0.72rem; font-weight: 600; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;";
                     if (eventType === 'member_lifecycle') {
                         const act = (log.action || '').toLowerCase();
                         if (log.transition_type === 'left' || act.includes('left') || act.includes('removed') || act.includes('replaced') || act.includes('departed')) {
@@ -1368,23 +1816,23 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                             const isRev = act.includes('reviewer');
                             const isTl = act.includes('leader');
                             const lbl = isFac ? 'Facilitator Replaced' : (isRev ? 'Reviewer Transition' : (isTl ? 'TL Handover' : 'Member Left'));
-                            return `<span class="badge" style="${badgeBase} background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;"><i data-lucide="user-minus" style="width:12px;height:12px;"></i>${lbl}</span>`;
+                            return `<span class="badge audit-badge audit-badge-left"><i data-lucide="user-minus" style="width:12px;height:12px;"></i>${lbl}</span>`;
                         }
                         if (act.includes('facilitator')) {
-                            return `<span class="badge" style="${badgeBase} background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;"><i data-lucide="user-check" style="width:12px;height:12px;"></i>Quality Facilitator</span>`;
+                            return `<span class="badge audit-badge audit-badge-fac"><i data-lucide="user-check" style="width:12px;height:12px;"></i>Quality Facilitator</span>`;
                         }
                         if (act.includes('reviewer')) {
-                            return `<span class="badge" style="${badgeBase} background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff;"><i data-lucide="user-check" style="width:12px;height:12px;"></i>Project Reviewer</span>`;
+                            return `<span class="badge audit-badge audit-badge-rev"><i data-lucide="user-check" style="width:12px;height:12px;"></i>Project Reviewer</span>`;
                         }
                         if (act.includes('leader')) {
-                            return `<span class="badge" style="${badgeBase} background: #fef3c7; color: #92400e; border: 1px solid #fde68a;"><i data-lucide="award" style="width:12px;height:12px;"></i>Team Leader</span>`;
+                            return `<span class="badge audit-badge audit-badge-lead"><i data-lucide="award" style="width:12px;height:12px;"></i>Team Leader</span>`;
                         }
-                        return `<span class="badge" style="${badgeBase} background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe;"><i data-lucide="user-plus" style="width:12px;height:12px;"></i>Member Joined</span>`;
+                        return `<span class="badge audit-badge audit-badge-join"><i data-lucide="user-plus" style="width:12px;height:12px;"></i>Member Joined</span>`;
                     }
-                    if (eventType === 'data_entry') return `<span class="badge" style="${badgeBase} background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;"><i data-lucide="edit-3" style="width:12px;height:12px;"></i>Data Entered</span>`;
-                    if (eventType === 'governance') return `<span class="badge" style="${badgeBase} background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;"><i data-lucide="shield-check" style="width:12px;height:12px;"></i>Approval / Gate</span>`;
-                    if (eventType === 'meeting') return `<span class="badge" style="${badgeBase} background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd;"><i data-lucide="video" style="width:12px;height:12px;"></i>Meeting</span>`;
-                    return `<span class="badge" style="${badgeBase} background: #f8fafc; color: #475569; border: 1px solid #e2e8f0;">Activity</span>`;
+                    if (eventType === 'data_entry') return `<span class="badge audit-badge audit-badge-entry"><i data-lucide="edit-3" style="width:12px;height:12px;"></i>Data Entered</span>`;
+                    if (eventType === 'governance') return `<span class="badge audit-badge audit-badge-gov"><i data-lucide="shield-check" style="width:12px;height:12px;"></i>Approval / Gate</span>`;
+                    if (eventType === 'meeting') return `<span class="badge audit-badge audit-badge-meeting"><i data-lucide="video" style="width:12px;height:12px;"></i>Meeting</span>`;
+                    return `<span class="badge audit-badge audit-badge-default">Activity</span>`;
                 };
 
                 const cards = logs.map(log => {
@@ -1403,21 +1851,22 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                         const stageText = stagePart ? stagePart.replace('Stage:', '').trim() : '';
                         const decLower = decision.toLowerCase();
                         const isApproved = decLower.includes('approv') || decLower.includes('complet');
-                        const isRejected = decLower.includes('reject') || decLower.includes('sent back') || decLower.includes('revision');
-                        const decColor = isApproved ? '#047857' : (isRejected ? '#b91c1c' : '#b45309');
-                        const decBg = isApproved ? '#ecfdf5' : (isRejected ? '#fef2f2' : '#fffbeb');
-                        const decBorder = isApproved ? '#a7f3d0' : (isRejected ? '#fecaca' : '#fde68a');
-                        const decIcon = isApproved ? 'check-circle' : (isRejected ? 'x-circle' : 'alert-circle');
+                        const isRejected = decLower.includes('reject') || decLower.includes('sent back');
+                        const isRevision = decLower.includes('revision');
+
+                        const govClass = isApproved ? 'approved' : ((isRejected || isRevision) ? 'rejected' : 'pending');
+                        const decClass = isApproved ? 'approved' : (isRevision ? 'revision' : (isRejected ? 'rejected' : 'pending'));
+                        const decIcon = isApproved ? 'check-circle' : ((isRejected || isRevision) ? 'x-circle' : 'alert-circle');
 
                         detailsHtml = `
-                            <div class="mt-2.5 p-3 rounded-3" style="background:${decBg}; border:1px solid ${decBorder}; border-left:4px solid ${decColor};">
+                            <div class="audit-governance-box ${govClass}">
                                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1.5">
                                     <div class="d-flex align-items-center gap-2">
-                                        ${stageText ? `<span class="badge" style="background:#ffffff; color:#334155; border:1px solid #cbd5e1; font-weight:600; font-size:0.72rem;">${OctaQube.escapeHtml(stageText)}</span>` : ''}
-                                        ${decision ? `<span class="badge" style="background:#ffffff; color:${decColor}; border:1px solid ${decBorder}; font-weight:700; font-size:0.74rem;"><i data-lucide="${decIcon}" style="width:12px;height:12px;" class="me-1"></i>${OctaQube.escapeHtml(decision)}</span>` : ''}
+                                        ${stageText ? `<span class="badge audit-stage-badge">${OctaQube.escapeHtml(stageText)}</span>` : ''}
+                                        ${decision ? `<span class="badge audit-decision-badge ${decClass}"><i data-lucide="${decIcon}" style="width:12px;height:12px;" class="me-1"></i>${OctaQube.escapeHtml(decision)}</span>` : ''}
                                     </div>
                                 </div>
-                                ${remarks ? `<div class="mt-1.5 pt-1.5" style="border-top:1px solid ${decBorder}; font-size:0.78rem; color:#1e293b;"><strong style="color:#64748b;">Remarks:</strong> ${OctaQube.escapeHtml(remarks)}</div>` : ''}
+                                ${remarks ? `<div class="audit-remarks"><strong>Remarks:</strong> ${OctaQube.escapeHtml(remarks)}</div>` : ''}
                             </div>
                         `;
                     } else if (log.event_type === 'member_lifecycle') {
@@ -1433,11 +1882,15 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                             if (mData.member_avatar) displayAvatar = mData.member_avatar;
 
                             const isLeft = (mData.type === 'left' || mData.left_at || (log.action && (log.action.toLowerCase().includes('left') || log.action.toLowerCase().includes('removed'))));
-                            const themeColor = isLeft ? { bg: '#fef2f2', border: '#fecaca', accent: '#ef4444', text: '#991b1b', badgeBg: '#fee2e2', badgeText: '#b91c1c' }
-                                : (mData.type === 'leader' ? { bg: '#fffbeb', border: '#fde68a', accent: '#f59e0b', text: '#92400e', badgeBg: '#fef3c7', badgeText: '#92400e' }
-                                : (mData.type === 'facilitator' ? { bg: '#f0f9ff', border: '#bae6fd', accent: '#0ea5e9', text: '#0369a1', badgeBg: '#e0f2fe', badgeText: '#0369a1' }
-                                : (mData.type === 'reviewer' ? { bg: '#faf5ff', border: '#e9d5ff', accent: '#a855f7', text: '#6b21a8', badgeBg: '#f3e8ff', badgeText: '#7e22ce' }
-                                : { bg: '#f8fafc', border: '#e2e8f0', accent: '#6366f1', text: '#3730a3', badgeBg: '#ede9fe', badgeText: '#5b21b6' })));
+                            const memTypeClass = isLeft ? 'left'
+                                : (mData.type === 'leader' ? 'leader'
+                                : (mData.type === 'facilitator' ? 'facilitator'
+                                : (mData.type === 'reviewer' ? 'reviewer' : 'member')));
+
+                            const badgeClass = isLeft ? 'audit-badge-left'
+                                : (mData.type === 'leader' ? 'audit-badge-lead'
+                                : (mData.type === 'facilitator' ? 'audit-badge-fac'
+                                : (mData.type === 'reviewer' ? 'audit-badge-rev' : 'audit-badge-join')));
 
                             const roleTitle = mData.member_role || (mData.type === 'leader' ? 'Team Leader' : (mData.type === 'facilitator' ? 'Quality Facilitator' : (mData.type === 'reviewer' ? 'Project Reviewer' : 'Team Member')));
                             const statusText = isLeft ? 'Left Project in Middle' : (mData.status || 'Active Member');
@@ -1446,40 +1899,40 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                             const actorText = mData.actor_name ? `${mData.actor_name} (${mData.actor_role || (isLeft ? 'Admin' : 'Lead')})` : '';
 
                             detailsHtml = `
-                                <div class="mt-2.5 p-3 rounded-3" style="background:${themeColor.bg}; border:1px solid ${themeColor.border}; border-left:4px solid ${themeColor.accent};">
-                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2" style="border-bottom:1px solid ${themeColor.border};">
+                                <div class="audit-member-box ${memTypeClass}">
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2 border-bottom">
                                         <div class="d-flex align-items-center gap-2">
-                                            <span class="badge" style="background:${themeColor.badgeBg}; color:${themeColor.badgeText}; font-weight:700; font-size:0.72rem; padding:3px 8px; border-radius:6px; border:1px solid ${themeColor.border};">
+                                            <span class="badge audit-badge ${badgeClass}">
                                                 <i data-lucide="${isLeft ? 'user-minus' : 'user-check'}" style="width:12px;height:12px;" class="me-1"></i>${OctaQube.escapeHtml(statusText)}
                                             </span>
-                                            <span style="color:${themeColor.text}; font-size:0.76rem; font-weight:600;">${OctaQube.escapeHtml(roleTitle)}</span>
+                                            <span class="audit-member-role-title fw-semibold" style="font-size:0.76rem;">${OctaQube.escapeHtml(roleTitle)}</span>
                                         </div>
-                                        <div style="font-size:0.74rem; color:#475569; font-weight:500;">
+                                        <div style="font-size:0.74rem; opacity: 0.85;" class="fw-medium">
                                             <i data-lucide="${isLeft ? 'calendar-x' : 'calendar'}" style="width:12px;height:12px;" class="me-1 ${isLeft ? 'text-danger' : 'text-primary'}"></i>
                                             <strong>${isLeft ? 'Departure Date:' : 'Effective Date:'}</strong> ${OctaQube.escapeHtml(effectiveDate)}
                                         </div>
                                     </div>
                                     <div class="row g-2" style="font-size:0.76rem;">
                                         <div class="col-sm-6">
-                                            <div style="color:#64748b; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">Working Tenure & Duration</div>
+                                            <div class="audit-col-label" style="font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.3px; opacity:0.75;">Working Tenure & Duration</div>
                                             <div class="fw-semibold text-dark mt-0.5 d-flex align-items-center gap-1">
                                                 <i data-lucide="clock" style="width:12px;height:12px;" class="${isLeft ? 'text-danger' : 'text-secondary'}"></i>
                                                 <span>${OctaQube.escapeHtml(durationText)}</span>
                                             </div>
                                             ${isLeft && mData.joined_at ? `
-                                            <div class="mt-1" style="font-size:0.7rem; color:#64748b;">
+                                            <div class="mt-1" style="font-size:0.7rem; opacity:0.8;">
                                                 <span>Joined: <strong>${OctaQube.escapeHtml(mData.joined_at)}</strong></span> &rarr; <span>Left: <strong class="text-danger">${OctaQube.escapeHtml(mData.left_at || log.timestamp || 'Mid-Project')}</strong></span>
                                             </div>` : ''}
                                         </div>
                                         ${actorText ? `
                                         <div class="col-sm-6">
-                                            <div style="color:#64748b; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">${isLeft ? 'Removed / Replaced By' : 'Assigned / Enrolled By'}</div>
+                                            <div class="audit-col-label" style="font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.3px; opacity:0.75;">${isLeft ? 'Removed / Replaced By' : 'Assigned / Enrolled By'}</div>
                                             <div class="fw-semibold text-dark mt-0.5 d-flex align-items-center gap-1">
                                                 <i data-lucide="user" style="width:12px;height:12px;" class="text-secondary"></i>
                                                 <span>${OctaQube.escapeHtml(actorText)}</span>
                                             </div>
                                             ${mData.reason ? `
-                                            <div class="mt-1" style="font-size:0.7rem; color:#b91c1c;">
+                                            <div class="mt-1 text-danger" style="font-size:0.7rem;">
                                                 <em>${OctaQube.escapeHtml(mData.reason)}</em>
                                             </div>` : ''}
                                         </div>` : ''}
@@ -1494,22 +1947,22 @@ const uid = proj.project_uid || ('PRJ-' + proj.id);
                     }
 
                     return `
-                    <div class="p-3 bg-white rounded-3 border shadow-xs d-flex align-items-start justify-content-between flex-wrap gap-2 hover-row mb-2.5" style="border-radius:10px; transition:all 0.2s ease;">
+                    <div class="audit-log-item hover-row">
                         <div class="d-flex align-items-start gap-3" style="flex:1; min-width:0;">
-                            <img src="${displayAvatar}" class="rounded-circle mt-0.5 flex-shrink-0" style="width:38px; height:38px; object-fit:cover; border:2px solid #e2e8f0;" alt="User">
+                            <img src="${displayAvatar}" class="audit-avatar" alt="User">
                             <div style="min-width:0; flex:1;">
                                 <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
                                     <span class="fw-bold text-dark" style="font-size:0.9rem;">${OctaQube.escapeHtml(displayName)}</span>
-                                    <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; font-size:0.72rem; font-weight:600; padding:2px 8px; border-radius:6px;">${OctaQube.escapeHtml(displayRole)}</span>
+                                    <span class="badge audit-role-pill">${OctaQube.escapeHtml(displayRole)}</span>
                                     ${getBadge(log.event_type, log)}
                                 </div>
-                                <div class="fw-semibold text-dark" style="font-size:0.84rem; color:#1e293b;">${OctaQube.escapeHtml(log.action || '')}</div>
+                                <div class="fw-semibold text-dark" style="font-size:0.84rem;">${OctaQube.escapeHtml(log.action || '')}</div>
                                 ${detailsHtml}
                             </div>
                         </div>
                         <div class="text-end flex-shrink-0 ps-2">
-                            <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-2" style="background:#f8fafc; border:1px solid #e2e8f0; color:#64748b; font-size:0.72rem; font-weight:500;">
-                                <i data-lucide="clock" style="width:11px; height:11px; color:#94a3b8;"></i> ${OctaQube.escapeHtml(log.timestamp || '')}
+                            <span class="audit-timestamp-pill">
+                                <i data-lucide="clock" style="width:11px; height:11px; opacity:0.7;"></i> ${OctaQube.escapeHtml(log.timestamp || '')}
                             </span>
                         </div>
                     </div>`;

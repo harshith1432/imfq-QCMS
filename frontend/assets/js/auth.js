@@ -62,7 +62,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 
     const username = (document.getElementById('username')?.value || '').trim();
     const password = document.getElementById('password')?.value || '';
-    const rememberMe = document.getElementById('rememberMe')?.checked || false;
+    const rememberMe = false;
     const errorMsg = document.getElementById('errorMsg');
 
     let isLoggingIn = false;
@@ -102,13 +102,8 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
             sessionStorage.setItem('octaqube_authenticated', 'true');
             localStorage.setItem('octaqube_authenticated', 'true');
 
-            if (rememberMe) {
-                localStorage.setItem('octaqube_remember_me', 'true');
-                localStorage.setItem('octaqube_remembered_username', username);
-            } else {
-                localStorage.removeItem('octaqube_remember_me');
-                localStorage.removeItem('octaqube_remembered_username');
-            }
+            localStorage.removeItem('octaqube_remember_me');
+            localStorage.removeItem('octaqube_remembered_username');
 
             const userPayload = JSON.stringify({
                 username: data.username,

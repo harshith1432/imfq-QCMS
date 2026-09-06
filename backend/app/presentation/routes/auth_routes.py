@@ -27,19 +27,31 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+import time
+
 auth_bp = Blueprint('auth', __name__)
 
+_settings_cache = {"data": None, "ts": 0}
+
 def get_platform_settings_safe():
+    now = time.time()
+    if _settings_cache["data"] and (now - _settings_cache["ts"] < 30):
+        return _settings_cache["data"]
+
     try:
         from app.infrastructure.database.models.models import PlatformSettings
-        return PlatformSettings.query.order_by(PlatformSettings.id.asc()).first()
+        ps = PlatformSettings.query.order_by(PlatformSettings.id.asc()).first()
+        if ps:
+            _settings_cache["data"] = ps
+            _settings_cache["ts"] = now
+        return ps
     except Exception as e:
         print(f"[QCMS Warning] PlatformSettings query error: {e}")
         try:
             db.session.rollback()
         except Exception:
             pass
-        return None
+        return _settings_cache.get("data")
 
 def get_support_email_safe():
     try:

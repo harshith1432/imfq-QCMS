@@ -61,7 +61,44 @@ class VectorSearchService:
         if not org_id or query_embedding is None:
             return []
 
-        # 1. Query all active knowledge records for this organization tenant
+        # 1. Attempt database-native vector similarity search if pgvector is enabled
+        try:
+            sql = text("""
+                SELECT id, project_id, title, category, problem_summary, root_cause,
+                       solution_summary, kpi_improvement_pct,
+                       1 - (embedding <=> :query_vec::vector) AS similarity_score
+                FROM knowledge_repository
+                WHERE org_id = :org_id AND embedding IS NOT NULL
+                ORDER BY embedding <=> :query_vec::vector
+                LIMIT :limit
+            """)
+            raw_res = db.session.execute(sql, {
+                "org_id": org_id,
+                "query_vec": str(query_embedding),
+                "limit": limit
+            }).fetchall()
+
+            if raw_res:
+                return [{
+                    "id": r.id,
+                    "project_id": r.project_id,
+                    "title": r.title or "Untitled Project",
+                    "category": r.category or "Quality",
+                    "problem_summary": r.problem_summary or "",
+                    "root_cause": r.root_cause or "",
+                    "solution_summary": r.solution_summary or "",
+                    "kpi_improvement_pct": r.kpi_improvement_pct or 0,
+                    "similarity_score": round(float(r.similarity_score), 4),
+                    "content": f"{r.title or ''} - {r.solution_summary or r.problem_summary or ''}"
+                } for r in raw_res]
+        except Exception:
+            # Seamless fallback to in-memory search if pgvector extension is not enabled or embedding is JSON string
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
+        # 2. In-memory cosine similarity fallback across tenant records
         records = KnowledgeRepository.query.filter_by(org_id=org_id).all()
         if not records:
             return []

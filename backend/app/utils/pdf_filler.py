@@ -764,14 +764,24 @@ def build_qc_story_html(project_id):
     s7 = Stage7PerformanceVerificationBenefitsRealization.query.filter_by(project_id=project_id).first()
     s8 = Stage8StandardizationKnowledgeSharingProjectClosure.query.filter_by(project_id=project_id).first()
 
-    d1 = wf1.data if (wf1 and wf1.data) else (s1.data if (s1 and s1.data) else {})
-    d2 = wf2.data if (wf2 and wf2.data) else (s2.data if (s2 and s2.data) else {})
-    d3 = wf3.data if (wf3 and wf3.data) else (s3.data if (s3 and s3.data) else {})
-    d4 = wf4.data if (wf4 and wf4.data) else (s4.data if (s4 and s4.data) else {})
-    d5 = wf5.data if (wf5 and wf5.data) else (s5.data if (s5 and s5.data) else {})
-    d6 = wf6.data if (wf6 and wf6.data) else (s6.data if (s6 and s6.data) else {})
-    d7 = wf7.data if (wf7 and wf7.data) else (s7.data if (s7 and s7.data) else {})
-    d8 = wf8.data if (wf8 and wf8.data) else (s8.data if (s8 and s8.data) else {})
+    def _extract_model_dict(model_obj):
+        if not model_obj:
+            return {}
+        if hasattr(model_obj, 'data') and model_obj.data and isinstance(model_obj.data, dict):
+            return model_obj.data
+        try:
+            return {c.name: getattr(model_obj, c.name) for c in model_obj.__table__.columns if getattr(model_obj, c.name) is not None}
+        except Exception:
+            return {}
+
+    d1 = wf1.data if (wf1 and wf1.data) else _extract_model_dict(s1)
+    d2 = wf2.data if (wf2 and wf2.data) else _extract_model_dict(s2)
+    d3 = wf3.data if (wf3 and wf3.data) else _extract_model_dict(s3)
+    d4 = wf4.data if (wf4 and wf4.data) else _extract_model_dict(s4)
+    d5 = wf5.data if (wf5 and wf5.data) else _extract_model_dict(s5)
+    d6 = wf6.data if (wf6 and wf6.data) else _extract_model_dict(s6)
+    d7 = wf7.data if (wf7 and wf7.data) else _extract_model_dict(s7)
+    d8 = wf8.data if (wf8 and wf8.data) else _extract_model_dict(s8)
 
     # Meta Variables & Document Identity Branding Context
     from app.domain.services.document_branding_service import DocumentBrandingService
