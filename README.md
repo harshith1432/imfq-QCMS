@@ -23,6 +23,7 @@ An enterprise-grade, high-performance SaaS operating system engineered for struc
 
 ## 📑 Table of Contents
 
+0. [📚 Complete Technical Documentation Library (`documentation/`)](#-complete-technical-documentation-library)
 1. [Executive Overview & Value Proposition](#-executive-overview--value-proposition)
 2. [System Architecture & Data Flow](#-system-architecture--data-flow)
 3. [Frontend Architecture & Client-Driven Logic](#-frontend-architecture--client-driven-logic)
@@ -55,6 +56,28 @@ An enterprise-grade, high-performance SaaS operating system engineered for struc
 8. [Testing & Quality Assurance](#-testing--quality-assurance)
 9. [Operational FAQs & Troubleshooting](#-operational-faqs--troubleshooting)
 10. [License & Governance](#-license--governance)
+
+---
+
+## 📚 Complete Technical Documentation Library
+
+All deep-dive architectural documents, knowledge transfer guides, API specifications, and database diagrams are centralized in the **[`/documentation`](./documentation/)** directory:
+
+| Category | Reference Document | Description |
+| :--- | :--- | :--- |
+| 🏗️ **Architecture & Database** | **[Master Architecture Blueprint](./documentation/architecture/QCMS_MASTER_ARCHITECTURE.md)** | Full Clean Architecture, Domain-Driven Design (DDD), and multi-tenant security layers |
+| | **[Performance & Latency Optimization Report](./documentation/architecture/QCMS_PERFORMANCE_OPTIMIZATION_AND_LATENCY_REPORT.md)** | Sub-200ms latency benchmarks, Redis caching, Gunicorn threads, and pooling |
+| | **[Database Architecture Report (HTML)](./documentation/architecture/qcms_database_architecture_report.html) / [(PDF)](./documentation/architecture/qcms_database_architecture_report.pdf)** | Interactive ERD, schema relations, foreign keys, and audit log tables |
+| 🧠 **AI & Neural RAG** | **[Quality AI Assistant Documentation (HTML)](./documentation/ai_and_rag/quality_ai_feature_documentation.html) / [(PDF)](./documentation/ai_and_rag/quality_ai_feature_documentation.pdf)** | Built-in AI assistant, root cause generator, 5-Why analyzer, and DMAIC prompts |
+| | **[Neural RAG Deep Dive (HTML)](./documentation/ai_and_rag/neural_rag_deep_dive.html) / [(PDF)](./documentation/ai_and_rag/neural_rag_deep_dive.pdf)** | Retrieval-Augmented Generation across historical closed projects & SOP deviations |
+| | **[Vector Cosine Similarity Explained (HTML)](./documentation/ai_and_rag/vector_cosine_similarity_explained.html) / [(PDF)](./documentation/ai_and_rag/vector_cosine_similarity_explained.pdf)** | Mathematical foundations of TF-IDF vectors and cosine similarity matching |
+| 🔄 **Quality Circle Workflow** | **[8-Stage Workflow Specifications](./documentation/knowledge_transfer_and_guides/README_STAGES.md)** | Full specifications of Stages 1–8, gatekeeper rules, and auto-archiving |
+| | **[Comprehensive Knowledge Transfer (PDF)](./documentation/knowledge_transfer_and_guides/QCMS_Comprehensive_Knowledge_Transfer.pdf)** | Complete onboarding manual for developers, admins, and quality managers |
+| | **[QC Storybook Reporter Specification](./documentation/knowledge_transfer_and_guides/Reporter.md)** | Automated ReportLab PDF storybook generation engine |
+| 🌐 **API Reference** | **[REST API Documentation](./documentation/api/API_DOCUMENTATION.md)** | Complete REST endpoint contracts, authentication schemes, and JSON payloads |
+| 📊 **Presentations** | **[Interactive Web Presentation (HTML)](./documentation/presentations/qcms_presentation.html) / [(PDF)](./documentation/presentations/qcms_enterprise_presentation.pdf)** | Executive slide deck for enterprise stakeholders & quality councils |
+
+👉 *For the complete index, visit the **[Documentation Hub README](./documentation/README.md)**.*
 
 ---
 
